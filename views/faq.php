@@ -1,0 +1,7 @@
+<?php $parCategorie = $parCategorie ?? []; $erreur = $erreur ?? null; require __DIR__ . '/../includes/header.php'; ?>
+<div class="wrap page-head"><h1>Questions fréquentes</h1><p class="lead">Les réponses aux questions posées le plus souvent à l'accueil.</p></div>
+<div class="wrap section">
+<?php if (!$parCategorie): ?><div class="vide">Aucune question publiée pour le moment.</div><?php endif; ?>
+<?php foreach ($parCategorie as $categorie => $questions): ?><section class="faq-cat"><h2><?= e($categorie) ?></h2><?php foreach ($questions as $question): ?><details class="faq-item"><summary><?= e($question['question']) ?></summary><div class="reponse"><?= nl2br(e($question['reponse'] ?? '')) ?></div></details><?php endforeach; ?></section><?php endforeach; ?>
+<?php if (a_role('ADHERENT')): ?><section class="form" style="max-width:620px"><h2>Poser une question</h2><?php if ($erreur): ?><p class="flash flash-erreur"><?= e($erreur) ?></p><?php endif; ?><form method="post"><?= champ_csrf() ?><div class="form-ligne"><label for="question">Votre question</label><textarea id="question" name="question" maxlength="500" required></textarea></div><button class="btn btn-vert" type="submit">Envoyer la question</button></form></section><?php else: ?><p class="note">Les adhérents connectés peuvent poser une question. Sinon, utilisez le <a href="<?= url('contact.php') ?>">formulaire de contact</a>.</p><?php endif; ?></div>
+<?php require __DIR__ . '/../includes/footer.php'; ?>

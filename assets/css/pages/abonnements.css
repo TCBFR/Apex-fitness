@@ -1,0 +1,8 @@
+/* Styles de la page des abonnements */
+.page-abonnements .offres{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:18px;align-items:start}
+.page-abonnements .offre{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:26px}
+.page-abonnements .offre.vedette{border-color:var(--green);border-width:2px}
+.page-abonnements .offre .prix{font-size:34px;font-weight:600;margin:14px 0 2px}
+.page-abonnements .offre .prix small{font-size:15px;font-weight:400;color:var(--ink-soft)}
+.page-abonnements .offre ul{margin:16px 0 20px;padding-left:20px;color:var(--ink-soft);font-size:15px}
+.page-abonnements .offre li{margin-bottom:6px}

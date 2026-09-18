@@ -1,0 +1,20 @@
+/* Styles de la page des avis */
+.page-avis .avis-synthese{display:grid;grid-template-columns:minmax(240px,360px) minmax(0,1fr);gap:18px;align-items:stretch;margin-bottom:26px}
+.page-avis .note-moyenne-panel{padding:18px 18px 18px 0;display:flex;flex-direction:column;justify-content:center}
+.page-avis .note-moyenne-panel h2{font-size:36px;line-height:1.05;margin-bottom:18px}
+.page-avis .note-moyenne-panel .mono{font-size:24px;color:#D9942B;letter-spacing:2px}
+.page-avis .note-moyenne-panel .prix{font-size:54px;line-height:1.05;margin:18px 0 12px}
+.page-avis .note-moyenne-panel .muted{font-size:18px;color:#4A4E53}
+.page-avis .filtre-note-panel{display:flex;flex-direction:column;justify-content:center}
+.page-avis .filtre-etoiles{display:flex;flex-direction:column;gap:12px;padding:0 16px}
+.page-avis .filtre-etoile{display:grid;grid-template-columns:110px minmax(0,1fr) 26px;align-items:center;gap:10px;min-height:28px;color:#3A424C;opacity:.85}
+.page-avis .filtre-etoile:hover,.page-avis .filtre-etoile.active{opacity:1}
+.page-avis .filtre-etoile .stars{font-size:14px;letter-spacing:1px;color:#4A4E53;white-space:nowrap}
+.page-avis .filtre-etoile .label-total{font-size:15px;color:#252A30;font-weight:600;white-space:nowrap}
+.page-avis .filtre-etoile .barre-note{display:block;height:9px;background:#D5D7D8;border-radius:999px;overflow:hidden}
+.page-avis .filtre-etoile .remplissage{display:block;height:100%;background:#737A82;border-radius:999px}
+.page-avis .filtre-etoile .count{font-size:15px;color:#4A4E53;justify-self:end}
+.page-avis .reponse-admin{margin-top:14px;padding:12px 14px;border-left:3px solid var(--green);background:#EEF4EE;border-radius:var(--radius)}
+.page-avis .reponse-admin strong{display:block;margin-bottom:6px;font-size:13px;color:var(--green)}
+.page-avis .reponse-admin p{margin:0}
+@media (max-width:720px){.page-avis .avis-synthese{grid-template-columns:1fr}.page-avis .filtre-etoile{grid-template-columns:96px minmax(0,1fr) 24px}}

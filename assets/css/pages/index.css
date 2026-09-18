@@ -1,0 +1,22 @@
+/* Styles de la page d'accueil */
+.page-accueil .hero{background:var(--ink);color:#EFEEE9}
+.page-accueil .hero-inner{display:grid;grid-template-columns:1.08fr .92fr;align-items:stretch;height:560px;overflow:hidden}
+.page-accueil .hero-photo{height:100%}
+.page-accueil .hero-photo-img{width:100%;height:100%;object-fit:cover;object-position:center 38%;display:block}
+.page-accueil .hero-texte-wrap{display:flex;align-items:center;padding:42px 48px}
+.page-accueil .hero-texte{max-width:460px}
+.page-accueil .hero h1{font-size:38px;color:#fff;max-width:14ch;margin-bottom:10px}
+.page-accueil .hero p{color:#B4BBC3;font-size:16px;max-width:48ch}
+.page-accueil .hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+.page-accueil .hero-actions .btn{background:#8FBF8F;border-color:#8FBF8F;color:#15171B}
+.page-accueil .hero-actions .btn:hover{background:#A3CFA3;color:#15171B}
+.page-accueil .hero-actions .btn-ghost{background:transparent;color:#EFEEE9;border-color:#3A424C}
+.page-accueil .hero-actions .btn-ghost:hover{background:#242A31;color:#fff}
+.page-accueil .section-objectifs{background:var(--ink)}
+.page-accueil .objectifs-img{width:100%;height:auto;display:block}
+@media (max-width:900px){
+  .page-accueil .hero-inner{grid-template-columns:1fr;height:auto}
+  .page-accueil .hero-photo{order:-1;height:200px}
+  .page-accueil .hero-texte-wrap{padding:24px 22px}
+  .page-accueil .hero h1{font-size:30px}
+}
