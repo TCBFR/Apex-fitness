@@ -233,7 +233,7 @@ if ($planningDisponible) {
 $st = db()->prepare(
     'SELECT p.*, ab.libelle_abo FROM paiement p
      JOIN abonnement ab ON ab.Numabo = p.Numabo
-  WHERE p.NumAdh = ? ORDER BY p.date_paiement DESC');
+  WHERE p.NumUsers = ? ORDER BY p.date_paiement DESC');
 $st->execute([$moi]);
 $mesPaiements = $st->fetchAll();
 

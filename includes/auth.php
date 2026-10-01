@@ -54,6 +54,7 @@ function roles_de(int $numUsers): array
                 $roles[] = $role;
             }
         } catch (PDOException $exception) {
+            error_log('[Apex Fitness] role lookup failed for user ' . $numUsers . ': ' . $exception->getMessage());
         }
     }
     return $roles;

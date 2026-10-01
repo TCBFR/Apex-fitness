@@ -13,6 +13,25 @@ CREATE TABLE utilisateur (
   Date_CreationUsers DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE journal (
+  Numjournal  INT AUTO_INCREMENT PRIMARY KEY,
+  date_action DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  NumUsers    INT NULL,
+  action      VARCHAR(60) NOT NULL,
+  cible       VARCHAR(120),
+  ip          VARCHAR(45),
+  FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE message_contact (
+  Nummessage INT AUTO_INCREMENT PRIMARY KEY,
+  nom        VARCHAR(120) NOT NULL,
+  mail       VARCHAR(150) NOT NULL,
+  sujet      VARCHAR(160) NOT NULL,
+  message    TEXT NOT NULL,
+  date_envoi DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 CREATE TABLE fonction (
   Numfonc     INT AUTO_INCREMENT PRIMARY KEY,
   libellefonc VARCHAR(60) NOT NULL
@@ -105,6 +124,25 @@ CREATE TABLE abonnement (
   Numoffre             INT NOT NULL,
   FOREIGN KEY (Numoffre) REFERENCES offre(Numoffre)
 ) ENGINE=InnoDB;
+
+INSERT INTO offre (Numoffre, libelle_offre, description_offre, type_offre) VALUES
+  (1, 'Freemium', 'Tarif mensuel reduit sur presentation d un justificatif.', 'FREEMIUM'),
+  (2, 'Basic', 'Forfait annuel avec engagement de 12 mois.', 'BASIC'),
+  (3, 'Premium', 'Acces mensuel avec coaching inclus.', 'PLUS');
+
+INSERT INTO freemium (Numoffre, prix_mensuel_reduit, taux_reduction, justificatif_requis, nb_reservations_max_mois)
+VALUES (1, 143.00, 10.00, 'Justificatif etudiant ou demandeur d emploi', 4);
+
+INSERT INTO basic (Numoffre, prix_annuel, duree_engagement_mois, reconduction_tacite)
+VALUES (2, 2000.00, 12, 1);
+
+INSERT INTO abonnement_plus (Numoffre, prix_mensuel_plus, supplement_mensuel, seances_coach_incluses, acces_illimite)
+VALUES (3, 300.00, 0.00, 4, 1);
+
+INSERT INTO abonnement (libelle_abo, description_abo, date_mise_en_service, actif_abo, Numoffre) VALUES
+  ('Freemium', 'Formule mensuelle a tarif reduit.', CURRENT_DATE, 1, 1),
+  ('Basic', 'Formule annuelle avec engagement.', CURRENT_DATE, 1, 2),
+  ('Premium', 'Formule mensuelle avec coaching inclus.', CURRENT_DATE, 1, 3);
 
 CREATE TABLE souscrire (
   NumUsers            INT NOT NULL,
@@ -231,6 +269,7 @@ CREATE TABLE avis (
   NumInteraction INT PRIMARY KEY,
   noteavis       TINYINT NOT NULL CHECK (noteavis BETWEEN 1 AND 5),
   commentaire    TEXT,
+  reponse        TEXT,
   Numres         INT NOT NULL UNIQUE,
   FOREIGN KEY (NumInteraction) REFERENCES interaction_adherent(NumInteraction) ON DELETE CASCADE,
   FOREIGN KEY (Numres)         REFERENCES reservation(Numres) ON DELETE CASCADE
@@ -241,6 +280,7 @@ CREATE TABLE faq (
   question       TEXT NOT NULL,
   reponse        TEXT,
   statut_faq     VARCHAR(20) NOT NULL DEFAULT 'En attente',
+  categorie      VARCHAR(80) NOT NULL DEFAULT 'General',
   FOREIGN KEY (NumInteraction) REFERENCES interaction_adherent(NumInteraction) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -250,4 +290,48 @@ CREATE TABLE faq (
 INSERT INTO utilisateur (NumUsers, nomUsers, prenomUsers, mailUsers, telUsers, passwordUsers) VALUES
  (1,'Vasseur','Marion','admin@apex.fr','05 55 10 20 30','$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW'),
  (2,'Roux','Camille','camille.roux@apex.fr','06 41 77 30 02','$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW'),
- (3,'Anselme','Marc','marc.anselme@apex.fr','06 22 81 14 55','$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjs
+ (3,'Anselme','Marc','marc.anselme@apex.fr','06 22 81 14 55','$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW');
+
+INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh)
+VALUES (2, 'DEMO-ADH-2', CURRENT_DATE);
+
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Quelles formules proposez-vous ?', 'Freemium : 143 EUR par mois, avec 10 % de réduction, sur présentation d’un justificatif étudiant ou demandeur d’emploi et dans la limite de 4 réservations par mois. Basic : 2 000 EUR par an, avec 12 mois d’engagement. Premium : 300 EUR par mois, avec 4 séances de coaching et un accès illimité.', 'Publiee', 'Abonnements');
+
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Comment réserver un cours ?', 'Connectez-vous à votre espace adhérent, puis choisissez un créneau disponible dans le planning. La formule Freemium est limitée à 4 réservations par mois.', 'Publiee', 'Réservations');
+
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Jusqu’à quand puis-je annuler une réservation ?', 'Vous pouvez annuler une réservation jusqu’à 2 heures avant le début du cours. Passé ce délai, l’annulation n’est plus possible depuis votre espace.', 'Publiee', 'Réservations');
+
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Sous quel délai recevrai-je une réponse à mon message ?', 'L’accueil vous répond sous 48 heures ouvrées. Vous pouvez envoyer votre demande depuis le formulaire de contact.', 'Publiee', 'Contact');
+
+INSERT INTO utilisateur (NumUsers, nomUsers, prenomUsers, mailUsers, telUsers, passwordUsers) VALUES
+  (4, 'Nabil', 'S.', 's.nabil@mail.fr', NULL, '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW'),
+  (5, 'Diallo', 'Awa', 'awa.diallo@mail.fr', NULL, '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW'),
+  (6, 'Lemoine', 'H.', 'h.lemoine@mail.fr', NULL, '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW');
+
+INSERT INTO admin (NumUsers, matriculeadmin, date_affectationadmin)
+VALUES (1, 'DEMO-ADM-1', CURRENT_DATE);
+
+INSERT INTO fonction (Numfonc, libellefonc) VALUES
+  (1, 'Coach'),
+  (2, 'Technicien maintenance');
+
+INSERT INTO employe (NumUsers, matriculeemp, Date_embaucheemp, Numfonc) VALUES
+  (2, 'DEMO-EMP-2', CURRENT_DATE, 1),
+  (3, 'DEMO-EMP-3', CURRENT_DATE, 2);
+
+INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh) VALUES
+  (4, 'DEMO-ADH-4', CURRENT_DATE, NULL),
+  (5, 'DEMO-ADH-5', DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR), DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY)),
+  (6, 'DEMO-ADH-6', CURRENT_DATE, NULL);

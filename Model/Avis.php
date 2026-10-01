@@ -17,11 +17,13 @@ final class Avis extends Model
         $this->assureColonneReponse();
 
         return $this->pdo->query(
-            "SELECT a.Numavis AS NumInteraction, a.noteavis, a.commentaire, a.reponse,
-                a.date_avis AS date_interaction, u.prenomUsers, u.nomUsers
+            "SELECT a.NumInteraction, a.noteavis, a.commentaire, a.reponse,
+                i.date_interaction, u.prenomUsers, u.nomUsers
              FROM avis a
-             JOIN utilisateur u ON u.NumUsers = a.NumAdh
-             ORDER BY a.date_avis DESC"
+             JOIN interaction_adherent i ON i.NumInteraction = a.NumInteraction
+             JOIN utilisateur u ON u.NumUsers = i.NumUsers
+             WHERE i.type_interaction = 'AVIS'
+             ORDER BY i.date_interaction DESC"
         )->fetchAll();
     }
 
@@ -34,11 +36,39 @@ final class Avis extends Model
             throw new InvalidArgumentException('Votre avis doit contenir au moins 10 caractères.');
         }
 
-        $avis = $this->pdo->prepare(
-            'INSERT INTO avis (noteavis, commentaire, NumAdh) VALUES (?, ?, ?)'
-        );
-        $avis->execute([$note, $commentaire, $numUtilisateur]);
-        return (int) $this->pdo->lastInsertId();
+        $this->pdo->beginTransaction();
+        try {
+            $reservation = $this->pdo->prepare(
+                'SELECT r.Numres
+                 FROM reservation r
+                 LEFT JOIN avis a ON a.Numres = r.Numres
+                 WHERE r.NumUsers = ? AND a.NumInteraction IS NULL
+                 ORDER BY r.Numres DESC LIMIT 1'
+            );
+            $reservation->execute([$numUtilisateur]);
+            $numReservation = $reservation->fetchColumn();
+            if ($numReservation === false) {
+                throw new RuntimeException('Une réservation sans avis associé est nécessaire pour publier un avis.');
+            }
+
+            $interaction = $this->pdo->prepare(
+                'INSERT INTO interaction_adherent (NumUsers, type_interaction) VALUES (?, ?)'
+            );
+            $interaction->execute([$numUtilisateur, 'AVIS']);
+            $numInteraction = (int) $this->pdo->lastInsertId();
+
+            $avis = $this->pdo->prepare(
+                'INSERT INTO avis (NumInteraction, noteavis, commentaire, Numres) VALUES (?, ?, ?, ?)'
+            );
+            $avis->execute([$numInteraction, $note, $commentaire, $numReservation]);
+            $this->pdo->commit();
+            return $numInteraction;
+        } catch (Throwable $exception) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $exception;
+        }
     }
 
     public function repondre(int $numInteraction, string $reponse): void
@@ -50,7 +80,7 @@ final class Avis extends Model
             throw new InvalidArgumentException('La réponse ne peut pas être vide.');
         }
 
-        $st = $this->pdo->prepare('UPDATE avis SET reponse = ? WHERE Numavis = ?');
+        $st = $this->pdo->prepare('UPDATE avis SET reponse = ? WHERE NumInteraction = ?');
         $st->execute([$reponse, $numInteraction]);
 
         if ($st->rowCount() === 0) {

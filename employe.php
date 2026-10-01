@@ -191,16 +191,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirige('employe.php?onglet=maintenance');
     }
 
-    /* ---- changer le statut d'un adherent ---------------------------- */
-    if ($action === 'statut_adherent') {
-        $num    = (int) $_POST['adherent'];
-        $statut = (int) $_POST['statut'];
-        $pdo->prepare('UPDATE adherent SET Numstatut = ? WHERE NumUsers = ?')->execute([$statut, $num]);
-        journalise('MAJ_STATUT_ADHERENT', 'NumUsers=' . $num);
-        flash('succes', 'Statut de l\'adhérent mis à jour.');
-        redirige('employe.php?onglet=adherents');
-    }
-
     /* ---- repondre a une question de FAQ ----------------------------- */
     if ($action === 'repondre_faq') {
         $num     = (int) $_POST['interaction'];
@@ -228,12 +218,15 @@ $aujourdhui = date('Y-m-d');
 
 $stats = [
     'adherents' => (int) $pdo->query(
-        "SELECT COUNT(*) FROM adherent a JOIN statut s ON s.Numstatut=a.Numstatut WHERE s.libelle_statut='Actif'")->fetchColumn(),
+    "SELECT COUNT(*) FROM adherent WHERE Date_finadh IS NULL OR Date_finadh >= CURDATE()"
+  )->fetchColumn(),
     'reservations' => (int) $pdo->query(
-        "SELECT COUNT(*) FROM reservation r JOIN creneaux c ON c.Numcreneaux=r.Numcreneaux
-         WHERE DATE(c.date_heure_debut)=CURDATE() AND r.statut_reservation<>'Annulee'")->fetchColumn(),
+        "SELECT COUNT(*) FROM reservation r JOIN activite a ON a.Numactivite=r.Numactivite
+         WHERE DATE(a.date_heure_debut)=CURDATE() AND r.statut_reservation<>'Annulee'"
+    )->fetchColumn(),
     'creneaux' => (int) $pdo->query(
-        'SELECT COUNT(*) FROM creneaux WHERE DATE(date_heure_debut)=CURDATE()')->fetchColumn(),
+        'SELECT COUNT(*) FROM activite WHERE DATE(date_heure_debut)=CURDATE()'
+    )->fetchColumn(),
     'dispo' => (int) $pdo->query(
         "SELECT COUNT(*) FROM equipement e JOIN statut s ON s.Numstatut=e.Numstatut WHERE s.libelle_statut='Disponible'")->fetchColumn(),
     'maint' => (int) $pdo->query(
@@ -243,21 +236,48 @@ $stats = [
 ];
 
 $remplissage = $pdo->query(
-    'SELECT * FROM v_creneau_places WHERE DATE(date_heure_debut)=CURDATE() ORDER BY date_heure_debut')->fetchAll();
+  "SELECT a.*, a.titre AS libelleact,
+      (SELECT COUNT(*) FROM reservation r
+       WHERE r.Numactivite = a.Numactivite AND r.statut_reservation <> 'Annulee') AS places_prises
+   FROM activite a
+   WHERE DATE(a.date_heure_debut) = CURDATE()
+   ORDER BY a.date_heure_debut"
+)->fetchAll();
 
 $adherents = $pdo->query(
-    'SELECT v.*, u.telUsers FROM v_adherent_complet v
-     JOIN utilisateur u ON u.NumUsers = v.NumUsers
-     ORDER BY v.nomUsers, v.prenomUsers')->fetchAll();
+  "SELECT ad.*, u.nomUsers, u.prenomUsers, u.mailUsers, u.telUsers,
+      CASE WHEN ad.Date_finadh IS NULL OR ad.Date_finadh >= CURDATE()
+         THEN 'Actif' ELSE 'Expire' END AS statut_adherent,
+      (SELECT abo.libelle_abo
+       FROM souscrire su
+       JOIN abonnement abo ON abo.Numabo = su.Numabo
+       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
+       ORDER BY su.date_debut DESC LIMIT 1) AS libelle_abo
+   FROM adherent ad
+   JOIN utilisateur u ON u.NumUsers = ad.NumUsers
+   ORDER BY u.nomUsers, u.prenomUsers"
+)->fetchAll();
 
-$statutsAdherent = $pdo->query(
-    "SELECT s.Numstatut, s.libelle_statut FROM statut_adherent sa
-     JOIN statut s ON s.Numstatut = sa.Numstatut ORDER BY s.Numstatut")->fetchAll();
+$statutsAdherent = [
+  ['libelle_statut' => 'Actif'],
+  ['libelle_statut' => 'Expire'],
+];
 
 $creneaux = $pdo->query(
-    'SELECT * FROM v_creneau_places ORDER BY date_heure_debut DESC LIMIT 40')->fetchAll();
+  "SELECT a.*, a.titre AS libelleact, s.nomsalle,
+      (SELECT COUNT(*) FROM reservation r
+       WHERE r.Numactivite = a.Numactivite AND r.statut_reservation <> 'Annulee') AS places_prises
+   FROM activite a
+   JOIN salle s ON s.Numsalle = a.Numsalle
+   ORDER BY a.date_heure_debut DESC
+   LIMIT 40"
+)->fetchAll();
 
-$activites = $pdo->query('SELECT * FROM activite ORDER BY libelleact')->fetchAll();
+$activites = $pdo->query(
+  'SELECT Numactivite AS Numact, titre AS libelleact,
+      TIMESTAMPDIFF(MINUTE, date_heure_debut, date_heure_fin) AS duree_minutes
+   FROM activite ORDER BY titre'
+)->fetchAll();
 $salles    = $pdo->query('SELECT * FROM salle ORDER BY nomsalle')->fetchAll();
 $coachs    = $pdo->query(
     "SELECT e.NumUsers, u.nomUsers, u.prenomUsers FROM employe e
@@ -265,26 +285,45 @@ $coachs    = $pdo->query(
      JOIN fonction f ON f.Numfonc=e.Numfonc WHERE f.libellefonc='Coach sportif'")->fetchAll();
 
 $equipements = $pdo->query(
-    'SELECT eq.*, t.libelletypeequip, sa.nomsalle, st.libelle_statut
+  "SELECT eq.*, eq.Numequip AS num_inventaire, t.libelletypeequip,
+      NULL AS nomsalle, st.libelle_statut
      FROM equipement eq
      JOIN type_equipement t ON t.Numtypeequip = eq.Numtypeequip
-     JOIN salle sa ON sa.Numsalle = eq.Numsalle
      JOIN statut st ON st.Numstatut = eq.Numstatut
-     ORDER BY eq.num_inventaire')->fetchAll();
+   ORDER BY eq.Numequip"
+)->fetchAll();
 
 $maintenances = $pdo->query(
-    'SELECT d.*, eq.num_inventaire, eq.nomequip, st.libelle_statut, sm.ordre,
+  "SELECT d.*, eq.Numequip AS num_inventaire, eq.nomequip, st.libelle_statut,
+      CASE st.libelle_statut
+        WHEN 'Ouverte' THEN 1
+        WHEN 'En cours' THEN 2
+        WHEN 'En attente de piece' THEN 3
+        WHEN 'Terminee' THEN 4
+        ELSE 0
+      END AS ordre,
             u.nomUsers, u.prenomUsers
      FROM demande_maintenance d
      JOIN equipement eq ON eq.Numequip = d.Numequip
      JOIN statut st ON st.Numstatut = d.Numstatut
      JOIN statut_maintenance sm ON sm.Numstatut = d.Numstatut
      JOIN utilisateur u ON u.NumUsers = d.NumUsers
-     ORDER BY sm.ordre, d.date_demandemaint DESC')->fetchAll();
+   ORDER BY ordre, d.date_demandemaint DESC"
+)->fetchAll();
 
 $statutsMaint = $pdo->query(
-    'SELECT s.Numstatut, s.libelle_statut, sm.ordre FROM statut_maintenance sm
-     JOIN statut s ON s.Numstatut = sm.Numstatut ORDER BY sm.ordre')->fetchAll();
+  "SELECT s.Numstatut, s.libelle_statut,
+      CASE s.libelle_statut
+        WHEN 'Ouverte' THEN 1
+        WHEN 'En cours' THEN 2
+        WHEN 'En attente de piece' THEN 3
+        WHEN 'Terminee' THEN 4
+        ELSE 0
+      END AS ordre
+   FROM statut_maintenance sm
+   JOIN statut s ON s.Numstatut = sm.Numstatut
+   ORDER BY ordre"
+)->fetchAll();
 
 $questionsFaq = $faq->questions();
 $messages = $maintenance ? [] : $messageController->getThreads($moi);
@@ -355,7 +394,7 @@ require __DIR__ . '/includes/header.php';
 
   <div class="table-scroll">
     <table class="tableau" id="t-adherents">
-      <thead><tr><th>Matricule</th><th>Nom</th><th>Contact</th><th>Formule</th><th>Statut</th><th>Fin</th><th>Action</th></tr></thead>
+      <thead><tr><th>Matricule</th><th>Nom</th><th>Contact</th><th>Formule</th><th>Statut</th><th>Fin</th></tr></thead>
       <tbody>
       <?php foreach ($adherents as $a):
           $cls = $a['statut_adherent'] === 'Actif' ? 'tag-ok'
@@ -367,20 +406,6 @@ require __DIR__ . '/includes/header.php';
           <td><?= e($a['libelle_abo'] ?? '—') ?></td>
           <td><span class="tag <?= $cls ?>"><?= e($a['statut_adherent']) ?></span></td>
           <td class="mono"><?= dateFr($a['Date_finadh']) ?></td>
-          <td>
-            <form method="post" style="display:flex;gap:6px;margin:0">
-              <?= champ_csrf() ?>
-              <input type="hidden" name="action" value="statut_adherent">
-              <input type="hidden" name="adherent" value="<?= (int) $a['NumUsers'] ?>">
-              <select name="statut" style="padding:5px 8px;border:1px solid #DCDAD2;border-radius:3px">
-                <?php foreach ($statutsAdherent as $s): ?>
-                  <option value="<?= (int) $s['Numstatut'] ?>" <?= $s['libelle_statut'] === $a['statut_adherent'] ? 'selected' : '' ?>>
-                    <?= e($s['libelle_statut']) ?></option>
-                <?php endforeach; ?>
-              </select>
-              <button class="btn btn-sm btn-ghost" type="submit">Appliquer</button>
-            </form>
-          </td>
         </tr>
       <?php endforeach; ?>
       </tbody>
@@ -476,7 +501,7 @@ require __DIR__ . '/includes/header.php';
           <td class="mono"><?= e($eq['num_inventaire']) ?></td>
           <td><?= e($eq['nomequip']) ?><br><span class="mono"><?= e($eq['marque'] . ' ' . $eq['modele']) ?></span></td>
           <td><?= e($eq['libelletypeequip']) ?></td>
-          <td><?= e($eq['nomsalle']) ?></td>
+          <td><?= e($eq['nomsalle'] ?? '—') ?></td>
           <td><span class="tag <?= $cls ?>"><?= e($eq['libelle_statut']) ?></span></td>
           <td class="mono"><?= dateFr($eq['date_derniere_maintenance']) ?></td>
           <td>

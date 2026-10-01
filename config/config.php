@@ -106,25 +106,9 @@ function flashs(): array
 // --- Journal d'activite ----------------------------------------------
 function journalise(string $action, ?string $cible = null): void
 {
-    static $initialise = false;
     $pdo = db();
 
     try {
-        if (!$initialise) {
-            $pdo->exec(
-                'CREATE TABLE IF NOT EXISTS journal (
-                    Numjournal INT AUTO_INCREMENT PRIMARY KEY,
-                    date_action DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    NumUsers INT NULL,
-                    action VARCHAR(60) NOT NULL,
-                    cible VARCHAR(120),
-                    ip VARCHAR(45),
-                    FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE SET NULL
-                ) ENGINE=InnoDB'
-            );
-            $initialise = true;
-        }
-
         $sql = 'INSERT INTO journal (NumUsers, action, cible, ip) VALUES (?, ?, ?, ?)';
         $pdo->prepare($sql)->execute([
             $_SESSION['user']['NumUsers'] ?? null,
@@ -133,7 +117,8 @@ function journalise(string $action, ?string $cible = null): void
             $_SERVER['REMOTE_ADDR'] ?? null,
         ]);
     } catch (PDOException $exception) {
-    }
+        error_log('[Apex Fitness] activity log write failed: ' . $exception->getMessage());
+        }
 }
 
 // --- Formatage -------------------------------------------------------

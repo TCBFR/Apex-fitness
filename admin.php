@@ -103,17 +103,17 @@ $statsRoles = [
 ];
 
 $parActivite = $pdo->query(
-    "SELECT a.libelleact, COUNT(r.Numres) AS n
+  "SELECT a.titre AS libelleact, COUNT(r.Numres) AS n
      FROM activite a
-     LEFT JOIN creneaux c ON c.Numact = a.Numact
-     LEFT JOIN reservation r ON r.Numcreneaux = c.Numcreneaux AND r.statut_reservation <> 'Annulee'
-     GROUP BY a.Numact ORDER BY n DESC")->fetchAll();
+   LEFT JOIN reservation r ON r.Numactivite = a.Numactivite AND r.statut_reservation <> 'Annulee'
+   GROUP BY a.Numactivite, a.titre ORDER BY n DESC")->fetchAll();
 
 $parAbonnement = $pdo->query(
-    "SELECT ab.libelle_abo, ab.type_abo, COUNT(s.NumUsers) AS n
+  "SELECT ab.libelle_abo, o.type_offre AS type_abo, COUNT(s.NumUsers) AS n
      FROM abonnement ab
+   JOIN offre o ON o.Numoffre = ab.Numoffre
      LEFT JOIN souscrire s ON s.Numabo = ab.Numabo AND s.statut_souscription = 'En cours'
-     GROUP BY ab.Numabo ORDER BY n DESC")->fetchAll();
+   GROUP BY ab.Numabo, ab.libelle_abo, o.type_offre ORDER BY n DESC")->fetchAll();
 
 $recettes = $pdo->query(
     "SELECT DATE_FORMAT(date_paiement,'%Y-%m') AS mois, SUM(montant) AS total, COUNT(*) AS n

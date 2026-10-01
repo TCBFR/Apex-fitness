@@ -10,7 +10,7 @@ final class CompteCrudController
                     (d.NumUsers IS NOT NULL) AS est_adherent,
                     f.libellefonc
              FROM utilisateur u
-             LEFT JOIN administrateur a ON a.NumUsers = u.NumUsers
+             LEFT JOIN admin a ON a.NumUsers = u.NumUsers
              LEFT JOIN employe e ON e.NumUsers = u.NumUsers
              LEFT JOIN adherent d ON d.NumUsers = u.NumUsers
              LEFT JOIN fonction f ON f.Numfonc = e.Numfonc
@@ -46,13 +46,10 @@ final class CompteCrudController
     }
     public function addAdherent(int $id): void
     {
-        $status = db()->query(
-            "SELECT Numstatut FROM statut WHERE type_statut='ADHERENT' AND libelle_statut='Actif'"
-        )->fetchColumn();
         db()->prepare(
-            'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh, Numstatut)
-             VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), ?)'
-        )->execute([$id, 'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT), (int) $status]);
+            'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh)
+             VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR))'
+        )->execute([$id, 'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT)]);
     }
     public function update(int $id, array $data): void
     {
@@ -96,7 +93,7 @@ final class CompteCrudController
     {
         if (in_array('ADMIN', $roles, true)) {
             $pdo->prepare(
-                'INSERT INTO administrateur (NumUsers, matriculeadmin, niveau_droits, date_affectationadmin)
+                'INSERT INTO admin (NumUsers, matriculeadmin, niveau_droits, date_affectationadmin)
                  VALUES (?, ?, ?, CURDATE())'
             )->execute([$id, 'ADM-' . str_pad((string) $id, 3, '0', STR_PAD_LEFT), 'TOTAL']);
         }
@@ -108,13 +105,10 @@ final class CompteCrudController
             )->execute([$id, 'EMP-' . str_pad((string) $id, 3, '0', STR_PAD_LEFT), $function]);
         }
         if (in_array('ADHERENT', $roles, true)) {
-            $status = (int) $pdo->query(
-                "SELECT Numstatut FROM statut WHERE type_statut='ADHERENT' AND libelle_statut='Actif'"
-            )->fetchColumn();
             $pdo->prepare(
-                'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh, Numstatut)
-                 VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), ?)'
-            )->execute([$id, 'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT), $status]);
+                'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh)
+                 VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR))'
+            )->execute([$id, 'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT)]);
         }
     }
 }
