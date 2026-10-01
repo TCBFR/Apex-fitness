@@ -155,6 +155,7 @@ require __DIR__ . '/includes/header.php';
     ] as $cle => $lib): ?>
       <a href="?onglet=<?= $cle ?>" <?= $onglet === $cle ? 'aria-current="page"' : '' ?>><?= $lib ?></a>
     <?php endforeach; ?>
+    <a href="<?= e(url('tables.php')) ?>">Tables de la base</a>
   </nav>
 
 <?php if ($onglet === 'avis'): ?>

@@ -35,15 +35,13 @@ $messages = $messageController->getAllThreads($moi);
    Fiche adherent : statut et abonnement en cours
    --------------------------------------------------------------------- */
 $st = db()->prepare(
-    "SELECT ad.*, s.libelle_statut,
-            ab.Numabo, ab.libelle_abo, ab.type_abo,
-            so.date_debut, so.date_fin, so.statut_souscription,
-            f.nb_reservations_max_mois
+  "SELECT ad.*,
+      CASE WHEN ad.Date_finadh IS NULL OR ad.Date_finadh >= CURDATE()
+         THEN 'Actif' ELSE 'Expire' END AS libelle_statut,
+      NULL AS Numabo, NULL AS libelle_abo, NULL AS type_abo,
+      NULL AS date_debut, NULL AS date_fin, NULL AS statut_souscription,
+      NULL AS nb_reservations_max_mois
      FROM adherent ad
-     JOIN statut s ON s.Numstatut = ad.Numstatut
-     LEFT JOIN souscrire so ON so.NumUsers = ad.NumUsers AND so.statut_souscription = 'En cours'
-     LEFT JOIN abonnement ab ON ab.Numabo = so.Numabo
-     LEFT JOIN freemium f ON f.Numabo = ab.Numabo
      WHERE ad.NumUsers = ?");
 $st->execute([$moi]);
 $fiche = $st->fetch();
@@ -200,17 +198,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'annul
 /* ---------------------------------------------------------------------
    Donnees des onglets
    --------------------------------------------------------------------- */
-$creneaux = db()->query(
+$tables = array_map('strtolower', db()->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN));
+$planningDisponible = in_array('creneaux', $tables, true)
+  && in_array('reservation', $tables, true)
+  && in_array('v_creneau_places', $tables, true);
+
+if ($planningDisponible) {
+  $creneaux = db()->query(
     'SELECT * FROM v_creneau_places WHERE date_heure_debut >= NOW()
      ORDER BY date_heure_debut')->fetchAll();
 
-$st = db()->prepare(
+  $st = db()->prepare(
     "SELECT Numcreneaux, statut_reservation FROM reservation
      WHERE NumUsers = ? AND statut_reservation <> 'Annulee'");
-$st->execute([$moi]);
-$dejaReserves = array_column($st->fetchAll(), 'statut_reservation', 'Numcreneaux');
+  $st->execute([$moi]);
+  $dejaReserves = array_column($st->fetchAll(), 'statut_reservation', 'Numcreneaux');
 
-$st = db()->prepare(
+  $st = db()->prepare(
     'SELECT r.*, c.date_heure_debut, c.date_heure_fin, a.libelleact, s.nomsalle
      FROM reservation r
      JOIN creneaux c ON c.Numcreneaux = r.Numcreneaux
@@ -218,13 +222,18 @@ $st = db()->prepare(
      JOIN salle s    ON s.Numsalle = c.Numsalle
      WHERE r.NumUsers = ?
      ORDER BY c.date_heure_debut DESC');
-$st->execute([$moi]);
-$mesReservations = $st->fetchAll();
+  $st->execute([$moi]);
+  $mesReservations = $st->fetchAll();
+} else {
+  $creneaux = [];
+  $dejaReserves = [];
+  $mesReservations = [];
+}
 
 $st = db()->prepare(
     'SELECT p.*, ab.libelle_abo FROM paiement p
      JOIN abonnement ab ON ab.Numabo = p.Numabo
-     WHERE p.NumUsers = ? ORDER BY p.date_paiement DESC');
+  WHERE p.NumAdh = ? ORDER BY p.date_paiement DESC');
 $st->execute([$moi]);
 $mesPaiements = $st->fetchAll();
 

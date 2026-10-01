@@ -1,0 +1,1 @@
+<?php require __DIR__ . '/../../views/crud/table.php';

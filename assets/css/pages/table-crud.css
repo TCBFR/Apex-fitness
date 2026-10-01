@@ -1,0 +1,191 @@
+.crud-page {
+    padding-block: 2rem 4rem;
+}
+
+.crud-heading,
+.crud-list-heading,
+.crud-form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.crud-heading h1 {
+    margin: 0;
+    text-transform: capitalize;
+}
+
+.crud-eyebrow {
+    margin: 0 0 .35rem;
+    color: #5d6964;
+    font-size: .85rem;
+}
+
+.crud-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+    gap: 2rem;
+    margin-top: 1.75rem;
+}
+
+.crud-form-section,
+.crud-list-section {
+    min-width: 0;
+}
+
+.crud-form-section h2,
+.crud-list-heading h2 {
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+}
+
+.crud-form {
+    display: grid;
+    gap: .9rem;
+}
+
+.crud-field {
+    display: grid;
+    gap: .35rem;
+    font-size: .9rem;
+}
+
+.crud-field input:not([type="checkbox"]),
+.crud-field select,
+.crud-field textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 2.6rem;
+    padding: .55rem .65rem;
+    border: 1px solid #aeb8b2;
+    border-radius: 4px;
+    background: #fff;
+    color: #18221d;
+    font: inherit;
+}
+
+.crud-field textarea {
+    min-height: 6rem;
+    resize: vertical;
+}
+
+.crud-field input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    accent-color: #167c5a;
+}
+
+.crud-form-actions {
+    justify-content: flex-start;
+    margin-top: .4rem;
+}
+
+.crud-cancel,
+.crud-row-actions a,
+.crud-delete {
+    color: #176849;
+    text-decoration: underline;
+    text-underline-offset: .15em;
+}
+
+.crud-note,
+.crud-list-heading span {
+    color: #59665f;
+    font-size: .85rem;
+}
+
+.crud-table-scroll {
+    max-width: 100%;
+    overflow: auto;
+    border: 1px solid #d5ddd8;
+}
+
+.crud-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+}
+
+.crud-table th,
+.crud-table td {
+    padding: .65rem .75rem;
+    border-bottom: 1px solid #e0e6e2;
+    text-align: left;
+    vertical-align: top;
+}
+
+.crud-table th {
+    position: sticky;
+    top: 0;
+    background: #edf2ef;
+    white-space: nowrap;
+}
+
+.crud-row-actions {
+    white-space: nowrap;
+}
+
+.crud-row-actions form {
+    display: inline;
+    margin-left: .5rem;
+}
+
+.crud-delete {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    cursor: pointer;
+}
+
+.crud-empty {
+    padding: 1.5rem !important;
+    color: #59665f;
+    text-align: center !important;
+}
+
+.crud-table-catalog {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0;
+    margin: 2rem 0 0;
+    padding: 0;
+    border-top: 1px solid #d5ddd8;
+    list-style: none;
+}
+
+.crud-table-catalog li {
+    border-bottom: 1px solid #d5ddd8;
+}
+
+.crud-table-catalog a {
+    display: block;
+    padding: .9rem .65rem;
+    color: #176849;
+    text-decoration: none;
+    text-transform: capitalize;
+}
+
+.crud-table-catalog a:hover,
+.crud-table-catalog a:focus-visible {
+    background: #edf2ef;
+    text-decoration: underline;
+}
+
+@media (max-width: 850px) {
+    .crud-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .crud-page {
+        padding-inline: 1rem;
+    }
+
+    .crud-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

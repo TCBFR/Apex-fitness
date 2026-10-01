@@ -9,6 +9,7 @@ $pagesCss = [
 	'contact' => 'contact.css',
 	'faq' => 'faq.css',
 	'login' => 'login.css',
+	'crud' => 'table-crud.css',
 ];
 $pagesJs = [
 	'accueil' => 'index.js',

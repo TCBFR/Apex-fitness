@@ -43,14 +43,17 @@ function roles_de(int $numUsers): array
 {
     $roles = [];
     foreach ([
-        'ADMIN'    => 'SELECT 1 FROM administrateur WHERE NumUsers = ?',
+        'ADMIN'    => 'SELECT 1 FROM admin          WHERE NumUsers = ?',
         'EMPLOYE'  => 'SELECT 1 FROM employe        WHERE NumUsers = ?',
         'ADHERENT' => 'SELECT 1 FROM adherent       WHERE NumUsers = ?',
     ] as $role => $sql) {
-        $st = db()->prepare($sql);
-        $st->execute([$numUsers]);
-        if ($st->fetchColumn()) {
-            $roles[] = $role;
+        try {
+            $st = db()->prepare($sql);
+            $st->execute([$numUsers]);
+            if ($st->fetchColumn()) {
+                $roles[] = $role;
+            }
+        } catch (PDOException $exception) {
         }
     }
     return $roles;

@@ -17,13 +17,11 @@ final class Avis extends Model
         $this->assureColonneReponse();
 
         return $this->pdo->query(
-            "SELECT a.NumInteraction, a.noteavis, a.commentaire, a.reponse, i.date_interaction,
-                    u.prenomUsers, u.nomUsers
+            "SELECT a.Numavis AS NumInteraction, a.noteavis, a.commentaire, a.reponse,
+                a.date_avis AS date_interaction, u.prenomUsers, u.nomUsers
              FROM avis a
-             JOIN interaction_adherent i ON i.NumInteraction = a.NumInteraction
-             JOIN adherent ad ON ad.NumUsers = i.NumUsers
-             JOIN utilisateur u ON u.NumUsers = ad.NumUsers
-             ORDER BY i.date_interaction DESC"
+             JOIN utilisateur u ON u.NumUsers = a.NumAdh
+             ORDER BY a.date_avis DESC"
         )->fetchAll();
     }
 
@@ -36,25 +34,11 @@ final class Avis extends Model
             throw new InvalidArgumentException('Votre avis doit contenir au moins 10 caractères.');
         }
 
-        $this->pdo->beginTransaction();
-        try {
-            $interaction = $this->pdo->prepare(
-                "INSERT INTO interaction_adherent (NumUsers, type_interaction)
-                 VALUES (?, 'AVIS')"
-            );
-            $interaction->execute([$numUtilisateur]);
-            $numInteraction = (int) $this->pdo->lastInsertId();
-
-            $avis = $this->pdo->prepare(
-                'INSERT INTO avis (NumInteraction, noteavis, commentaire) VALUES (?, ?, ?)'
-            );
-            $avis->execute([$numInteraction, $note, $commentaire]);
-            $this->pdo->commit();
-            return $numInteraction;
-        } catch (Throwable $exception) {
-            $this->pdo->rollBack();
-            throw $exception;
-        }
+        $avis = $this->pdo->prepare(
+            'INSERT INTO avis (noteavis, commentaire, NumAdh) VALUES (?, ?, ?)'
+        );
+        $avis->execute([$note, $commentaire, $numUtilisateur]);
+        return (int) $this->pdo->lastInsertId();
     }
 
     public function repondre(int $numInteraction, string $reponse): void
@@ -66,7 +50,7 @@ final class Avis extends Model
             throw new InvalidArgumentException('La réponse ne peut pas être vide.');
         }
 
-        $st = $this->pdo->prepare('UPDATE avis SET reponse = ? WHERE NumInteraction = ?');
+        $st = $this->pdo->prepare('UPDATE avis SET reponse = ? WHERE Numavis = ?');
         $st->execute([$reponse, $numInteraction]);
 
         if ($st->rowCount() === 0) {

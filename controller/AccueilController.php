@@ -5,7 +5,14 @@ final class AccueilController
     public function getAll(): array
     {
         return db()->query(
-            'SELECT * FROM activite ORDER BY libelleact'
+            'SELECT Numactivite,
+        niveau,
+        date_heure_debut,
+        date_heure_fin,
+        capacite_max,
+        description
+ FROM activite
+ ORDER BY titre'
         )->fetchAll();
     }
 }

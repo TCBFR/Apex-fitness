@@ -85,6 +85,15 @@ qu'au confort (menu, filtres, confirmations).
   La déconnexion détruit toute la session et tous les rôles
   portés par le compte connecté.
 
+## CRUD par table
+
+Depuis **Administration > Tables de la base**, un administrateur peut consulter,
+créer, modifier ou supprimer les enregistrements des 26 tables SQL. Chaque
+table possède son propre dossier avec `controller/`, `model/`, `view/` et un
+`index.php` à sa racine. Le moteur commun lit les colonnes, clés primaires et
+clés étrangères depuis les métadonnées MySQL ; les identifiants restent
+configurés dans `config/config.php`.
+
 ## Sécurité
 
 - Mots de passe hachés avec `password_hash()` / `password_verify()`.
