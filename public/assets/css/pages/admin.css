@@ -1,0 +1,194 @@
+.admin-page {
+  min-height: 100vh;
+  background: #f1f0eb;
+}
+
+.admin-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+}
+
+.admin-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: 24px 16px;
+  background: #15171b;
+  color: #fff;
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.admin-brand-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  background: #1e5f4b;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.admin-brand strong,
+.admin-brand small {
+  display: block;
+}
+
+.admin-brand small {
+  margin-top: 3px;
+  color: #aeb4ba;
+}
+
+.admin-navigation {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-navigation a,
+.admin-back {
+  padding: 11px 12px;
+  color: #c3c9d0;
+  text-decoration: none;
+  border-radius: 3px;
+}
+
+.admin-navigation a:hover,
+.admin-navigation a[aria-current="page"] {
+  background: #29312e;
+  color: #fff;
+}
+
+.admin-back {
+  margin-top: auto;
+  border: 1px solid #454c55;
+}
+
+.admin-main {
+  min-width: 0;
+}
+
+.admin-topbar {
+  display: flex;
+  min-height: 92px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 36px;
+  background: #fff;
+  border-bottom: 1px solid #dcdad2;
+}
+
+.admin-topbar h1,
+.admin-heading h2 {
+  margin: 0;
+}
+
+.admin-topbar h1 {
+  font-size: 22px;
+}
+
+.admin-eyebrow {
+  margin: 0 0 4px;
+  color: #1e5f4b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+
+.admin-account {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.admin-account a {
+  color: #9b3a2b;
+  text-decoration: none;
+}
+
+.admin-content {
+  padding: 30px 36px 48px;
+}
+
+.admin-heading {
+  margin-bottom: 22px;
+}
+
+.admin-heading h2 {
+  font-size: 26px;
+}
+
+.admin-flashes {
+  padding: 18px 36px 0;
+}
+
+.admin-flashes .flash {
+  margin-bottom: 0;
+}
+
+.admin-content .compteurs {
+  margin-top: 0;
+}
+
+@media (max-width: 800px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-sidebar {
+    gap: 18px;
+    padding: 16px;
+  }
+
+  .admin-navigation {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .admin-navigation a {
+    white-space: nowrap;
+  }
+
+  .admin-back {
+    margin-top: 0;
+  }
+
+  .admin-topbar,
+  .admin-content {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .admin-topbar {
+    min-height: 76px;
+  }
+
+  .admin-flashes {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-account {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .admin-heading h2 {
+    font-size: 22px;
+  }
+}

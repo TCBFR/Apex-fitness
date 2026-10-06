@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../controller/MessageController.php';
+require_once __DIR__ . '/../config/function.php';
+require_once __DIR__ . '/../message_contact/controller/MessageController.php';
 exige_role('ADHERENT');
 
 $moi    = utilisateur()['NumUsers'];

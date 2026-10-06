@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../../config/Model.php';
-class InteractionAdherent extends Model
+require_once __DIR__ . '/../../config/function.php';
+class InteractionAdherent
 {
     protected const TABLE = 'interaction_adherent';
 
@@ -134,13 +134,14 @@ class InteractionAdherent extends Model
 
     protected int $numUtilisateur;
     protected string $typeInteraction;
+    protected PDO $pdo;
 
     public function __construct(int $numUtilisateur, string $typeInteraction, ?PDO $pdo = null)
     {
         if (!in_array($typeInteraction, ['AVIS', 'FAQ'], true)) {
             throw new InvalidArgumentException('Type d’interaction invalide.');
         }
-        parent::__construct($pdo);
+        $this->pdo = $pdo ?? db();
         $this->numUtilisateur = $numUtilisateur;
         $this->typeInteraction = $typeInteraction;
     }

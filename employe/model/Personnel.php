@@ -1,9 +1,16 @@
 <?php
 
-require_once __DIR__ . '/../../config/Model.php';
+require_once __DIR__ . '/../../config/function.php';
 
-final class Personnel extends Model
+final class Personnel
 {
+    private PDO $pdo;
+
+    public function __construct(?PDO $pdo = null)
+    {
+        $this->pdo = $pdo ?? db();
+    }
+
     public function tous(): array
     {
         return $this->pdo->query(

@@ -257,7 +257,7 @@ class Utilisateur
                     (a.NumUsers IS NOT NULL) AS est_admin,
                     (e.NumUsers IS NOT NULL) AS est_employe,
                     (d.NumUsers IS NOT NULL) AS est_adherent,
-                    f.libellefonc
+                    f.libellefonc, e.matriculeemp, e.Date_embaucheemp
              FROM utilisateur u
              LEFT JOIN admin a ON a.NumUsers = u.NumUsers
              LEFT JOIN employe e ON e.NumUsers = u.NumUsers

@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../controller/AvisPageController.php';
+require_once __DIR__ . '/../config/function.php';
+require_once __DIR__ . '/controller/AvisPageController.php';
 $controller = new AvisPageController();
 $erreur = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

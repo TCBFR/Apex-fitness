@@ -1,8 +1,15 @@
 <?php
-require_once __DIR__ . '/../../config/Model.php';
+require_once __DIR__ . '/../../config/function.php';
 
-final class MessageSuppression extends Model
+final class MessageSuppression
 {
+    private PDO $pdo;
+
+    public function __construct(?PDO $pdo = null)
+    {
+        $this->pdo = $pdo ?? db();
+    }
+
     public function delete(int $userId, int $messageId): void
     {
         $parent = $this->parent($userId, $messageId);

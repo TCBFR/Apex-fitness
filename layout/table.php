@@ -17,10 +17,10 @@ require __DIR__ . '/header.php';
 <section class="crud-page wrap">
     <div class="crud-heading">
         <div>
-            <p class="crud-eyebrow"><a href="<?= e(url('admin/tables.php')) ?>">Administration des tables</a></p>
+            <p class="crud-eyebrow">Administration</p>
             <h1><?= e($titrePage) ?></h1>
         </div>
-        <a class="btn btn-sm" href="<?= e(url('admin/tables.php')) ?>">Toutes les tables</a>
+        <a class="btn btn-sm" href="<?= e(url('admin/espace.php')) ?>">Retour à l’administration</a>
     </div>
 
     <?php if ($crud['error'] !== null): ?>

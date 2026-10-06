@@ -1,8 +1,15 @@
 <?php
 
-require_once __DIR__ . '/../../config/Model.php';
-final class Paiement extends Model
+require_once __DIR__ . '/../../config/function.php';
+
+final class Paiement
 {
+    private PDO $pdo;
+
+    public function __construct(?PDO $pdo = null)
+    {
+        $this->pdo = $pdo ?? db();
+    }
     protected const TABLE = 'paiement';
 
     public function create(PDO $pdo, array $columns, array $data): void

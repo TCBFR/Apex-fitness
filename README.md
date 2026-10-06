@@ -55,13 +55,18 @@ utilisateur/        connexion, déconnexion et CRUD
 <autres entités>/   un index.php, model/ et view/ pour chaque entité
 layout/table.php    gabarit commun utilisé par les vues des entités
 config/             connexion PDO, authentification, sessions, CSRF, helpers
+config/function.php fonctions partagées (base, session, authentification, affichage)
 layout/             en-tête et pied de page partagés
-controller/         contrôleurs métier réutilisés par les espaces fonctionnels
+<entite>/controller contrôleurs rangés dans le dossier de leur fonctionnalité
 public/index.php    point d’entrée et routes autorisées
 public/.htaccess    réécriture des URL vers le point d’entrée
 public/assets/      feuilles CSS, scripts JavaScript et images
 sql/apex_fitness.sql
 ```
+
+`config/config.php` contient uniquement la configuration, sans classe ni
+fonction. Les fonctions communes sont chargées depuis `config/function.php`.
+Les contrôleurs se trouvent dans le sous-dossier `controller/` de leur entité.
 
 ## Règles de gestion implémentées
 
@@ -106,10 +111,10 @@ qu'au confort (menu, filtres, confirmations).
 
 ## CRUD par table
 
-Depuis **Administration > Tables de la base**, un administrateur peut consulter,
-créer, modifier ou supprimer les enregistrements des 26 tables SQL. Chaque
-table possède son propre dossier avec `model/`, `view/` et `index.php`. Les
-champs, clés primaires et clés étrangères sont lus depuis
+Un administrateur peut consulter, créer, modifier ou supprimer les
+enregistrements des tables depuis les pages de chaque entité. Chaque table
+possède son propre dossier avec `model/`, `view/` et `index.php`. Les champs,
+clés primaires et clés étrangères sont lus depuis
 les métadonnées MySQL ; les opérations de chaque table sont exposées par les
 méthodes de sa classe métier. Les identifiants restent configurés dans
 `config/config.php`.

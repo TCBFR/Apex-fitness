@@ -1,6 +1,13 @@
 <?php
-require_once __DIR__ . '/../../config/Model.php';
-final class Message extends Model {
+require_once __DIR__ . '/../../config/function.php';
+final class Message {
+    private PDO $pdo;
+
+    public function __construct(?PDO $pdo = null)
+    {
+        $this->pdo = $pdo ?? db();
+    }
+
     public function getAllFor(int $userId): array
     {
         $this->assureTable();

@@ -1,7 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../controller/GestionController.php';
+require_once __DIR__ . '/../config/function.php';
+require_once __DIR__ . '/controller/GestionController.php';
 require_once __DIR__ . '/model/FournisseurDomain.php';
 
 exige_role('EMPLOYE');

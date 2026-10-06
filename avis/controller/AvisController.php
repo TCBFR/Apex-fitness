@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../avis/model/AvisDomain.php';
+require_once __DIR__ . '/../model/AvisDomain.php';
 
 final class AvisController
 {

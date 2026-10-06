@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../config/function.php';
 
 $pages = [
     'accueil/index.php' => '../accueil/index.php',
@@ -14,7 +14,6 @@ $pages = [
     'adherent/espace.php' => '../adherent/espace.php',
     'admin/index.php' => '../admin/index.php',
     'admin/espace.php' => '../admin/espace.php',
-    'admin/tables.php' => '../admin/tables.php',
     'avis/index.php' => '../avis/index.php',
     'avis/public.php' => '../avis/public.php',
     'basic/index.php' => '../basic/index.php',
@@ -53,6 +52,12 @@ if (!is_string($requestPath)) {
     exit('Adresse invalide.');
 }
 
+$queryRoute = $_GET['route'] ?? null;
+if ($queryRoute !== null && !is_string($queryRoute)) {
+    http_response_code(400);
+    exit('Adresse invalide.');
+}
+
 $base = baseUrl();
 if ($base !== '' && str_starts_with($requestPath, $base . '/')) {
     $requestPath = substr($requestPath, strlen($base));
@@ -61,7 +66,7 @@ if ($base !== '' && str_starts_with($requestPath, $base . '/')) {
 }
 
 $requestPath = rawurldecode($requestPath);
-$route = trim($requestPath, '/');
+$route = $queryRoute !== null ? rawurldecode($queryRoute) : trim($requestPath, '/');
 if ($route === '' || $route === 'index.php') {
     $route = 'accueil/index.php';
 }

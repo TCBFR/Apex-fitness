@@ -1,11 +1,24 @@
 <?php
-require_once __DIR__ . '/../controller/AvisController.php';
-require_once __DIR__ . '/../config/auth.php';
+require_once __DIR__ . '/../avis/controller/AvisController.php';
+require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../utilisateur/model/utilisateur.php';
 exige_role('ADMIN');
 
 $onglet = $_GET['onglet'] ?? 'utilisateurs';
+if (!is_string($onglet) || !in_array($onglet, ['utilisateurs', 'maintenance', 'avis', 'statistiques', 'messages'], true)) {
+    $onglet = 'utilisateurs';
+}
+$vueCompte = $_GET['compte'] ?? 'liste';
+$vueMaintenance = $_GET['maintenance'] ?? 'liste';
 $pdo    = db();
+$fonctions = Utilisateur::toutesLesFonctions();
+$fonctionMaintenance = null;
+foreach ($fonctions as $fonction) {
+    if (str_contains(strtolower($fonction['libellefonc']), 'maintenance')) {
+        $fonctionMaintenance = $fonction;
+        break;
+    }
+}
 /* =====================================================================
    ACTIONS
    ===================================================================== */
@@ -25,6 +38,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('erreur', $message);
         }
         redirige('admin/espace.php?onglet=utilisateurs');
+    }
+
+    if ($action === 'creer_technicien') {
+        try {
+            if ($fonctionMaintenance === null) {
+                throw new RuntimeException('Aucune fonction de maintenance n’est configurée.');
+            }
+            $donnees = $_POST;
+            $donnees['roles'] = ['EMPLOYE'];
+            $donnees['fonction'] = (int) $fonctionMaintenance['Numfonc'];
+            $num = Utilisateur::creerCompte($donnees);
+            journalise('CREATION_TECHNICIEN_MAINTENANCE', 'NumUsers=' . $num);
+            flash('succes', 'Compte technicien de maintenance créé.');
+        } catch (Throwable $exception) {
+            flash('erreur', $exception->getMessage());
+        }
+        redirige('admin/espace.php?onglet=maintenance');
+    }
+
+    if ($action === 'modifier_technicien') {
+        $num = (int) ($_POST['utilisateur'] ?? 0);
+        try {
+            $technicien = $pdo->prepare(
+                'SELECT e.NumUsers FROM employe e
+                 JOIN fonction f ON f.Numfonc = e.Numfonc
+                 WHERE e.NumUsers = ? AND LOWER(f.libellefonc) LIKE ?'
+            );
+            $technicien->execute([$num, '%maintenance%']);
+            if (!$technicien->fetchColumn()) {
+                throw new RuntimeException('Ce compte n’est pas un technicien de maintenance.');
+            }
+            Utilisateur::modifierCompte($num, $_POST);
+            journalise('MODIFICATION_TECHNICIEN_MAINTENANCE', 'NumUsers=' . $num);
+            flash('succes', 'Compte technicien mis à jour.');
+        } catch (Throwable $exception) {
+            flash('erreur', $exception->getMessage());
+        }
+        redirige('admin/espace.php?onglet=maintenance');
     }
 
     if ($action === 'ajouter_adherent') {
@@ -75,7 +126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       } catch (Throwable $exception) {
         flash('erreur', $exception->getMessage());
         }
-        redirige('admin/espace.php?onglet=utilisateurs');
+        redirige(($_POST['retour'] ?? '') === 'maintenance'
+            ? 'admin/espace.php?onglet=maintenance'
+            : 'admin/espace.php?onglet=utilisateurs');
     }
 }
 
@@ -83,12 +136,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
    DONNEES
    ===================================================================== */
 $utilisateurs = Utilisateur::tousLesComptes();
-$fonctions = Utilisateur::toutesLesFonctions();
+$techniciensMaintenance = array_values(array_filter(
+    $utilisateurs,
+    static fn(array $user): bool => $user['est_employe']
+        && str_contains(strtolower((string) ($user['libellefonc'] ?? '')), 'maintenance')
+));
 $compteModifie = null;
+$compteConsulte = null;
+$technicienSelectionne = null;
 foreach ($utilisateurs as $user) {
-  if ((int) $user['NumUsers'] === (int) ($_GET['modifier'] ?? 0)) {
-    $compteModifie = $user;
-    break;
+  if ((int) $user['NumUsers'] === (int) ($_GET['id'] ?? 0)) {
+    if ($vueCompte === 'modifier') {
+      $compteModifie = $user;
+    } elseif ($vueCompte === 'voir') {
+      $compteConsulte = $user;
+    }
+  }
+  foreach ($techniciensMaintenance as $technicien) {
+      if ((int) $technicien['NumUsers'] === (int) ($_GET['id'] ?? 0)) {
+          $technicienSelectionne = $technicien;
+          break;
+      }
   }
 }
 
@@ -122,40 +190,78 @@ $parEtat = $pdo->query(
      FROM statut s LEFT JOIN equipement e ON e.Numstatut = s.Numstatut
      WHERE s.type_statut = 'EQUIPEMENT' GROUP BY s.Numstatut")->fetchAll();
 
-$journal = $pdo->query(
-    'SELECT j.*, u.nomUsers, u.prenomUsers FROM journal j
-     LEFT JOIN utilisateur u ON u.NumUsers = j.NumUsers
-     ORDER BY j.date_action DESC LIMIT 80')->fetchAll();
-
 $messages = $pdo->query('SELECT * FROM message_contact ORDER BY date_envoi DESC LIMIT 30')->fetchAll();
 $avisAdmin = (new AvisController())->index();
 
 $maxRes = max(1, ...array_map(fn($r) => (int) $r['n'], $parActivite ?: [['n' => 1]]));
 
-$titrePage  = 'Administration';
-$pageActive = 'admin';
-require __DIR__ . '/../layout/header.php';
+$flashMessages = flashs();
+$adminUser = utilisateur();
 ?>
 
-<div class="wrap page-head">
-  <h1>Administration</h1>
-  <p class="lead">Comptes, rôles, statistiques et journal d'activité.</p>
-</div>
-
-<div class="wrap section">
-  <nav class="onglets">
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration - <?= e(APP_NOM) ?></title>
+  <link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
+  <link rel="stylesheet" href="<?= e(url('assets/css/pages/admin.css')) ?>">
+</head>
+<body class="admin-page">
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="<?= e(url('admin/espace.php')) ?>">
+      <span class="admin-brand-mark">A</span>
+      <span><strong>Apex Fitness</strong><small>Administration</small></span>
+    </a>
+    <nav class="admin-navigation" aria-label="Menu administration">
     <?php foreach ([
         'utilisateurs' => 'Utilisateurs et rôles',
+        'maintenance'  => 'Techniciens de maintenance',
         'avis'         => 'Avis clients',
         'statistiques' => 'Statistiques',
         'messages'     => 'Messages reçus',
-        'journal'      => "Journal d'activité",
     ] as $cle => $lib): ?>
-      <a href="?onglet=<?= $cle ?>" <?= $onglet === $cle ? 'aria-current="page"' : '' ?>><?= $lib ?></a>
+      <a href="<?= e(url('admin/espace.php?onglet=' . $cle)) ?>" <?= $onglet === $cle ? 'aria-current="page"' : '' ?>><?= e($lib) ?></a>
     <?php endforeach; ?>
-    <a href="<?= e(url('admin/tables.php')) ?>">Tables de la base</a>
-  </nav>
+    </nav>
+    <a class="admin-back" href="<?= e(url('accueil/index.php')) ?>">Retour au site</a>
+  </aside>
 
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <div>
+        <p class="admin-eyebrow">ESPACE SÉCURISÉ</p>
+        <h1>Administration</h1>
+      </div>
+      <div class="admin-account">
+        <span><?= e(($adminUser['prenomUsers'] ?? '') . ' ' . ($adminUser['nomUsers'] ?? '')) ?></span>
+        <a href="<?= e(url('utilisateur/deconnexion.php')) ?>">Déconnexion</a>
+      </div>
+    </div>
+
+    <?php if ($flashMessages): ?>
+      <div class="admin-flashes">
+        <?php foreach ($flashMessages as $message): ?>
+          <p class="flash flash-<?= e($message['type']) ?>"><?= e($message['message']) ?></p>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <main class="admin-content">
+      <div class="admin-heading">
+        <div>
+          <p class="admin-eyebrow">TABLEAU DE BORD</p>
+          <h2><?= e([
+              'utilisateurs' => 'Utilisateurs et rôles',
+              'maintenance' => 'Techniciens de maintenance',
+              'avis' => 'Avis clients',
+              'statistiques' => 'Statistiques',
+              'messages' => 'Messages reçus',
+          ][$onglet] ?? 'Administration') ?></h2>
+        </div>
+      </div>
 <?php if ($onglet === 'avis'): ?>
 
   <?php if (!$avisAdmin): ?>
@@ -193,7 +299,26 @@ require __DIR__ . '/../layout/header.php';
   <?php endif; ?>
 
 <?php elseif ($onglet === 'utilisateurs'): ?>
-  <?php require __DIR__ . '/view/comptes.php'; ?>
+  <?php if ($vueCompte === 'creer'): ?>
+    <?php require __DIR__ . '/view/creer-compte.php'; ?>
+  <?php elseif ($vueCompte === 'modifier' && $compteModifie): ?>
+    <?php require __DIR__ . '/view/modifier-compte.php'; ?>
+  <?php elseif ($vueCompte === 'voir' && $compteConsulte): ?>
+    <?php require __DIR__ . '/view/voir-compte.php'; ?>
+  <?php else: ?>
+    <?php require __DIR__ . '/view/comptes.php'; ?>
+  <?php endif; ?>
+
+<?php elseif ($onglet === 'maintenance'): ?>
+  <?php if ($vueMaintenance === 'creer'): ?>
+    <?php require __DIR__ . '/view/creer-technicien.php'; ?>
+  <?php elseif ($vueMaintenance === 'modifier' && $technicienSelectionne): ?>
+    <?php require __DIR__ . '/view/modifier-technicien.php'; ?>
+  <?php elseif ($vueMaintenance === 'voir' && $technicienSelectionne): ?>
+    <?php require __DIR__ . '/view/voir-technicien.php'; ?>
+  <?php else: ?>
+    <?php require __DIR__ . '/view/techniciens-maintenance.php'; ?>
+  <?php endif; ?>
 
 <?php elseif ($onglet === 'statistiques'): ?>
 
@@ -248,31 +373,10 @@ require __DIR__ . '/../layout/header.php';
 
 <?php elseif ($onglet === 'messages'): ?>
   <?php require __DIR__ . '/../message_contact/view/admin-contact.php'; ?>
-
-<?php else: ?>
-
-  <div class="barre-outils">
-    <input type="search" data-filtre="#t-journal" placeholder="Action, utilisateur ou cible" aria-label="Filtrer le journal">
-  </div>
-  <div class="table-scroll">
-    <table class="tableau" id="t-journal">
-      <thead><tr><th>Date</th><th>Utilisateur</th><th>Action</th><th>Cible</th><th>IP</th></tr></thead>
-      <tbody>
-      <?php foreach ($journal as $j): ?>
-        <tr>
-          <td class="mono"><?= dateFr($j['date_action'], true) ?></td>
-          <td><?= $j['nomUsers'] ? e($j['prenomUsers'] . ' ' . $j['nomUsers']) : 'Anonyme' ?></td>
-          <td><span class="tag tag-mute"><?= e($j['action']) ?></span></td>
-          <td class="mono"><?= e($j['cible']) ?></td>
-          <td class="mono"><?= e($j['ip']) ?></td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-    <p class="vide" data-vide hidden>Aucune entrée ne correspond.</p>
-  </div>
-
 <?php endif; ?>
+    </main>
+  </div>
 </div>
-
-<?php require __DIR__ . '/../layout/footer.php'; ?>
+<script src="<?= e(url('assets/js/app.js')) ?>"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../faq/model/FaqDomain.php';
+require_once __DIR__ . '/../model/FaqDomain.php';
 
 final class FaqController
 {

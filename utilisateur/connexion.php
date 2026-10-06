@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../controller/LoginController.php';
+require_once __DIR__ . '/../config/function.php';
+require_once __DIR__ . '/controller/LoginController.php';
 if (connecte()) redirige(page_accueil_role());
 $controller = new LoginController();
 $erreur = null;

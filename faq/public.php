@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../controller/FaqPageController.php';
+require_once __DIR__ . '/../config/function.php';
+require_once __DIR__ . '/controller/FaqPageController.php';
 $controller = new FaqPageController();
 $erreur = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

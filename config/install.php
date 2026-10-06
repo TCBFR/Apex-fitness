@@ -9,7 +9,7 @@
  * SUPPRIMEZ CE FICHIER une fois l'installation terminee.
  */
 
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/function.php';
 
 $motDePasseDemo = 'apex2026';
 $rapport = [];

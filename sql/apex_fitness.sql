@@ -131,13 +131,13 @@ INSERT INTO offre (Numoffre, libelle_offre, description_offre, type_offre) VALUE
   (3, 'Premium', 'Acces mensuel avec coaching inclus.', 'PLUS');
 
 INSERT INTO freemium (Numoffre, prix_mensuel_reduit, taux_reduction, justificatif_requis, nb_reservations_max_mois)
-VALUES (1, 143.00, 10.00, 'Justificatif etudiant ou demandeur d emploi', 4);
+VALUES (1, 20.00, 10.00, 'Justificatif etudiant ou demandeur d emploi', 4);
 
 INSERT INTO basic (Numoffre, prix_annuel, duree_engagement_mois, reconduction_tacite)
-VALUES (2, 2000.00, 12, 1);
+VALUES (2, 350.00, 12, 1);
 
 INSERT INTO abonnement_plus (Numoffre, prix_mensuel_plus, supplement_mensuel, seances_coach_incluses, acces_illimite)
-VALUES (3, 300.00, 0.00, 4, 1);
+VALUES (3, 45.00, 0.00, 4, 1);
 
 INSERT INTO abonnement (libelle_abo, description_abo, date_mise_en_service, actif_abo, Numoffre) VALUES
   ('Freemium', 'Formule mensuelle a tarif reduit.', CURRENT_DATE, 1, 1),

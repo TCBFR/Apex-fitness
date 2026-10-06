@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../controller/ContactController.php';
+require_once __DIR__ . '/../config/function.php';
+require_once __DIR__ . '/controller/ContactController.php';
 $controller = new ContactController();
 $donnees = $controller->get();
 $erreurs = [];
