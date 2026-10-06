@@ -5,15 +5,24 @@ XT sur STATUT, INTERACTION_ADHERENT et ABONNEMENT).
 
 ## Installation
 
-1. Copier le dossier dans la racine web (`htdocs/`, `www/`, `/var/www/html`).
+1. Copier le projet sur le serveur puis configurer le **DocumentRoot** (racine
+   web) Apache sur le dossier `public/`, pas sur la racine du projet. Autoriser
+   les règles `.htaccess` avec `AllowOverride All`.
 2. Importer `sql/apex_fitness.sql` dans phpMyAdmin ou en ligne de commande :
    ```
    mysql -u root -p < sql/apex_fitness.sql
    ```
-3. Adapter les identifiants dans `config/config.php` (`DB_USER`, `DB_PASS`,
-   et `APP_BASE` si le site est dans un sous-dossier).
-4. Ouvrir `install.php` dans le navigateur, puis **supprimer ce fichier**.
-5. Se connecter depuis `login.php`.
+3. Adapter les identifiants dans `config/config.php` (`DB_USER`, `DB_PASS`).
+   `APP_BASE` est détecté automatiquement ; le renseigner uniquement si
+   l’application est publiée sous un chemin personnalisé.
+4. Ouvrir `/config/install.php` dans le navigateur, puis **supprimer ce fichier**
+   du projet après l’installation.
+5. Ouvrir `/` puis se connecter depuis le lien « Connexion ».
+
+Le dossier `public/` est le seul répertoire à exposer par le serveur web. Il
+contient les ressources CSS, JavaScript et images, le point d’entrée `index.php`
+et les règles de réécriture Apache. Les autres pages PHP sont chargées par ce
+point d’entrée à partir d’une liste de routes autorisées.
 
 Prérequis : PHP 8.1 ou supérieur (le code utilise `never`, `str_contains`,
 les fonctions fléchées), MySQL 5.7 / MariaDB 10.4 ou supérieur.
@@ -32,27 +41,25 @@ Mot de passe commun aux comptes de démonstration : `apex2026`.
 ## Arborescence
 
 ```
-index.php          accueil public, planning et activités
-login.php          connexion commune aux trois profils
-logout.php
-abonnements.php    les trois offres, lues dans les entités filles
-faq.php            questions publiées, dépôt de question par un adhérent
-avis.php           avis publics, dépôt réservé aux adhérents non employés
-contact.php        formulaire enregistré en base
-adherent.php       planning, mes réservations, mon abonnement
-employe.php        tableau de bord, adhérents, créneaux, matériel, maintenance, questions
-admin.php          utilisateurs et rôles, statistiques, messages, journal
-gestion.php        CRUD fournisseurs, accueil et coachs
-paiement.php       paiement et réactivation immédiate d'un abonnement
-install.php        pose les mots de passe de démonstration, à supprimer
-config/config.php  connexion PDO, sessions, CSRF, helpers
-includes/auth.php  authentification et contrôle des rôles
-includes/header.php, footer.php
-Model/             classes d'accès aux données
-controller/        contrôleurs des pages et des règles métier
-controller/crud/   CRUD séparés : comptes, messages et fournisseurs
-assets/css/style.css
-assets/js/app.js
+accueil/            accueil public, planning et activités
+abonnement/         catalogue, offres et CRUD de la table abonnement
+adherent/           espace adhérent et CRUD
+admin/              espace administrateur, tables SQL et CRUD
+avis/               avis publics et CRUD
+employe/            espace employé et CRUD
+faq/                questions publiées et CRUD
+fournisseur/        gestion fournisseurs et CRUD
+message_contact/    contact et vues de messagerie
+paiement/           paiement et CRUD
+utilisateur/        connexion, déconnexion et CRUD
+<autres entités>/   un index.php, model/ et view/ pour chaque entité
+layout/table.php    gabarit commun utilisé par les vues des entités
+config/             connexion PDO, authentification, sessions, CSRF, helpers
+layout/             en-tête et pied de page partagés
+controller/         contrôleurs métier réutilisés par les espaces fonctionnels
+public/index.php    point d’entrée et routes autorisées
+public/.htaccess    réécriture des URL vers le point d’entrée
+public/assets/      feuilles CSS, scripts JavaScript et images
 sql/apex_fitness.sql
 ```
 
@@ -63,7 +70,7 @@ qu'au confort (menu, filtres, confirmations).
 
 - Deux activités ne peuvent pas occuper la même salle au même moment :
   contrainte `UNIQUE (Numsalle, date_heure_debut)` plus test de chevauchement
-  dans `employe.php`.
+  dans `employe/espace.php`.
 - Réservation refusée si le créneau est complet : comptage dans une transaction
   avec `SELECT … FOR UPDATE`, ce qui évite la sur-réservation en cas de clics
   simultanés.
@@ -76,12 +83,24 @@ qu'au confort (menu, filtres, confirmations).
   par l'héritage T.
 - L'historique des interventions est conservé : chaque changement de statut
   d'une demande écrit une ligne dans `intervention`.
-- Un adhérent peut payer depuis `paiement.php`, même si son statut est expiré :
+- Un adhérent peut payer depuis `paiement/payer.php`, même si son statut est expiré :
   la souscription précédente est terminée, le paiement est enregistré, une
   nouvelle souscription est créée et le statut repasse à Actif dans une seule
   transaction.
-- Les contrôleurs MVC regroupent les CRUD des comptes, des messages et des
-  fournisseurs dans `controller/crud/`, avec leurs vues dans `views/crud/`.
+- Chaque table SQL utilise la classe métier du dossier de l’entité pour ses
+  opérations CRUD, sans trait de persistance partagé ni classe adaptatrice par
+  table. Toutes les entités exposent les mêmes opérations `create`, `update`,
+  `findById`, `findAll` et `delete`. Les opérations métier propres aux quatre
+  familles d’héritage portent des noms spécifiques (par exemple
+  `createAccount` ou `createOffer`) pour ne pas détourner cette interface. Le
+  contrôleur commun traite les actions HTTP et prépare les métadonnées ; les
+  lectures et écritures SQL sont dans la classe de l’entité. Chaque dossier
+  conserve sa vue, qui réutilise `layout/table.php`.
+  Les héritages du MCD sont représentés par les classes `Utilisateur` →
+  `Adherent`, `Employe`, `Admin`, `Fournisseur` ; `Offre` → `Freemium`, `Basic`,
+  `AbonnementPlus` ; `Statut` → `EtatEquipement`, `StatutMaintenance` ;
+  `InteractionAdherent` → `Avis`, `Faq`. Chaque classe fille écrit son
+  enregistrement parent et son enregistrement spécialisé dans une transaction.
   La déconnexion détruit toute la session et tous les rôles
   portés par le compte connecté.
 
@@ -89,10 +108,11 @@ qu'au confort (menu, filtres, confirmations).
 
 Depuis **Administration > Tables de la base**, un administrateur peut consulter,
 créer, modifier ou supprimer les enregistrements des 26 tables SQL. Chaque
-table possède son propre dossier avec `controller/`, `model/`, `view/` et un
-`index.php` à sa racine. Le moteur commun lit les colonnes, clés primaires et
-clés étrangères depuis les métadonnées MySQL ; les identifiants restent
-configurés dans `config/config.php`.
+table possède son propre dossier avec `model/`, `view/` et `index.php`. Les
+champs, clés primaires et clés étrangères sont lus depuis
+les métadonnées MySQL ; les opérations de chaque table sont exposées par les
+méthodes de sa classe métier. Les identifiants restent configurés dans
+`config/config.php`.
 
 ## Sécurité
 

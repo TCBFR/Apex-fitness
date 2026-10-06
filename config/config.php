@@ -14,7 +14,7 @@ const DB_PASS = 'root';
 const DB_PORT = 8889;
 
 const APP_NOM  = 'Fitness';
-const APP_BASE = '';   // sous-dossier eventuel, ex. '/apex-fitness'
+const APP_BASE = '';   // Laisser vide pour détecter automatiquement le sous-dossier.
 
 // --- Affichage des erreurs : a passer a 0 en production --------------
 ini_set('display_errors', '1');
@@ -58,7 +58,28 @@ function e(?string $v): string
 
 function url(string $chemin): string
 {
-    return APP_BASE . '/' . ltrim($chemin, '/');
+    $base = APP_BASE;
+    if ($base === '') {
+        $racinePublique = realpath(__DIR__ . '/../public');
+        $racineWeb = isset($_SERVER['DOCUMENT_ROOT']) ? realpath($_SERVER['DOCUMENT_ROOT']) : false;
+
+        if ($racinePublique !== false && $racineWeb !== false) {
+            $racineWeb = rtrim($racineWeb, DIRECTORY_SEPARATOR);
+            $prefixeRacineWeb = $racineWeb === '' ? DIRECTORY_SEPARATOR : $racineWeb . DIRECTORY_SEPARATOR;
+            if ($racinePublique !== $racineWeb &&
+                str_starts_with($racinePublique, $prefixeRacineWeb)) {
+                $sousDossier = substr($racinePublique, strlen($prefixeRacineWeb));
+                $base = '/' . str_replace(DIRECTORY_SEPARATOR, '/', $sousDossier);
+            }
+        }
+    }
+
+    return rtrim($base, '/') . '/' . ltrim($chemin, '/');
+}
+
+function baseUrl(): string
+{
+    return rtrim(url(''), '/');
 }
 
 function redirige(string $chemin): never

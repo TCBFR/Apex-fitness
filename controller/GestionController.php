@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../Model/Personnel.php';
+require_once __DIR__ . '/../employe/model/Personnel.php';
 
 final class GestionController
 {

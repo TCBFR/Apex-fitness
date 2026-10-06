@@ -1,6 +1,7 @@
 <?php
-require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../config/auth.php';
 exige_role('ADMIN');
-require_once __DIR__ . '/controller/avis.php';
-$crud = (new AvisTableController())->traiter();
+require_once __DIR__ . '/../controller/EntityController.php';
+require_once __DIR__ . '/model/avis.php';
+$crud = (new EntityController(Avis::class))->traiter();
 require __DIR__ . '/view/avis.php';

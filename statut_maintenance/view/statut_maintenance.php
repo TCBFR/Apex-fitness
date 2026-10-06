@@ -1,1 +1,1 @@
-<?php require __DIR__ . '/../../views/crud/table.php';
+<?php require __DIR__ . '/../../layout/table.php';

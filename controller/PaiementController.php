@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../Model/Paiement.php';
+require_once __DIR__ . '/../paiement/model/PaiementDomain.php';
 
 final class PaiementController
 {

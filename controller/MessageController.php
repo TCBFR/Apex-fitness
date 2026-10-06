@@ -1,7 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../Model/Message.php';
-require_once __DIR__ . '/../Model/MessageSuppression.php';
+require_once __DIR__ . '/../message_contact/model/Message.php';
+require_once __DIR__ . '/../message_contact/model/MessageSuppression.php';
 
 final class MessageController
 {
