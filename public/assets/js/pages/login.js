@@ -4,7 +4,7 @@ document.querySelectorAll(".compte-demo").forEach(function (compte) {
   compte.addEventListener("click", function () {
     if (!champMail || !champMotDePasse) return;
     champMail.value = compte.dataset.identifiant;
-    champMotDePasse.value = compte.dataset.motdepasse;
+    champMotDePasse.value = compte.dataset.motdepasse || "";
     champMail.focus();
   });
 });

@@ -1,11 +1,48 @@
 <?php
 require_once __DIR__ . '/../config/function.php';
-require_once __DIR__ . '/../message_contact/controller/MessageController.php';
+require_once __DIR__ . '/../message_contact/controller/MessageContactController.php';
+require_once __DIR__ . '/../avis/controller/AvisController.php';
 exige_role('ADHERENT');
 
 $moi    = utilisateur()['NumUsers'];
 $onglet = $_GET['onglet'] ?? 'planning';
 $messageController = new MessageController();
+$st = db()->prepare(
+  "SELECT COUNT(*)
+   FROM interaction_adherent i
+   JOIN avis a ON a.NumInteraction = i.NumInteraction
+   WHERE i.NumUsers = ? AND i.type_interaction = 'AVIS'"
+);
+$st->execute([$moi]);
+$aDejaPublieAvis = (int) $st->fetchColumn() > 0;
+
+if (!in_array($onglet, ['planning', 'reservations', 'abonnement', 'avis', 'messages'], true)
+    || ($onglet === 'avis' && $aDejaPublieAvis)) {
+  redirige('adherent/espace.php?onglet=planning');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'publier_avis') {
+  verifie_csrf();
+  if ($aDejaPublieAvis) {
+    flash('erreur', 'Vous avez déjà publié un avis.');
+    redirige('adherent/espace.php?onglet=planning');
+  }
+  if (a_role('EMPLOYE')) {
+    http_response_code(403);
+    flash('erreur', 'Seuls les adhérents non employés peuvent publier un avis.');
+    redirige('adherent/espace.php?onglet=avis');
+  }
+  try {
+    $avisController = new AvisController();
+    $avisController->creer((int) $moi, (int) ($_POST['note'] ?? 0), (string) ($_POST['commentaire'] ?? ''));
+    journalise('AVIS_SALLE', 'Apex Fitness');
+    flash('succes', 'Merci pour votre avis.');
+  } catch (Throwable $exception) {
+    flash('erreur', $exception->getMessage());
+    redirige('adherent/espace.php?onglet=avis');
+  }
+  redirige('adherent/espace.php?onglet=planning');
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'repondre_message') {
   verifie_csrf();
@@ -38,9 +75,39 @@ $st = db()->prepare(
   "SELECT ad.*,
       CASE WHEN ad.Date_finadh IS NULL OR ad.Date_finadh >= CURDATE()
          THEN 'Actif' ELSE 'Expire' END AS libelle_statut,
-      NULL AS Numabo, NULL AS libelle_abo, NULL AS type_abo,
-      NULL AS date_debut, NULL AS date_fin, NULL AS statut_souscription,
-      NULL AS nb_reservations_max_mois
+      (SELECT su.Numabo
+       FROM souscrire su
+       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
+       ORDER BY su.date_debut DESC LIMIT 1) AS Numabo,
+      (SELECT abo.libelle_abo
+       FROM souscrire su
+       JOIN abonnement abo ON abo.Numabo = su.Numabo
+       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
+       ORDER BY su.date_debut DESC LIMIT 1) AS libelle_abo,
+      (SELECT o.type_offre
+       FROM souscrire su
+       JOIN abonnement abo ON abo.Numabo = su.Numabo
+       JOIN offre o ON o.Numoffre = abo.Numoffre
+       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
+       ORDER BY su.date_debut DESC LIMIT 1) AS type_abo,
+      (SELECT su.date_debut
+       FROM souscrire su
+       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
+       ORDER BY su.date_debut DESC LIMIT 1) AS date_debut,
+      (SELECT su.date_fin
+       FROM souscrire su
+       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
+       ORDER BY su.date_debut DESC LIMIT 1) AS date_fin,
+      (SELECT su.statut_souscription
+       FROM souscrire su
+       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
+       ORDER BY su.date_debut DESC LIMIT 1) AS statut_souscription,
+      (SELECT f.nb_reservations_max_mois
+       FROM souscrire su
+       JOIN abonnement abo ON abo.Numabo = su.Numabo
+       JOIN freemium f ON f.Numoffre = abo.Numoffre
+       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
+       ORDER BY su.date_debut DESC LIMIT 1) AS nb_reservations_max_mois
      FROM adherent ad
      WHERE ad.NumUsers = ?");
 $st->execute([$moi]);
@@ -237,31 +304,92 @@ $st = db()->prepare(
 $st->execute([$moi]);
 $mesPaiements = $st->fetchAll();
 
-$titrePage  = 'Mon espace';
-$pageActive = 'adherent';
-require __DIR__ . '/../layout/header.php';
+$reservationsAvenir = count(array_filter(
+  $mesReservations,
+  static fn(array $reservation): bool =>
+    $reservation['statut_reservation'] === 'Reservee' &&
+    strtotime($reservation['date_heure_debut']) > time()
+));
+$titrePage = 'Mon espace';
+$adherentUser = utilisateur();
+$flashMessages = flashs();
 ?>
-
-<div class="wrap page-head">
-  <h1>Bonjour <?= e(utilisateur()['prenomUsers']) ?></h1>
-  <p class="lead">
-    <?= e($fiche['matriculeadh']) ?> &middot;
-    <span class="tag <?= $estActif ? 'tag-ok' : ($fiche['libelle_statut'] === 'Suspendu' ? 'tag-warn' : 'tag-bad') ?>">
-      <?= e($fiche['libelle_statut']) ?>
-    </span>
-    <?php if ($fiche['libelle_abo']): ?>
-      &middot; formule <?= e($fiche['libelle_abo']) ?> jusqu'au <?= dateFr($fiche['date_fin']) ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><?= e($titrePage) ?> - <?= e(APP_NOM) ?></title>
+  <link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
+  <link rel="stylesheet" href="<?= e(url('assets/css/pages/admin.css')) ?>">
+</head>
+<body class="admin-page">
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="admin-brand" href="<?= e(url('adherent/espace.php?onglet=planning')) ?>">
+      <span class="admin-brand-mark">A</span>
+      <span><strong>Apex Fitness</strong><small>Espace adhérent</small></span>
+    </a>
+    <nav class="admin-navigation" aria-label="Menu adhérent">
+      <?php foreach ([
+        'planning' => 'Planning',
+        'reservations' => 'Mes réservations',
+        'abonnement' => 'Mon abonnement',
+        'avis' => 'Mes avis',
+        'messages' => 'Messages',
+      ] as $cle => $lib): ?>
+        <?php if ($cle === 'avis' && $aDejaPublieAvis) continue; ?>
+        <a href="<?= e(url('adherent/espace.php?onglet=' . $cle)) ?>" <?= $onglet === $cle ? 'aria-current="page"' : '' ?>><?= e($lib) ?></a>
+      <?php endforeach; ?>
+    </nav>
+  </aside>
+  <div class="admin-main">
+    <div class="admin-topbar">
+      <div>
+        <p class="admin-eyebrow">ESPACE SÉCURISÉ</p>
+        <h1>Mon espace</h1>
+      </div>
+      <div class="admin-account">
+        <span><?= e(($adherentUser['prenomUsers'] ?? '') . ' ' . ($adherentUser['nomUsers'] ?? '')) ?></span>
+        <a href="<?= e(url('utilisateur/deconnexion.php')) ?>">Déconnexion</a>
+      </div>
+    </div>
+    <?php if ($flashMessages): ?>
+      <div class="admin-flashes">
+        <?php foreach ($flashMessages as $message): ?>
+          <p class="flash flash-<?= e($message['type']) ?>"><?= e($message['message']) ?></p>
+        <?php endforeach; ?>
+      </div>
     <?php endif; ?>
-  </p>
-</div>
-
-<div class="wrap section">
-  <nav class="onglets">
-    <a href="?onglet=planning"     <?= $onglet === 'planning' ? 'aria-current="page"' : '' ?>>Planning</a>
-    <a href="?onglet=reservations" <?= $onglet === 'reservations' ? 'aria-current="page"' : '' ?>>Mes réservations</a>
-    <a href="?onglet=abonnement"   <?= $onglet === 'abonnement' ? 'aria-current="page"' : '' ?>>Mon abonnement</a>
-    <a href="?onglet=messages"     <?= $onglet === 'messages' ? 'aria-current="page"' : '' ?>>Messages reçus</a>
-  </nav>
+    <main class="admin-content">
+      <div class="admin-heading">
+        <div>
+          <p class="admin-eyebrow">VOTRE ESPACE PERSONNEL</p>
+          <h2><?= e([
+            'planning' => 'Aperçu du planning',
+            'reservations' => 'Mes réservations',
+            'abonnement' => 'Mon abonnement',
+            'avis' => 'Partager votre expérience',
+            'messages' => 'Messages',
+          ][$onglet]) ?></h2>
+        </div>
+      </div>
+      <?php if ($onglet !== 'avis'): ?>
+      <div class="compteurs">
+        <div class="compteur">
+          <div class="v"><?= e($fiche['libelle_statut']) ?></div>
+          <div class="k">statut du compte</div>
+        </div>
+        <div class="compteur">
+          <div class="v"><?= $reservationsAvenir ?></div>
+          <div class="k">réservations à venir</div>
+        </div>
+        <div class="compteur">
+          <div class="v"><?= count($creneaux) ?></div>
+          <div class="k">créneaux au planning</div>
+        </div>
+      </div>
+      <?php endif; ?>
 
   <?php if ($onglet === 'planning'): ?>
 
@@ -348,6 +476,47 @@ require __DIR__ . '/../layout/header.php';
       </div>
       <p class="note">L'annulation reste possible jusqu'à 2 heures avant le début du cours.</p>
     <?php endif; ?>
+
+  <?php elseif ($onglet === 'avis'): ?>
+
+    <section class="review-card" aria-labelledby="review-form-title">
+      <div class="review-card-heading">
+        <span class="review-mark" aria-hidden="true">A</span>
+        <div>
+          <p class="admin-eyebrow">VOTRE RETOUR COMPTE</p>
+          <h3 id="review-form-title">Partager votre expérience</h3>
+          <p>Aidez-nous à rendre chaque visite chez Apex Fitness encore meilleure.</p>
+        </div>
+      </div>
+      <form method="post" class="review-form">
+        <?= champ_csrf() ?>
+        <input type="hidden" name="action" value="publier_avis">
+        <fieldset class="review-rating">
+          <legend>Quelle note donneriez-vous à votre expérience&nbsp;?</legend>
+          <div class="review-stars">
+            <?php for ($note = 5; $note >= 1; $note--): ?>
+              <input class="review-rating-input" type="radio" id="note-avis-<?= $note ?>"
+                     name="note" value="<?= $note ?>" required>
+              <label class="review-rating-label" for="note-avis-<?= $note ?>">
+                <span aria-hidden="true">★</span>
+                <span class="sr"><?= $note ?> sur 5</span>
+              </label>
+            <?php endfor; ?>
+          </div>
+          <p class="review-hint">De 1 étoile (décevant) à 5 étoiles (excellent)</p>
+        </fieldset>
+        <div class="review-comment">
+          <label for="commentaire-avis">Votre commentaire</label>
+          <textarea id="commentaire-avis" name="commentaire" rows="5" minlength="10" maxlength="2000" required
+                    placeholder="Qu’avez-vous apprécié ? Que pourrions-nous améliorer ?"></textarea>
+          <p class="review-hint">10 caractères minimum · 2 000 caractères maximum</p>
+        </div>
+        <div class="review-form-footer">
+          <p>Votre avis sera publié après son envoi.</p>
+          <button class="btn btn-vert" type="submit">Publier mon avis</button>
+        </div>
+      </form>
+    </section>
 
   <?php elseif ($onglet === 'messages'): ?>
 
@@ -446,4 +615,9 @@ require __DIR__ . '/../layout/header.php';
   <?php endif; ?>
 </div>
 
-<?php require __DIR__ . '/../layout/footer.php'; ?>
+    </main>
+  </div>
+</div>
+<script src="<?= e(url('assets/js/app.js')) ?>"></script>
+</body>
+</html>

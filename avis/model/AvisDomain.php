@@ -29,6 +29,8 @@ final class Avis extends InteractionAdherent
 
     public function createReview(PDO $pdo): int
     {
+        $this->assureReservationOptionnelle($pdo);
+
         if ($this->note < 1 || $this->note > 5) {
             throw new InvalidArgumentException('La note doit être comprise entre 1 et 5.');
         }
@@ -38,6 +40,23 @@ final class Avis extends InteractionAdherent
 
         $pdo->beginTransaction();
         try {
+            $adherent = $pdo->prepare('SELECT NumUsers FROM adherent WHERE NumUsers = ? FOR UPDATE');
+            $adherent->execute([$this->numUtilisateur]);
+            if (!$adherent->fetchColumn()) {
+                throw new RuntimeException('Seul un adhérent peut publier un avis.');
+            }
+
+            $avisExistants = $pdo->prepare(
+                "SELECT COUNT(*)
+                 FROM interaction_adherent i
+                 JOIN avis a ON a.NumInteraction = i.NumInteraction
+                 WHERE i.NumUsers = ? AND i.type_interaction = 'AVIS'"
+            );
+            $avisExistants->execute([$this->numUtilisateur]);
+            if ((int) $avisExistants->fetchColumn() > 0) {
+                throw new RuntimeException('Vous avez déjà publié un avis.');
+            }
+
             $numReservation = $this->numReservation;
             if ($numReservation < 1) {
                 $reservation = $pdo->prepare(
@@ -48,10 +67,8 @@ final class Avis extends InteractionAdherent
                      ORDER BY r.Numres DESC LIMIT 1 FOR UPDATE'
                 );
                 $reservation->execute([$this->numUtilisateur]);
-                $numReservation = (int) ($reservation->fetchColumn() ?: 0);
-            }
-            if ($numReservation < 1) {
-                throw new RuntimeException('Une réservation sans avis associé est nécessaire pour publier un avis.');
+                $numReservation = $reservation->fetchColumn();
+                $numReservation = $numReservation === false ? null : (int) $numReservation;
             }
 
             $id = parent::createInteraction($pdo);
@@ -65,6 +82,17 @@ final class Avis extends InteractionAdherent
         } catch (Throwable $exception) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $exception;
+        }
+    }
+
+    private function assureReservationOptionnelle(PDO $pdo): void
+    {
+        $colonne = $pdo->query("SHOW COLUMNS FROM avis LIKE 'Numres'")->fetch(PDO::FETCH_ASSOC);
+        if (!$colonne) {
+            throw new RuntimeException('La colonne Numres est absente de la table avis.');
+        }
+        if ($colonne['Null'] !== 'YES') {
+            $pdo->exec('ALTER TABLE avis MODIFY Numres INT NULL');
         }
     }
 

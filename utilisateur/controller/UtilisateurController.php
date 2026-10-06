@@ -1,7 +1,16 @@
 <?php
 
-final class LoginController
+require_once __DIR__ . '/../../admin/controller/EntityController.php';
+require_once __DIR__ . '/../model/utilisateur.php';
+
+/** Gère la connexion et les routes CRUD des comptes utilisateurs. */
+final class UtilisateurController extends EntityController
 {
+    public function __construct()
+    {
+        parent::__construct(Utilisateur::class);
+    }
+
     public function set(string $mail, string $password): ?string
     {
         if ($mail === '' || $password === '') {
@@ -16,5 +25,10 @@ final class LoginController
     {
         $return = (string) ($_GET['retour'] ?? '');
         return $return !== '' ? ltrim($return, '/') : page_accueil_role();
+    }
+
+    public function traiterCrud(): array
+    {
+        return $this->traiter();
     }
 }

@@ -13,6 +13,11 @@ CREATE TABLE utilisateur (
   Date_CreationUsers DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE compte_demo (
+  NumUsers INT PRIMARY KEY,
+  FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE journal (
   Numjournal  INT AUTO_INCREMENT PRIMARY KEY,
   date_action DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -249,10 +254,24 @@ CREATE TABLE demande_maintenance (
   priorite                  VARCHAR(20) NOT NULL DEFAULT 'Moyenne',
   date_demandemaint         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   NumUsers                  INT NOT NULL,
+  NumUsers_technicien       INT NULL,
   Numequip                  INT NOT NULL,
   Numstatut                 INT NOT NULL,
   FOREIGN KEY (NumUsers)  REFERENCES employe(NumUsers),
+  FOREIGN KEY (NumUsers_technicien) REFERENCES employe(NumUsers) ON DELETE SET NULL,
   FOREIGN KEY (Numequip)  REFERENCES equipement(Numequip),
+  FOREIGN KEY (Numstatut) REFERENCES statut_maintenance(Numstatut)
+) ENGINE=InnoDB;
+
+CREATE TABLE intervention (
+  Numintervention INT AUTO_INCREMENT PRIMARY KEY,
+  date_intervention DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  commentaire TEXT,
+  Nummaint INT NOT NULL,
+  NumUsers INT NOT NULL,
+  Numstatut INT NOT NULL,
+  FOREIGN KEY (Nummaint) REFERENCES demande_maintenance(Nummaint) ON DELETE CASCADE,
+  FOREIGN KEY (NumUsers) REFERENCES employe(NumUsers),
   FOREIGN KEY (Numstatut) REFERENCES statut_maintenance(Numstatut)
 ) ENGINE=InnoDB;
 
@@ -270,7 +289,7 @@ CREATE TABLE avis (
   noteavis       TINYINT NOT NULL CHECK (noteavis BETWEEN 1 AND 5),
   commentaire    TEXT,
   reponse        TEXT,
-  Numres         INT NOT NULL UNIQUE,
+  Numres         INT NULL UNIQUE,
   FOREIGN KEY (NumInteraction) REFERENCES interaction_adherent(NumInteraction) ON DELETE CASCADE,
   FOREIGN KEY (Numres)         REFERENCES reservation(Numres) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -315,23 +334,107 @@ SET @faq_id = LAST_INSERT_ID();
 INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
   (@faq_id, 'Sous quel délai recevrai-je une réponse à mon message ?', 'L’accueil vous répond sous 48 heures ouvrées. Vous pouvez envoyer votre demande depuis le formulaire de contact.', 'Publiee', 'Contact');
 
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Comment puis-je consulter les cours proposés ?', 'Consultez le planning depuis le site ou votre espace adhérent. Vous y trouverez les activités et leurs créneaux.', 'Publiee', 'Planning');
+
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Comment réserver une place pour un cours ?', 'Connectez-vous à votre espace adhérent, ouvrez le planning puis choisissez un créneau disponible pour réserver.', 'Publiee', 'Réservations');
+
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Où puis-je retrouver mes réservations ?', 'Vos réservations sont consultables dans la rubrique « Réservations » de votre espace adhérent.', 'Publiee', 'Réservations');
+
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Comment consulter ou changer mon abonnement ?', 'Retrouvez votre formule et son statut dans la rubrique « Abonnement » de votre espace adhérent. Les offres disponibles sont présentées dans le catalogue.', 'Publiee', 'Abonnements');
+
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Comment contacter l’équipe Apex Fitness ?', 'Utilisez le formulaire de contact du site pour envoyer votre demande à l’équipe.', 'Publiee', 'Contact');
+
+INSERT INTO interaction_adherent (type_interaction, NumUsers) VALUES ('FAQ', 2);
+SET @faq_id = LAST_INSERT_ID();
+INSERT INTO faq (NumInteraction, question, reponse, statut_faq, categorie) VALUES
+  (@faq_id, 'Comment laisser un avis sur mon expérience ?', 'Depuis votre espace adhérent, ouvrez la rubrique « Avis », attribuez une note et partagez votre commentaire.', 'Publiee', 'Avis');
+
 INSERT INTO utilisateur (NumUsers, nomUsers, prenomUsers, mailUsers, telUsers, passwordUsers) VALUES
   (4, 'Nabil', 'S.', 's.nabil@mail.fr', NULL, '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW'),
   (5, 'Diallo', 'Awa', 'awa.diallo@mail.fr', NULL, '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW'),
-  (6, 'Lemoine', 'H.', 'h.lemoine@mail.fr', NULL, '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW');
+  (6, 'Lemoine', 'H.', 'h.lemoine@mail.fr', NULL, '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW'),
+  (7, 'Moreau', 'Lina', 'lina.moreau@apex.fr', NULL, '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW'),
+  (8, 'Petit', 'Noah', 'noah.petit@apex.fr', NULL, '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW');
 
 INSERT INTO admin (NumUsers, matriculeadmin, date_affectationadmin)
 VALUES (1, 'DEMO-ADM-1', CURRENT_DATE);
 
 INSERT INTO fonction (Numfonc, libellefonc) VALUES
   (1, 'Coach'),
-  (2, 'Technicien maintenance');
+  (2, 'Technicien maintenance'),
+  (3, 'Accueil');
 
 INSERT INTO employe (NumUsers, matriculeemp, Date_embaucheemp, Numfonc) VALUES
   (2, 'DEMO-EMP-2', CURRENT_DATE, 1),
-  (3, 'DEMO-EMP-3', CURRENT_DATE, 2);
+  (3, 'DEMO-EMP-3', CURRENT_DATE, 2),
+  (7, 'DEMO-EMP-7', CURRENT_DATE, 1),
+  (8, 'DEMO-EMP-8', CURRENT_DATE, 3);
 
 INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh) VALUES
   (4, 'DEMO-ADH-4', CURRENT_DATE, NULL),
   (5, 'DEMO-ADH-5', DATE_SUB(CURRENT_DATE, INTERVAL 1 YEAR), DATE_SUB(CURRENT_DATE, INTERVAL 1 DAY)),
-  (6, 'DEMO-ADH-6', CURRENT_DATE, NULL);
+  (6, 'DEMO-ADH-6', CURRENT_DATE, NULL),
+  (7, 'DEMO-ADH-7', CURRENT_DATE, NULL);
+
+INSERT INTO compte_demo (NumUsers) VALUES
+  (1), (2), (3), (4), (5), (6), (7), (8);
+
+-- Fournisseur et inventaire de démonstration
+INSERT INTO utilisateur (nomUsers, prenomUsers, mailUsers, telUsers, passwordUsers)
+VALUES ('Apex', 'Fournitures', 'fournisseur.demo@apex.fr', NULL,
+        '$2y$10$VB0rJNYf4.JZSfYc/etFueMu1IA.PHjsWqhiHynF8CCPQwSoYd7EW');
+SET @fournisseur_demo = LAST_INSERT_ID();
+INSERT INTO fournisseur (NumUsers, nomfourn, telephonefourn, siret, mailfourn)
+VALUES (@fournisseur_demo, 'Fournisseur de démonstration', NULL, NULL, 'fournisseur.demo@apex.fr');
+
+INSERT INTO statut (libelle_statut, type_statut) VALUES
+  ('Disponible', 'EQUIPEMENT'),
+  ('Maintenance', 'EQUIPEMENT'),
+  ('Hors service', 'EQUIPEMENT'),
+  ('Ouverte', 'MAINTENANCE'),
+  ('En attente', 'MAINTENANCE'),
+  ('En cours', 'MAINTENANCE'),
+  ('En attente de piece', 'MAINTENANCE'),
+  ('À valider', 'MAINTENANCE'),
+  ('Terminee', 'MAINTENANCE');
+INSERT INTO etat_equipement (Numstatut)
+  SELECT Numstatut FROM statut WHERE type_statut = 'EQUIPEMENT';
+INSERT INTO statut_maintenance (Numstatut)
+  SELECT Numstatut FROM statut WHERE type_statut = 'MAINTENANCE';
+
+INSERT INTO type_equipement (libelletypeequip, descriptionequip) VALUES
+  ('Cardio-training', 'Équipements de cardio-training'),
+  ('Musculation', 'Appareils et accessoires de musculation'),
+  ('Accessoire fitness', 'Accessoires pour les activités fitness');
+
+INSERT INTO equipement
+  (nomequip, marque, modele, date_achatequip, prix_achatequip, Numtypeequip, NumUsers_fourn, Numstatut)
+SELECT demo.nomequip, 'Apex Fitness', demo.modele, CURRENT_DATE, demo.prix,
+       te.Numtypeequip, @fournisseur_demo, s.Numstatut
+FROM (
+  SELECT 'Tapis de course' AS nomequip, 'RUN-500' AS modele, 1899.00 AS prix, 'Cardio-training' AS type_nom
+  UNION ALL SELECT 'Vélo elliptique', 'ELLIPTIC-300', 1299.00, 'Cardio-training'
+  UNION ALL SELECT 'Vélo d’appartement', 'BIKE-200', 799.00, 'Cardio-training'
+  UNION ALL SELECT 'Rameur', 'ROW-400', 999.00, 'Cardio-training'
+  UNION ALL SELECT 'Presse à jambes', 'LEG-PRESS-01', 2499.00, 'Musculation'
+  UNION ALL SELECT 'Banc de musculation', 'BENCH-02', 499.00, 'Musculation'
+  UNION ALL SELECT 'Haltères (lot)', 'DUMBBELL-SET', 350.00, 'Musculation'
+  UNION ALL SELECT 'Tapis de fitness', 'FIT-MAT-01', 29.00, 'Accessoire fitness'
+) AS demo
+JOIN type_equipement te ON te.libelletypeequip = demo.type_nom
+JOIN statut s ON s.libelle_statut = 'Disponible' AND s.type_statut = 'EQUIPEMENT';

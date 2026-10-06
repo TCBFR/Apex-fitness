@@ -276,6 +276,12 @@ class Utilisateur
     {
         self::validerCompte($data, true);
         $pdo = db();
+        $pdo->exec(
+            'CREATE TABLE IF NOT EXISTS compte_demo (
+                NumUsers INT PRIMARY KEY,
+                FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE CASCADE
+            ) ENGINE=InnoDB'
+        );
         $pdo->beginTransaction();
         try {
             $compte = new self(
@@ -288,6 +294,7 @@ class Utilisateur
             $pdo->prepare('UPDATE utilisateur SET telUsers = ? WHERE NumUsers = ?')
                 ->execute([trim($data['tel'] ?? ''), $id]);
             self::creerRoles($pdo, $id, $data['roles'], (int) ($data['fonction'] ?? 0));
+            $pdo->prepare('INSERT INTO compte_demo (NumUsers) VALUES (?)')->execute([$id]);
             $pdo->commit();
             return $id;
         } catch (Throwable $exception) {

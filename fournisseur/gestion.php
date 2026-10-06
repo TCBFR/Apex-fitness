@@ -6,10 +6,12 @@ require_once __DIR__ . '/model/FournisseurDomain.php';
 
 exige_role('EMPLOYE');
 $maintenance = est_technicien_maintenance();
-if (!$maintenance && !a_role('ADMIN')) {
+if (!a_role('ADMIN')) {
   http_response_code(403);
-  flash('erreur', 'Les fournisseurs sont réservés au technicien maintenance.');
-  redirige('employe/espace.php?onglet=tableau');
+  flash('erreur', 'La gestion des fournisseurs est réservée à l’administration.');
+  redirige($maintenance
+    ? 'employe/espace.php?onglet=maintenance'
+    : 'employe/espace.php?onglet=tableau');
 }
 $controller = new GestionController();
 $onglet = $_GET['onglet'] ?? 'fournisseurs';

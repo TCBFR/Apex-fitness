@@ -1,7 +1,10 @@
 <?php
 
-require_once __DIR__ . '/../../employe/model/Personnel.php';
+require_once __DIR__ . '/../../admin/controller/EntityController.php';
+require_once __DIR__ . '/../model/FournisseurDomain.php';
+require_once __DIR__ . '/../../employe/model/employe.php';
 
+/** Coordonne les opérations d’administration des comptes employés. */
 final class GestionController
 {
     private Personnel $personnel;
@@ -32,5 +35,10 @@ final class GestionController
     public function supprimerEmploye(int $numUtilisateur): void
     {
         $this->personnel->supprimer($numUtilisateur);
+    }
+
+    public function traiterCrud(): array
+    {
+        return (new EntityController(Fournisseur::class))->traiter();
     }
 }

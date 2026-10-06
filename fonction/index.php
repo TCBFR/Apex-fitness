@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/function.php';
 exige_role('ADMIN');
-require_once __DIR__ . '/../admin/controller/EntityController.php';
-require_once __DIR__ . '/model/fonction.php';
-$crud = (new EntityController(Fonction::class))->traiter();
+require_once __DIR__ . '/controller/FonctionController.php';
+$crud = (new FonctionController())->traiter();
 require __DIR__ . '/view/fonction.php';

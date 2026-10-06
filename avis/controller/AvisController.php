@@ -1,7 +1,9 @@
 <?php
 
+require_once __DIR__ . '/../../admin/controller/EntityController.php';
 require_once __DIR__ . '/../model/AvisDomain.php';
 
+/** Coordonne les opérations sur les avis et leur affichage public. */
 final class AvisController
 {
     private Avis $avis;
@@ -24,5 +26,22 @@ final class AvisController
     public function repondre(int $numInteraction, string $reponse): void
     {
         $this->avis->repondre($numInteraction, trim($reponse));
+    }
+
+    public function filtrerParNote(array $avis, ?int $note): array
+    {
+        if ($note === null) {
+            return $avis;
+        }
+
+        return array_values(array_filter(
+            $avis,
+            static fn(array $item): bool => (int) $item['noteavis'] === $note
+        ));
+    }
+
+    public function traiterCrud(): array
+    {
+        return (new EntityController(Avis::class))->traiter();
     }
 }

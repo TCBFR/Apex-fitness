@@ -226,7 +226,6 @@ $adminUser = utilisateur();
       <a href="<?= e(url('admin/espace.php?onglet=' . $cle)) ?>" <?= $onglet === $cle ? 'aria-current="page"' : '' ?>><?= e($lib) ?></a>
     <?php endforeach; ?>
     </nav>
-    <a class="admin-back" href="<?= e(url('accueil/index.php')) ?>">Retour au site</a>
   </aside>
 
   <div class="admin-main">

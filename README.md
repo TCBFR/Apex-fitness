@@ -52,12 +52,12 @@ fournisseur/        gestion fournisseurs et CRUD
 message_contact/    contact et vues de messagerie
 paiement/           paiement et CRUD
 utilisateur/        connexion, déconnexion et CRUD
-<autres entités>/   un index.php, model/ et view/ pour chaque entité
+<autres entités>/   un index.php, controller/, model/ et view/ par entité
 layout/table.php    gabarit commun utilisé par les vues des entités
 config/             connexion PDO, authentification, sessions, CSRF, helpers
 config/function.php fonctions partagées (base, session, authentification, affichage)
 layout/             en-tête et pied de page partagés
-<entite>/controller contrôleurs rangés dans le dossier de leur fonctionnalité
+<entite>/controller un contrôleur local pour router chaque fonctionnalité
 public/index.php    point d’entrée et routes autorisées
 public/.htaccess    réécriture des URL vers le point d’entrée
 public/assets/      feuilles CSS, scripts JavaScript et images
@@ -66,7 +66,13 @@ sql/apex_fitness.sql
 
 `config/config.php` contient uniquement la configuration, sans classe ni
 fonction. Les fonctions communes sont chargées depuis `config/function.php`.
-Les contrôleurs se trouvent dans le sous-dossier `controller/` de leur entité.
+Chaque dossier de fonctionnalité possède un sous-dossier `controller/` avec un
+seul contrôleur local, ainsi qu’un sous-dossier `model/` contenant un seul
+fichier modèle. Les contrôleurs CRUD locaux délèguent les actions communes à
+`admin/controller/EntityController.php`. Le point d’entrée `public/index.php`
+vérifie chaque route dans sa liste blanche avant de charger la page
+correspondante. Les vues restent séparées des actions de page et des opérations
+SQL.
 
 ## Règles de gestion implémentées
 

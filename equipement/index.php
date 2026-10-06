@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../config/function.php';
 exige_role('ADMIN');
-require_once __DIR__ . '/../admin/controller/EntityController.php';
-require_once __DIR__ . '/model/equipement.php';
-$crud = (new EntityController(Equipement::class))->traiter();
+require_once __DIR__ . '/controller/EquipementController.php';
+$crud = (new EquipementController())->traiter();
 require __DIR__ . '/view/equipement.php';

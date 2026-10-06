@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+/** Applique les actions CRUD génériques aux entités administrables. */
 class EntityController
 {
     private const TABLES = [
