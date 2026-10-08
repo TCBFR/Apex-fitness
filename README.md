@@ -54,7 +54,7 @@ paiement/           paiement et CRUD
 utilisateur/        connexion, déconnexion et CRUD
 <autres entités>/   un index.php, controller/, model/ et view/ par entité
 layout/table.php    gabarit commun utilisé par les vues des entités
-config/             connexion PDO, authentification, sessions, CSRF, helpers
+config/             connexion PDO, authentification, sessions, CSRF et helpers
 config/function.php fonctions partagées (base, session, authentification, affichage)
 layout/             en-tête et pied de page partagés
 <entite>/controller un contrôleur local pour router chaque fonctionnalité
@@ -66,6 +66,11 @@ sql/apex_fitness.sql
 
 `config/config.php` contient uniquement la configuration, sans classe ni
 fonction. Les fonctions communes sont chargées depuis `config/function.php`.
+L’inventaire de démonstration est initialisé par la classe
+`InventaireDemo` définie dans `config/demo_inventory.php`. La classe
+`DemoInstaller`, dans `config/DemoInstaller.php`, prépare les comptes et les
+données de démonstration depuis `config/install.php`. Cette installation ne
+s’exécute plus lorsqu’un employé consulte son espace.
 Chaque dossier de fonctionnalité possède un sous-dossier `controller/` avec un
 seul contrôleur local, ainsi qu’un sous-dossier `model/` contenant un seul
 fichier modèle. Les contrôleurs CRUD locaux délèguent les actions communes à

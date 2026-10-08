@@ -1,6 +1,5 @@
 <?php
 require_once __DIR__ . '/../config/function.php';
-require_once __DIR__ . '/../config/demo_inventory.php';
 require_once __DIR__ . '/../faq/controller/FaqController.php';
 require_once __DIR__ . '/../message_contact/controller/MessageContactController.php';
 exige_role('EMPLOYE');
@@ -49,8 +48,6 @@ if (!$cleTechnicien) {
      FOREIGN KEY (NumUsers_technicien) REFERENCES employe(NumUsers) ON DELETE SET NULL'
   );
 }
-initialiseInventaireFitnessDemo($pdo);
-
 if ($maintenance && $onglet !== 'maintenance') {
   redirige('employe/espace.php?onglet=maintenance');
 }
