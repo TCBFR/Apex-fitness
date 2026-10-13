@@ -13,8 +13,8 @@ $pdo->exec(
     ) ENGINE=InnoDB'
 );
 
-// Migration des comptes de démonstration fournis avec les versions précédentes.
-$anciensEmailsDemo = [
+// Reconnaît les comptes de démonstration importés avec les anciennes données.
+$emailsDemo = [
     'admin@apex.fr',
     'camille.roux@apex.fr',
     'marc.anselme@apex.fr',
@@ -24,15 +24,13 @@ $anciensEmailsDemo = [
     'lina.moreau@apex.fr',
     'noah.petit@apex.fr',
 ];
-$ancienCompteQuery = $pdo->prepare(
-    'SELECT NumUsers, passwordUsers FROM utilisateur WHERE mailUsers = ?'
-);
+$compteQuery = $pdo->prepare('SELECT NumUsers, passwordUsers FROM utilisateur WHERE mailUsers = ?');
 $marquerDemo = $pdo->prepare('INSERT IGNORE INTO compte_demo (NumUsers) VALUES (?)');
-foreach ($anciensEmailsDemo as $ancienEmailDemo) {
-    $ancienCompteQuery->execute([$ancienEmailDemo]);
-    $ancienCompte = $ancienCompteQuery->fetch();
-    if ($ancienCompte && password_verify('apex2026', $ancienCompte['passwordUsers'])) {
-        $marquerDemo->execute([(int) $ancienCompte['NumUsers']]);
+foreach ($emailsDemo as $emailDemo) {
+    $compteQuery->execute([$emailDemo]);
+    $compte = $compteQuery->fetch();
+    if ($compte && password_verify('apex2026', $compte['passwordUsers'])) {
+        $marquerDemo->execute([(int) $compte['NumUsers']]);
     }
 }
 
@@ -76,7 +74,7 @@ foreach ($requeteDemo->fetchAll() as $compteDemo) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifie_csrf();
     $mail = trim($_POST['mail'] ?? '');
-    $erreur = $controller->set($mail, $_POST['motdepasse'] ?? '');
+    $erreur = $controller->set($mail, $_POST['motdepasse'] ?? '', isset($_POST['se_souvenir']));
     if ($erreur === null) { flash('succes', 'Bonjour ' . utilisateur()['prenomUsers'] . ', vous êtes connecté.'); redirige($controller->get()); }
 }
 $titrePage = 'Connexion';

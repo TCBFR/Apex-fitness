@@ -501,7 +501,7 @@ $statutsAdherent = [
 
 $planningDonnees = [];
 if ($onglet === 'creneaux') {
-  $planningDonnees = $planning->donnees('employe', (int) $moi);
+  $planningDonnees = $planning->donneesEmploye((int) $moi);
 }
 
 $equipements = $pdo->query(

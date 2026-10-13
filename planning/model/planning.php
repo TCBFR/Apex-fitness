@@ -64,23 +64,6 @@ final class Planning
         return $st->fetchAll();
     }
 
-    /** Creneaux a venir (liste sous le calendrier, cote adherent). */
-    public function creneauxAVenir(int $limite = 60): array
-    {
-        $limite = max(1, $limite);
-        return $this->pdo->query(
-            "SELECT a.Numactivite, a.titre, a.type_activite, a.date_heure_debut, a.date_heure_fin,
-                    a.capacite_max, s.nomsalle,
-                    (SELECT COUNT(*) FROM reservation r
-                      WHERE r.Numactivite = a.Numactivite AND r.statut_reservation <> 'Annulee') AS places_prises
-             FROM activite a
-             JOIN salle s ON s.Numsalle = a.Numsalle
-             WHERE a.date_heure_debut >= NOW()
-             ORDER BY a.date_heure_debut
-             LIMIT $limite"
-        )->fetchAll();
-    }
-
     /** Derniers creneaux (tableau de gestion, cote employe). */
     public function derniersCreneaux(int $limite = 40): array
     {
@@ -95,17 +78,6 @@ final class Planning
              ORDER BY a.date_heure_debut DESC
              LIMIT $limite"
         )->fetchAll();
-    }
-
-    /** Numeros d'activites deja reservees (non annulees) par l'adherent. */
-    public function activitesReservees(int $numUsers): array
-    {
-        $st = $this->pdo->prepare(
-            "SELECT Numactivite FROM reservation
-             WHERE NumUsers = ? AND statut_reservation <> 'Annulee'"
-        );
-        $st->execute([$numUsers]);
-        return array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
     }
 
     public function titresExistants(): array

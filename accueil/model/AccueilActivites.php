@@ -10,10 +10,12 @@ final class AccueilActivites
     public function toutes(): array
     {
         return db()->query(
-            'SELECT Numactivite, niveau, date_heure_debut, date_heure_fin,
+            'SELECT titre, TIMESTAMPDIFF(MINUTE, date_heure_debut, date_heure_fin) AS duree_minutes,
                     capacite_max, description
              FROM activite
-             ORDER BY titre'
+             WHERE date_heure_debut >= NOW()
+             ORDER BY date_heure_debut
+             LIMIT 6'
         )->fetchAll();
     }
 }

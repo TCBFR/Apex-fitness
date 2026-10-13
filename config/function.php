@@ -153,7 +153,7 @@ function jourHeure(string $start, string $end): string
     );
 }
 
-function tente_connexion(string $mail, string $motDePasse): bool
+function tente_connexion(string $mail, string $motDePasse, bool $seSouvenir = false): bool
 {
     $query = db()->prepare(
         'SELECT NumUsers, nomUsers, prenomUsers, mailUsers, passwordUsers
@@ -167,6 +167,17 @@ function tente_connexion(string $mail, string $motDePasse): bool
     }
 
     session_regenerate_id(true);
+    if ($seSouvenir) {
+        $cookie = session_get_cookie_params();
+        setcookie(session_name(), session_id(), [
+            'expires' => time() + 30 * 24 * 60 * 60,
+            'path' => $cookie['path'] ?: '/',
+            'domain' => $cookie['domain'],
+            'secure' => $cookie['secure'],
+            'httponly' => true,
+            'samesite' => $cookie['samesite'] ?? 'Lax',
+        ]);
+    }
     $_SESSION['user'] = [
         'NumUsers' => (int) $user['NumUsers'],
         'nomUsers' => $user['nomUsers'],
@@ -249,6 +260,15 @@ function deconnexion(): void
     if (connecte()) {
         journalise('DECONNEXION', utilisateur()['mailUsers']);
     }
+    $cookie = session_get_cookie_params();
+    setcookie(session_name(), '', [
+        'expires' => time() - 42000,
+        'path' => $cookie['path'] ?: '/',
+        'domain' => $cookie['domain'],
+        'secure' => $cookie['secure'],
+        'httponly' => true,
+        'samesite' => $cookie['samesite'] ?? 'Lax',
+    ]);
     $_SESSION = [];
     session_destroy();
 }

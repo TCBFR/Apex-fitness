@@ -57,7 +57,7 @@ function atx_js_config(): array
 {
     $cats = [];
     foreach (CATEGORIES as $k => $c) $cats[$k] = $c + ['svg' => icon($c['icon'], 16)];
-    return ['categories' => $cats, 'images' => CAT_IMAGES, 'icons' => [
+    return ['categories' => $cats, 'images' => CAT_IMAGES, 'apiUrl' => url('adherent/api.php'), 'reservationsUrl' => url('adherent/view/reservations.php'), 'csrf' => csrf(), 'icons' => [
         'user' => icon('user', 13), 'clock' => icon('clock', 14), 'check' => icon('check', 12),
         'pin' => icon('pin', 14), 'signal' => icon('signal', 14), 'right' => icon('right', 16), 'calendar' => icon('calendar', 14),
     ]];
@@ -84,20 +84,38 @@ function page_head(string $active, string $title): void
     @media (min-width:861px){#sidebar{transform:none!important}}
     @media (max-width:860px){.main{margin-left:0}}
   </style>
-  <script>window.ATX = <?= json_encode(atx_js_config(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;</script>
+  <script>window.ATX = <?= json_encode(atx_js_config(), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+  window.ATX.api = async (action, params = {}, method = 'GET') => {
+    const url = new URL(window.ATX.apiUrl, window.location.href);
+    url.searchParams.set('action', action);
+    if (method === 'GET') Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+    const response = await fetch(url, {method, headers: method === 'POST' ? {'Content-Type':'application/json'} : {},
+      body: method === 'POST' ? JSON.stringify({...params, csrf: window.ATX.csrf}) : undefined});
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || 'Erreur de communication.');
+    return result;
+  };
+  window.ATX.esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  window.ATX.cap = value => value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
+  window.ATX.hm = value => String(value).slice(11, 16);
+  window.ATX.frDate = (value, options = {}) => new Date(value).toLocaleDateString('fr-FR', options);
+  window.ATX.syncFilter = (filter, value) => document.querySelectorAll('[data-filter="' + filter + '"]').forEach(button => button.classList.toggle('is-active', button.dataset.value === value));
+  window.ATX.bookAction = async (action, id) => {
+    try { const result = await window.ATX.api(action, {id}, 'POST'); return result.session || null; }
+    catch (error) { alert(error.message); return null; }
+  };
+  </script>
+  <?php if ($active === 'planning'): ?>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/fr.global.min.js"></script>
+  <?php endif; ?>
 </head>
 <body data-page="<?= e($active) ?>">
 <div class="app">
   <?php include dirname(__DIR__) . '/sidebar.php'; ?>
 
   <div class="main">
-    <header class="topbar">
-      <button class="icon-btn menu-btn" id="burger" data-testid="topbar-menu-button" aria-label="Menu"><?= icon('menu', 22) ?></button>
-      <div class="topbar-right">
-        <button class="icon-btn bell" data-testid="topbar-notifications-button" data-soon="Notifications" aria-label="Notifications"><?= icon('bell', 22) ?><i class="dot"></i></button>
-        <button class="avatar-btn" data-testid="topbar-profile-button" data-soon="Profil"><span class="avatar"><?= e(ATX_USER['initial']) ?></span><?= icon('down', 18) ?></button>
-      </div>
-    </header>
+    <?php include dirname(__DIR__) . '/topbar.php'; ?>
     <main class="content">
 <?php
 }
@@ -126,12 +144,12 @@ function help_banner(): void
       <section class="panel help" data-testid="help-banner">
         <span class="help-icon"><?= icon('headset', 26) ?></span>
         <div><strong>Besoin d’un conseil ?</strong><p>Notre équipe est là pour vous aider à choisir les séances adaptées à vos objectifs.</p></div>
-        <button class="btn btn-outline" data-soon="Contact" data-testid="help-contact-button">Contacter l’accueil <?= icon('right', 16) ?></button>
+        <a class="btn btn-outline" href="<?= e(url('adherent/view/messagerie.php')) ?>" data-testid="help-contact-button">Contacter l’accueil <?= icon('right', 16) ?></a>
       </section>
 <?php
 }
 
-function page_foot(array $scripts = []): void
+function page_foot(): void
 {
     ?>
     </main>
@@ -139,9 +157,6 @@ function page_foot(array $scripts = []): void
 </div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <script src="assets/js/app.js"></script>
-<?php foreach ($scripts as $src): ?>
-<script src="<?= e($src) ?>"></script>
-<?php endforeach; ?>
 </body>
 </html>
 <?php

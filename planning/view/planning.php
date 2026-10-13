@@ -1,14 +1,11 @@
 <?php
 /**
- * VIEW du module planning, incluse par employe/espace.php (mode 'employe')
- * et par l'espace adherent (mode 'adherent').
+ * Vue du planning de gestion, incluse par employe/espace.php.
  * Variables attendues, definies par la page avant le require :
- *   $mode             'adherent' ou 'employe'
- *   $planningDonnees  resultat de (new PlanningController())->donnees($mode, $moi)
+ *   $planningDonnees  resultat de (new PlanningController())->donneesEmploye($moi)
  * Aucune requete SQL ici : affichage uniquement.
  */
 $d     = $planningDonnees;
-$jeton = PlanningController::jetonCsrf();
 ?>
 
 <ul class="planning-legende" aria-label="Légende des activités">
@@ -18,62 +15,7 @@ $jeton = PlanningController::jetonCsrf();
   <li class="act-complet">Complet</li>
 </ul>
 
-<?php if ($mode === 'adherent'): ?>
-
-  <?php if (!$d['estActif']): ?>
-    <p class="flash flash-info">Votre compte est <?= e(mb_strtolower($d['fiche']['libelle_statut'] ?? 'inconnu')) ?> :
-       la réservation est bloquée jusqu'à régularisation à l'accueil.</p>
-  <?php endif; ?>
-
-  <div id="planning" data-mode="adherent"
-       data-csrf="<?= e($jeton['valeur']) ?>" data-csrf-nom="<?= e($jeton['nom']) ?>"
-       data-actif="<?= $d['estActif'] ? '1' : '0' ?>"
-       data-source="<?= e(url('planning/events.php')) ?>"></div>
-  <div id="planning-detail" hidden aria-live="polite"></div>
-
-  <?php if (!$d['creneaux']): ?>
-    <div class="vide">Aucun créneau à venir n'est encore programmé.</div>
-  <?php else: ?>
-    <details>
-      <summary style="cursor:pointer;margin-bottom:12px">Afficher les créneaux à venir en liste</summary>
-      <div class="creneaux">
-        <?php foreach ($d['creneaux'] as $c):
-            $num       = (int) $c['Numactivite'];
-            $restantes = (int) $c['places_restantes'];
-        ?>
-          <article class="creneau" id="c<?= $num ?>">
-            <h3><?= e($c['titre']) ?></h3>
-            <p class="when"><?= jourHeure($c['date_heure_debut'], $c['date_heure_fin']) ?>
-               &middot; <?= e($c['nomsalle']) ?></p>
-            <div class="jauge"><i class="<?= $restantes === 0 ? 'pleine' : '' ?>" style="width:<?= (int) $c['pct'] ?>%"></i></div>
-            <div class="bas">
-              <span class="tag <?= $restantes === 0 ? 'tag-bad' : ($restantes <= 3 ? 'tag-warn' : 'tag-ok') ?>">
-                <?= $restantes === 0 ? 'Complet' : $restantes . ' place' . ($restantes > 1 ? 's' : '') ?>
-              </span>
-
-              <?php if ($c['reserve']): ?>
-                <span class="tag tag-mute">Déjà réservé</span>
-              <?php else: ?>
-                <form method="post" style="margin:0">
-                  <?= champ_csrf() ?>
-                  <input type="hidden" name="action" value="reserver">
-                  <input type="hidden" name="creneau" value="<?= $num ?>">
-                  <button class="btn btn-sm btn-vert" type="submit"
-                          <?= ($restantes === 0 || !$d['estActif']) ? 'disabled' : '' ?>>Réserver</button>
-                </form>
-              <?php endif; ?>
-            </div>
-          </article>
-        <?php endforeach; ?>
-      </div>
-    </details>
-  <?php endif; ?>
-
-<?php else: /* ---------------------------- mode employe ---------------------------- */ ?>
-
-  <div id="planning" data-mode="employe"
-       data-csrf="<?= e($jeton['valeur']) ?>" data-csrf-nom="<?= e($jeton['nom']) ?>"
-       data-source="<?= e(url('planning/events.php')) ?>"></div>
+  <div id="planning" data-source="<?= e(url('planning/events.php')) ?>"></div>
   <div id="planning-detail" hidden aria-live="polite"></div>
 
   <div class="form" style="margin-bottom:26px">
@@ -158,4 +100,3 @@ $jeton = PlanningController::jetonCsrf();
     </table>
   </div>
 
-<?php endif; ?>

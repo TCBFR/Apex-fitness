@@ -21,13 +21,6 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
 ?>
       <div class="layout-2">
         <div class="col-main">
-          <div class="tabs-big" data-testid="reservations-category-tabs">
-            <button class="tab-big is-active" data-filter="cat" data-value="all" data-testid="tab-cat-all"><?= icon('grid', 20) ?>Toutes les séances</button>
-            <?php foreach (MAIN_FILTERS as $k): ?>
-              <button class="tab-big" data-filter="cat" data-value="<?= e($k) ?>" data-testid="tab-cat-<?= e($k) ?>"><?= icon(CATEGORIES[$k]['icon'], 20) ?><?= e(CATEGORIES[$k]['label']) ?></button>
-            <?php endforeach; ?>
-          </div>
-
           <section class="panel list-panel">
             <div class="list-head">
               <span class="list-icon"><?= icon('calendar', 26) ?></span>
@@ -36,9 +29,9 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
                 <p>Découvrez et réservez les cours disponibles dans votre salle.</p>
               </div>
               <div class="date-box">
-                <a class="icon-btn" href="?date=<?= e($prev) ?>" data-testid="day-prev-button" aria-label="Jour précédent"><?= icon('left', 18) ?></a>
+                <a class="icon-btn" href="<?= e(url('adherent/view/reservations.php?date='.$prev)) ?>" data-testid="day-prev-button" aria-label="Jour précédent"><?= icon('left', 18) ?></a>
                 <span class="date-label" data-testid="day-label"><?= e(fr_date($date, 'short') . ' ' . $d->format('Y')) ?></span>
-                <a class="icon-btn" href="?date=<?= e($next) ?>" data-testid="day-next-button" aria-label="Jour suivant"><?= icon('right', 18) ?></a>
+                <a class="icon-btn" href="<?= e(url('adherent/view/reservations.php?date='.$next)) ?>" data-testid="day-next-button" aria-label="Jour suivant"><?= icon('right', 18) ?></a>
               </div>
             </div>
 
@@ -99,7 +92,7 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
             <div class="select">
               <select id="filter-coach" data-testid="filter-coach-select">
                 <option value="all">Tous les coachs</option>
-                <?php foreach (COACHES as $k => $full): ?><option value="<?= e($k) ?>">Coach <?= e($full) ?></option><?php endforeach; ?>
+                <?php foreach (atx_coaches() as $k => $full): ?><option value="<?= e($k) ?>">Coach <?= e($full) ?></option><?php endforeach; ?>
               </select><?= icon('down', 18) ?>
             </div>
             <h3 class="label">Disponibilité</h3>
@@ -113,18 +106,16 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
             <svg width="34" height="34" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3 44 44H34L24 22 14 44H4Z" fill="#CCFF00"/></svg>
             <h2>Ton objectif,<br>notre priorité</h2>
             <p>Un accompagnement sur mesure pour aller plus loin.</p>
-            <a href="performances.php" class="btn btn-primary btn-sm" data-testid="promo-cta">Voir mes performances <?= icon('right', 16) ?></a>
+            <a href="<?= e(url('adherent/view/performance.php')) ?>" class="btn btn-primary btn-sm" data-testid="promo-cta">Voir mes performances <?= icon('right', 16) ?></a>
           </section>
 
           <section class="panel help-mini">
             <span class="help-icon"><?= icon('headset', 24) ?></span>
             <div><strong>Une question ?</strong><p>Notre équipe est disponible pour vous aider.</p>
-              <a href="#" class="link" data-soon="Contact" data-testid="help-mini-contact">Contacter l’accueil <?= icon('right', 14) ?></a></div>
+              <a href="<?= e(url('adherent/view/messagerie.php')) ?>" class="link" data-testid="help-mini-contact">Contacter l’accueil <?= icon('right', 14) ?></a></div>
           </section>
         </aside>
       </div>
-<?php page_foot(['assets/js/reservations.js']); ?>
-
 <script>
   /* ATHLETIX — Réservations */
 (function () {
@@ -220,7 +211,7 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
             '<span class="my-ic">' + c.svg + '</span>' +
             '<div class="my-main"><strong>' + ATX.esc(s.title) + '</strong>' +
             '<small>' + ATX.frDate(s.start, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + ATX.hm(s.start) + ' – ' + ATX.hm(s.end) + ' · Coach ' + ATX.esc(s.coach) + '</small></div>' +
-            '<a class="btn btn-ghost btn-sm" href="?date=' + s.date + '" data-testid="my-booking-goto-' + s.id + '">Voir</a>' +
+            '<a class="btn btn-ghost btn-sm" href="' + ATX.reservationsUrl + '&date=' + encodeURIComponent(s.date) + '" data-testid="my-booking-goto-' + s.id + '">Voir</a>' +
             '<button class="btn btn-danger btn-sm" data-action="cancel" data-id="' + s.id + '" data-testid="my-booking-cancel-' + s.id + '">Annuler</button>' +
             '</div>'
           );
@@ -236,3 +227,4 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
 })();
 
 </script>
+<?php page_foot(); ?>

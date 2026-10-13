@@ -1,35 +1,14 @@
 <?php
-/**
- * Démarrage commun : données + réservations de l'utilisateur stockées en session PHP.
- */
+/** Fonctions partagées par le planning et la liste des réservations. */
 require_once __DIR__ . '/data.php';
-
-if (session_status() !== PHP_SESSION_ACTIVE) {
-    session_name('ATHLETIXSESSID');
-    session_start();
-}
-
-/** Réservations de l'utilisateur (ids de séances). Pré-remplies à la 1re visite. */
-function atx_bookings(): array
-{
-    if (!isset($_SESSION['bookings'])) {
-        $_SESSION['bookings'] = [];
-        $now = date('Y-m-d\TH:i:s');
-        foreach (atx_all_sessions() as $s) {
-            if ($s['start'] > $now && $s['base_booked'] < $s['capacity']) {
-                $_SESSION['bookings'][$s['id']] = true;
-                if (count($_SESSION['bookings']) >= 2) break;
-            }
-        }
-    }
-    return $_SESSION['bookings'];
-}
+require_once __DIR__ . '/../../../config/function.php';
+exige_role('ADHERENT');
 
 /** Séance enrichie avec l'état utilisateur (réservée, places, passée). */
 function atx_view(array $s): array
 {
-    $isBooked = isset(atx_bookings()[$s['id']]);
-    $count = $s['base_booked'] + ($isBooked ? 1 : 0);
+    $isBooked = (bool)($s['is_booked'] ?? false);
+    $count = (int)$s['base_booked'];
     $cat = CATEGORIES[$s['category']];
     return $s + [
         'booked'         => $count,
@@ -64,28 +43,6 @@ function atx_next_session(): ?array
     foreach ($upcoming as $s) if ($s['is_booked']) return $s;
     foreach ($upcoming as $s) if ($s['remaining'] > 0) return $s;
     return null;
-}
-
-/** @return array{0:int,1:string} [code HTTP, message] */
-function atx_book(string $id): array
-{
-    $s = atx_find($id);
-    if (!$s) return [404, 'Séance introuvable.'];
-    if ($s['is_past']) return [409, 'Cette séance est déjà passée.'];
-    if ($s['is_booked']) return [409, 'Vous avez déjà réservé cette séance.'];
-    if ($s['remaining'] <= 0) return [409, 'Cette séance est complète.'];
-    $_SESSION['bookings'][$id] = true;
-    return [200, 'Réservation confirmée : ' . $s['title'] . '.'];
-}
-
-function atx_cancel(string $id): array
-{
-    $s = atx_find($id);
-    if (!$s) return [404, 'Séance introuvable.'];
-    if (!$s['is_booked']) return [409, "Vous n'avez pas réservé cette séance."];
-    if ($s['is_past']) return [409, 'Impossible d’annuler une séance passée.'];
-    unset($_SESSION['bookings'][$id]);
-    return [200, 'Réservation annulée : ' . $s['title'] . '.'];
 }
 
 // e() est déjà défini par config/function.php : ne le redéclarer que s'il n'existe pas

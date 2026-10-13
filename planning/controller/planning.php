@@ -10,13 +10,13 @@ require_once __DIR__ . '/../model/planning.php';
  * Ce controller n'etend pas EntityController : le planning n'est pas un CRUD
  * d'administration, il a ses propres regles (reservation, quota, conflits).
  *
- * Utilisation dans une page (employe/espace.php, adherent/...) :
+ * Utilisation dans une page (employe/espace.php) :
  *   $planning = new PlanningController();
  *   if (POST && PlanningController::estAction($mode, $action)) {
  *       // verifie_csrf() deja appele par la page
  *       $planning->traiter($mode, $moi, 'employe/espace.php?onglet=creneaux');
  *   }
- *   $planningDonnees = $planning->donnees($mode, $moi);   // pour la view
+ *   $planningDonnees = $planning->donneesEmploye($moi);   // pour la view
  */
 final class PlanningController
 {
@@ -36,7 +36,7 @@ final class PlanningController
         'employe'  => ['creer_creneau', 'supprimer_creneau'],
     ];
 
-    /** Bibliotheque FullCalendar (CDN), a charger avant assets/js/planning.js. */
+    /** Bibliothèque FullCalendar à charger avant assets/js/planning.js. */
     public const FC_SCRIPTS = [
         'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js',
         'https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/fr.global.min.js',
@@ -53,23 +53,6 @@ final class PlanningController
     public static function estAction(string $mode, string $action): bool
     {
         return in_array($action, self::ACTIONS[$mode] ?? [], true);
-    }
-
-    /**
-     * Nom et valeur du jeton CSRF, lus dans le HTML de champ_csrf() : la view les
-     * donne a planning.js, qui poste ses propres formulaires avec le meme champ.
-     * @return array{nom:string, valeur:string}
-     */
-    public static function jetonCsrf(): array
-    {
-        $html = function_exists('champ_csrf') ? (string) champ_csrf() : '';
-        $nom = preg_match('/\bname=["\']([^"\']+)["\']/', $html, $n) ? $n[1] : 'csrf';
-        $valeur = preg_match('/\bvalue=["\']([^"\']*)["\']/', $html, $v)
-            ? html_entity_decode($v[1], ENT_QUOTES) : '';
-        if ($valeur === '' && function_exists('csrf')) {
-            $valeur = (string) csrf();
-        }
-        return ['nom' => $nom, 'valeur' => $valeur];
     }
 
     /* =====================================================================
@@ -116,32 +99,9 @@ final class PlanningController
        DONNEES POUR LA VIEW
        ===================================================================== */
 
-    /**
-     * @param string $mode 'adherent' ou 'employe'
-     * @return array donnees utilisees par planning/view/planning.php
-     */
-    public function donnees(string $mode, int $moi): array
+    /** Données nécessaires à l'affichage du planning employé. */
+    public function donneesEmploye(int $moi): array
     {
-        if ($mode === 'adherent') {
-            $fiche    = $this->model->ficheAdherent($moi);
-            $reserves = array_flip($this->model->activitesReservees($moi));
-            $creneaux = [];
-            foreach ($this->model->creneauxAVenir() as $c) {
-                $capacite = (int) $c['capacite_max'];
-                $prises   = (int) $c['places_prises'];
-                $c['places_restantes'] = max(0, $capacite - $prises);
-                $c['pct']              = $capacite > 0 ? (int) round($prises / $capacite * 100) : 0;
-                $c['reserve']          = isset($reserves[(int) $c['Numactivite']]);
-                $creneaux[] = $c;
-            }
-            return [
-                'moi'      => $moi,
-                'fiche'    => $fiche,
-                'estActif' => $fiche !== null && $fiche['libelle_statut'] === 'Actif',
-                'creneaux' => $creneaux,
-            ];
-        }
-
         $creneaux = [];
         foreach ($this->model->derniersCreneaux() as $c) {
             $capacite = (int) $c['capacite_max'];

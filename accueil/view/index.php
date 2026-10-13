@@ -28,29 +28,33 @@
 <section id="planning" class="section section-planning">
   <div class="container">
     <div class="section-header">
-      <h2>Ce que vous pouvez pratiquer</h2>
-      <p class="section-subtitle">Six activités encadrées ou en accès libre, réparties sur trois salles.</p>
+      <h2>Prochaines séances</h2>
+      <p class="section-subtitle">Choisissez une séance et consultez les disponibilités dans le planning.</p>
     </div>
     
+    <?php if (!$activites): ?>
+      <p class="section-subtitle">Aucune séance n’est programmée pour le moment.</p>
+    <?php else: ?>
     <div class="activities-grid">
       <?php foreach ($activites as $activite): ?>
         <div class="activity-card">
           <div class="activity-header">
-            <h3><?= e($activite['libelleact']) ?></h3>
+            <h3><?= e($activite['titre']) ?></h3>
           </div>
           <div class="activity-body">
             <div class="activity-details">
-              <span class="duration"><?= $activite['duree_minutes'] ? (int) $activite['duree_minutes'] . ' min' : 'Accès libre' ?></span>
-              <span class="capacity"><?= (int) $activite['capacite_defaut'] ?> places</span>
+              <span class="duration"><?= (int) $activite['duree_minutes'] ?> min</span>
+              <span class="capacity"><?= (int) $activite['capacite_max'] ?> places</span>
             </div>
-            <p class="activity-description"><?= e($activite['descriptionact']) ?></p>
+            <p class="activity-description"><?= e($activite['description'] ?? '') ?></p>
           </div>
           <div class="activity-footer">
-            <a href="#" class="btn btn-small">Réserver</a>
+            <a href="<?= e(url(a_role('ADHERENT') ? 'adherent/view/planning.php' : 'utilisateur/connexion.php')) ?>" class="btn btn-small">Réserver</a>
           </div>
         </div>
       <?php endforeach; ?>
     </div>
+    <?php endif; ?>
   </div>
 </section>
 
@@ -71,7 +75,6 @@
   </div>
 </section>
 
-<?php require __DIR__ . '/../../layout/footer.php'; ?>
 <style>
   /* Styles pour l'interface professionnelle et fitness */
 /* Styles pour l'interface professionnelle et fitness */
@@ -343,3 +346,4 @@
   }
 }
 </style>
+<?php require __DIR__ . '/../../layout/footer.php'; ?>

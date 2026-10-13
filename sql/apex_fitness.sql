@@ -73,6 +73,10 @@ CREATE TABLE adherent (
   matriculeadh        VARCHAR(20) NOT NULL UNIQUE,
   Date_inscriptionadh DATE NOT NULL,
   Date_finadh         DATE,
+  date_naissance      DATE,
+  ville               VARCHAR(100),
+  code_postal         CHAR(5),
+  adresse_postale     VARCHAR(255),
   FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 

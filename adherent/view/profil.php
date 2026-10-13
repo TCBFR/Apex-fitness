@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../config/function.php';
 exige_role('ADHERENT');
 require dirname(__DIR__) . '/includes/profil/data.php';
 
@@ -10,7 +11,6 @@ require dirname(__DIR__) . '/includes/profil/data.php';
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mon profil – ATHLETIX</title>
 <link rel="stylesheet" href="assets/css/style.css">
-<link rel="stylesheet" href="assets/css/sidebar.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
     <?php $activeNav = 'profil'; include dirname(__DIR__) . '/includes/sidebar.php'; ?>
 
     <main class="main-content">
-        <button class="burger" id="burger" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+        <?php include dirname(__DIR__) . '/includes/topbar.php'; ?>
 
 
 <!-- Hero -->
@@ -52,9 +52,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                 <section class="card identity-card">
                     <div class="identity-left">
                         <div class="avatar-ring">
-                            <img src="assets/images/avatar.png" alt="Avatar Thomas Martin" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                             <div class="avatar-fallback"><i class="fa-solid fa-user"></i></div>
-                            <button class="avatar-edit" aria-label="Modifier la photo"><i class="fa-solid fa-camera"></i></button>
                         </div>
                     </div>
 
@@ -64,16 +62,15 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                             <span class="verified" title="Compte vérifié"><i class="fa-solid fa-circle-check"></i></span>
                         </div>
                         <p class="muted">Membre ATHLETIX depuis le <?= htmlspecialchars($user['membre_depuis']); ?></p>
-                        <span class="badge badge-green">Abonnement actif</span>
+                        <span class="badge badge-green">Abonnement <?= e(mb_strtolower($abonnement['statut'])) ?></span>
 
                         <ul class="contact-list">
-                            <li><i class="fa-regular fa-envelope"></i> <?= htmlspecialchars($user['email']); ?></li>
-                            <li><i class="fa-solid fa-phone"></i> <?= htmlspecialchars($user['telephone']); ?></li>
-                            <li><i class="fa-solid fa-location-dot"></i> <?= htmlspecialchars($user['ville']); ?></li>
+                            <li><i class="fa-regular fa-envelope"></i> <span id="profileContactEmail"><?= e($user['email']) ?></span></li>
+                            <li><i class="fa-solid fa-phone"></i> <span id="profileContactPhone"><?= e($user['telephone'] ?: 'Téléphone non renseigné') ?></span></li>
                         </ul>
                     </div>
 
-                    <button class="btn btn-ghost btn-edit-top">
+                    <button class="btn btn-ghost btn-edit-top" type="submit" form="profileForm">
                         <i class="fa-regular fa-pen-to-square"></i>
                         Modifier les informations
                     </button>
@@ -86,25 +83,17 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                         <h3>Informations personnelles</h3>
                     </header>
 
-                    <div class="form-grid">
-                        <?php
-                        $fields = [
-                            ['Nom', $user['nom']],
-                            ['Adresse', $user['adresse_l1']."<br>".$user['adresse_l2']],
-                            ['Prénom', $user['prenom']],
-                            ['Téléphone', $user['telephone']],
-                            ['Date de naissance', $user['date_naissance']],
-                            ['Email', $user['email']],
-                            ['Sexe', $user['sexe']],
-                        ];
-                        foreach ($fields as $f): ?>
-                            <div class="field">
-                                <span class="field-label"><?= $f[0]; ?></span>
-                                <span class="field-value"><?= $f[1]; ?></span>
-                                <button class="field-edit" aria-label="Modifier <?= $f[0]; ?>"><i class="fa-regular fa-pen-to-square"></i></button>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
+                    <form id="profileForm">
+                        <div class="form-grid">
+                            <?php foreach (['nom'=>'Nom','prenom'=>'Prénom','telephone'=>'Téléphone','email'=>'Email'] as $key=>$label): ?>
+            <label class="field">
+                                <span class="field-label"><?= e($label) ?></span>
+                                <input class="field-value" type="<?= $key === 'email' ? 'email' : ($key === 'telephone' ? 'tel' : 'text') ?>" name="<?= e($key) ?>" value="<?= e($user[$key]) ?>" <?= $key !== 'telephone' ? 'required' : '' ?>>
+                            </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <p id="profileMessage" role="status" aria-live="polite"></p>
+                    </form>
                 </section>
 
                 <!-- Préférences de notification -->
@@ -165,14 +154,10 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                                     <span>N° Membre : <?= htmlspecialchars($user['num_membre']); ?></span>
                                 </div>
                             </div>
-                            <img class="qr" src="assets/images/qr-placeholder.png" alt="QR Code fictif">
+                            <span class="qr-member-number"><?= e($user['num_membre']) ?></span>
                         </div>
                     </div>
 
-                    <button class="btn btn-ghost btn-block">
-                        <i class="fa-regular fa-eye"></i> Voir ma carte complète
-                        <i class="fa-solid fa-chevron-right right"></i>
-                    </button>
                 </section>
 
                 <!-- Mon abonnement résumé -->
@@ -190,18 +175,17 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                         <div>
                             <p class="muted small"><i class="fa-regular fa-calendar"></i> Prochaine échéance</p>
                             <strong><?= htmlspecialchars($abonnement['prochaine_echeance']); ?></strong>
-                            <span class="muted xs">Renouvellement <?= htmlspecialchars($abonnement['renouvellement']); ?></span>
+                            <?php if ($abonnement['renouvellement']): ?><span class="muted xs">Renouvellement <?= e($abonnement['renouvellement']) ?></span><?php endif; ?>
                         </div>
                     </div>
 
-                    <p class="muted small mt">Accès illimité</p>
                     <ul class="access-list">
                         <?php foreach ($abonnement['acces'] as $a): ?>
                             <li><i class="fa-solid fa-<?= $a['icon']; ?>"></i> <?= htmlspecialchars($a['label']); ?></li>
                         <?php endforeach; ?>
                     </ul>
 
-                    <a href="abonnement.php" class="btn btn-primary btn-block">
+                    <a href="<?= e(url('adherent/view/abonnement.php')) ?>" class="btn btn-primary btn-block">
                         Gérer mon abonnement <i class="fa-solid fa-chevron-right right"></i>
                     </a>
                 </section>
@@ -213,9 +197,9 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                         <h3>Besoin d'aide ?</h3>
                     </header>
                     <p class="muted small">Une question sur votre compte, votre abonnement ou vos réservations.</p>
-                    <button class="btn btn-outline btn-block">
+                    <a href="<?= e(url('adherent/view/messagerie.php')) ?>" class="btn btn-outline btn-block">
                         Contacter l'accueil <i class="fa-solid fa-chevron-right right"></i>
-                    </button>
+                    </a>
                 </section>
 
             </aside>
@@ -223,12 +207,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
     </main>
 </div>
 
-<script src="assets/js/script.js"></script>
-</body>
-</html>
-
 <script>
-    // ===== ATHLETIX — Petites interactions =====
 document.addEventListener('DOMContentLoaded', () => {
 
     // Switch de préférences (persistance localStorage simple)
@@ -241,58 +220,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Boutons "edit" sur les champs → petite anim + mock
-    document.querySelectorAll('.field-edit').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const field = btn.closest('.field');
-            field.style.borderColor = 'var(--green)';
-            setTimeout(() => field.style.borderColor = '', 900);
-        });
+    document.getElementById('profileForm')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const saveButton = document.querySelector('.btn-edit-top');
+        if (event.submitter !== saveButton) return;
+        const form = event.currentTarget;
+        const data = Object.fromEntries(new FormData(form).entries());
+        const message = document.getElementById('profileMessage');
+        saveButton.disabled = true;
+        try {
+            const result = await window.ADH_API('profile', data);
+            message.textContent = 'Informations enregistrées.';
+            const profile = result.profile;
+            document.querySelector('.identity-name h2').textContent = profile.prenom + ' ' + profile.nom;
+            document.querySelector('#profileContactEmail').textContent = profile.email;
+            document.querySelector('#profileContactPhone').textContent = profile.telephone || 'Téléphone non renseigné';
+            document.querySelector('.member-infos strong').textContent = profile.prenom + ' ' + profile.nom;
+        } catch (error) { message.textContent = error.message; }
+        finally { saveButton.disabled = false; }
     });
 
-    // Bouton "Modifier les informations"
-    const topEdit = document.querySelector('.btn-edit-top');
-    if (topEdit) {
-        topEdit.addEventListener('click', () => {
-            document.querySelectorAll('.field').forEach((f, i) => {
-                setTimeout(() => {
-                    f.style.borderColor = 'var(--green)';
-                    setTimeout(() => f.style.borderColor = '', 600);
-                }, i * 80);
-            });
-        });
-    }
-
-    // Avatar edit (mock)
-    const avatarEdit = document.querySelector('.avatar-edit');
-    if (avatarEdit) {
-        avatarEdit.addEventListener('click', () => {
-            const ring = document.querySelector('.avatar-ring');
-            ring.animate(
-                [{ transform: 'scale(1)' }, { transform: 'scale(1.05)' }, { transform: 'scale(1)' }],
-                { duration: 400 }
-            );
-        });
-    }
-
-    // Animation de la barre de progression au chargement
-    const fill = document.querySelector('.progress-fill');
-    if (fill) {
-        const w = fill.style.width;
-        fill.style.width = '0';
-        requestAnimationFrame(() => {
-            setTimeout(() => (fill.style.width = w), 100);
-        });
-    }
-
-    // Chip utilisateur (menu factice)
-    const chip = document.querySelector('.user-chip');
-    if (chip) {
-        chip.addEventListener('click', () => {
-            chip.style.borderColor = 'var(--green)';
-            setTimeout(() => (chip.style.borderColor = ''), 500);
-        });
-    }
 });
 
 </script>
@@ -324,21 +271,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ===== Layout ===== */
 .app-shell{min-height:100vh}
 .main-content{margin-left:250px;padding:22px 36px 60px;max-width:1600px}
-.burger{display:none;position:fixed;top:14px;left:14px;z-index:40;width:42px;height:42px;border-radius:50%;background:#0f1619;border:1px solid var(--border);align-items:center;justify-content:center;font-size:16px}
-
-/* ===== Topbar ===== */
-.topbar{display:flex;justify-content:flex-end;align-items:center;margin-bottom:20px}
-.topbar-right{display:flex;align-items:center;gap:18px}
-.icon-btn{
-    position:relative;width:42px;height:42px;border-radius:50%;
-    background:#0f1619;border:1px solid var(--border);
-    display:grid;place-items:center;color:var(--muted);transition:.2s;
-}
-.icon-btn:hover{color:var(--green);border-color:var(--green)}
-.icon-btn .dot{position:absolute;top:10px;right:12px;width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 10px var(--green-glow)}
-.user-chip{display:flex;align-items:center;gap:10px;padding:4px 10px 4px 4px;background:#0f1619;border:1px solid var(--border);border-radius:40px}
-.avatar-mini{width:34px;height:34px;border-radius:50%;background:#223037;color:#cfd9dd;display:grid;place-items:center;font-weight:600}
-.user-chip i{color:var(--muted);font-size:12px}
 
 /* ===== Hero ===== */
 .hero{
@@ -397,7 +329,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .muted{color:var(--muted)}
 .muted.small,.small{font-size:13px}
 .muted.xs,.xs{font-size:11px;color:var(--muted)}
-.mt{margin-top:14px;display:inline-block}
 
 /* ===== Identity card ===== */
 .identity-card{display:grid;grid-template-columns:auto 1fr auto;gap:28px;align-items:flex-start}
@@ -406,15 +337,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     border:2px solid var(--green);padding:4px;
     box-shadow:0 0 24px rgba(182,255,46,.3);
 }
-.avatar-ring img,.avatar-fallback{
+.avatar-fallback{
     width:100%;height:100%;border-radius:50%;object-fit:cover;background:#1a2328;display:grid;place-items:center;color:var(--muted);font-size:52px;
 }
-.avatar-fallback{display:none}
-.avatar-edit{
-    position:absolute;bottom:6px;right:6px;width:32px;height:32px;border-radius:50%;
-    background:var(--green);color:#0a0a0a;display:grid;place-items:center;font-size:12px;
-    box-shadow:0 0 14px var(--green-glow);
-}
+.avatar-fallback{display:grid}
 .identity-name{display:flex;align-items:center;gap:10px}
 .identity-name h2{font-size:26px;font-weight:700}
 .verified{color:var(--green);font-size:20px}
@@ -423,12 +349,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .contact-list li{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}
 .contact-list i{color:var(--green);width:18px}
 .btn-edit-top{align-self:flex-start}
+.btn-edit-top:hover{background:var(--green-2);border-color:var(--green-2);color:#07100a;transform:translateY(-1px)}
 
 /* ===== Badges ===== */
 .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:40px;font-size:12px;font-weight:500}
 .badge-green{background:rgba(182,255,46,.12);color:var(--green);border:1px solid rgba(182,255,46,.3)}
-.badge-lg{padding:7px 14px;font-size:13px;position:absolute;top:20px;left:20px}
-.badge.small{padding:3px 10px;font-size:11px}
 
 /* ===== Buttons ===== */
 .btn{display:inline-flex;align-items:center;gap:10px;padding:11px 18px;border-radius:12px;font-size:13px;font-weight:500;transition:all .2s;border:1px solid transparent}
@@ -444,14 +369,13 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ===== Form grid (profil) ===== */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .field{
-    position:relative;background:#0a1115;border:1px solid var(--border);
-    border-radius:12px;padding:14px 44px 14px 16px;transition:.2s;
+    background:#0a1115;border:1px solid var(--border);
+    border-radius:12px;padding:14px 16px;transition:.2s;
 }
 .field:hover{border-color:var(--border-strong)}
 .field-label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:none}
+.field .field-value{width:100%;background:transparent;border:0;color:var(--text);font:inherit;font-size:14px;outline:none}
 .field-value{font-size:14px;font-weight:500;line-height:1.4}
-.field-edit{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);width:28px;height:28px;border-radius:8px;display:grid;place-items:center;transition:.2s}
-.field-edit:hover{color:var(--green);background:rgba(182,255,46,.08)}
 
 /* ===== Preferences ===== */
 .prefs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
@@ -488,12 +412,9 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .logo-text{font-weight:800;letter-spacing:1.5px;font-size:16px}
 .card-sub{font-size:9px;letter-spacing:3px;color:var(--muted);margin-top:4px}
 .member-infos{margin-top:34px;display:flex;flex-direction:column;gap:3px}
-.member-infos.tight{margin-top:20px}
 .member-infos strong{font-size:14px}
 .member-infos span{font-size:11px;color:var(--muted)}
-.qr{width:88px;height:88px;border-radius:6px;background:#fff;padding:4px}
-.qr.small{width:74px;height:74px}
-.member-card.compact{padding:18px}
+.qr-member-number{display:grid;place-items:center;width:88px;height:88px;border:1px solid var(--border);border-radius:6px;font:12px 'JetBrains Mono',monospace;color:var(--green);overflow-wrap:anywhere;text-align:center;padding:8px}
 
 /* ===== Sub-grid (profil sidebar abonnement) ===== */
 .sub-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
@@ -504,67 +425,19 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .access-list li{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
 .access-list i{color:var(--green);width:18px}
 
-/* ===== Abonnement details ===== */
-.sub-main-grid{display:grid;grid-template-columns:280px 1fr;gap:28px;margin-top:40px;align-items:flex-start}
-.sub-details h2{font-size:24px;font-weight:700;margin:10px 0 6px}
-.sub-details > .muted{font-size:14px;margin-bottom:18px}
-.pills{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
-.pill{display:flex;align-items:center;gap:10px;background:#0a1115;border:1px solid var(--border);padding:10px 12px;border-radius:10px}
-.pill i{color:var(--green);font-size:14px}
-.pill strong{display:block;font-size:13px}
-.pill span{font-size:11px;color:var(--muted)}
-.dates-list{list-style:none;display:flex;flex-direction:column;gap:10px}
-.dates-list li{display:flex;align-items:center;gap:12px}
-.dates-list i{color:var(--green);width:18px}
-.dates-list span{font-size:12px;color:var(--muted);display:block}
-.dates-list strong{font-size:14px}
-
-/* ===== Progress ===== */
-.progress-wrap{margin-top:24px}
-.progress-head{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:8px}
-.progress{height:8px;background:#1a2328;border-radius:40px;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--green-2),var(--green));border-radius:40px;box-shadow:0 0 12px var(--green-glow);transition:width 1s ease}
-
-/* ===== Renew note ===== */
-.renew-note{
-    margin-top:22px;background:#0a1115;border:1px solid var(--border);
-    border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;font-size:13px;color:var(--muted);
-}
-.renew-note > i{color:var(--green);font-size:16px}
-.renew-note span{flex:1;line-height:1.5}
-.green-link{color:var(--green);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
-.green-link:hover{text-decoration:underline}
-
-/* ===== History table ===== */
-.history{width:100%;border-collapse:collapse;margin-top:4px}
-.history th{text-align:left;font-size:12px;font-weight:500;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)}
-.history td{padding:14px 10px;font-size:13px;border-bottom:1px solid var(--border)}
-.history tr:last-child td{border-bottom:none}
-
-/* ===== Status row ===== */
-.status-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
-.status-dot{width:36px;height:36px;border-radius:50%;background:rgba(182,255,46,.1);border:1px solid rgba(182,255,46,.3);color:var(--green);display:grid;place-items:center;flex-shrink:0}
-.status-row strong{font-size:17px;display:block;margin-bottom:4px}
-
-/* ===== Advantages ===== */
-.advantages{list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
-.advantages li{display:flex;align-items:center;gap:10px;font-size:13px}
-.advantages i{color:var(--green);font-size:12px;width:16px;height:16px;border-radius:50%;background:rgba(182,255,46,.1);display:grid;place-items:center}
-
 /* ===== Responsive ===== */
 @media(max-width:1280px){
     .grid-2{grid-template-columns:1fr}
-    .sub-main-grid{grid-template-columns:1fr}
     .form-grid,.prefs-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:860px){
     .main-content{margin-left:0;padding:18px}
-    .burger{display:flex}
-    .main-content{padding-top:70px}
     .identity-card{grid-template-columns:1fr;text-align:center}
     .avatar-ring{margin:0 auto}
     .hero-visual{display:none}
-    .form-grid,.prefs-grid,.pills,.sub-grid{grid-template-columns:1fr}
+    .form-grid,.prefs-grid,.sub-grid{grid-template-columns:1fr}
 }
 
 </style>
+</body>
+</html>

@@ -1,30 +1,8 @@
 <?php
-// Localise un fichier d'include : ce fichier est dans adherent/view/, les includes dans adherent/includes/
-if (!function_exists('messagerieInc')) {
-    function messagerieInc(string $rel): string
-    {
-        $root = dirname(__DIR__) . '/includes';
-        $tried = [
-            $root . '/messagerie/' . $rel,
-            $root . '/' . $rel,
-            $root . '/messagerie/' . basename($rel),
-        ];
-        foreach ($tried as $path) {
-            if (is_file($path)) {
-                return $path;
-            }
-        }
-        throw new RuntimeException("Include introuvable : $rel. Chemins essayés : " . implode(' | ', $tried));
-    }
-}
-require messagerieInc('data/conversations.php');
-require messagerieInc('messagerie/icons.php');
-if (!function_exists('readTicks')) {
-    function readTicks(bool $read = false): string
-    {
-        return '<svg class="ticks' . ($read ? ' is-read' : '') . '" viewBox="0 0 18 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m1 6.5 3.5 3.5L11 2.5M7 10l.5.5L14 2.5"/></svg>';
-    }
-}
+require_once __DIR__ . '/../../config/function.php';
+exige_role('ADHERENT');
+require_once dirname(__DIR__) . '/includes/messagerie/data/conversations.php';
+require_once dirname(__DIR__) . '/includes/messagerie/icons.php';
 $activeId = $conversations[0]['id'];
 $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' => 'Administration'];
 ?>
@@ -38,20 +16,17 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- <link rel="stylesheet" href="assets/css/style.css"> (CSS déjà inclus en bas de page) -->
-    <link rel="stylesheet" href="assets/css/sidebar.css">
 </head>
 <body>
 <div class="app">
     <?php $activeNav = 'messages'; include dirname(__DIR__) . '/includes/sidebar.php'; ?>
 
     <main class="main">
-        <header class="topbar">
-            <button class="icon-btn topbar__burger" id="burger" data-testid="burger-btn" aria-label="Ouvrir le menu"><?= icon('menu') ?></button>
-            <div>
-                <h1 class="topbar__title">Messages</h1>
-                <p class="topbar__sub">Échangez avec vos coachs et l'équipe Athletix</p>
-            </div>
-        </header>
+        <?php include dirname(__DIR__) . '/includes/topbar.php'; ?>
+        <div class="page-title">
+            <h1 class="topbar__title">Messages</h1>
+            <p class="topbar__sub">Échangez avec vos coachs et l'équipe Athletix</p>
+        </div>
 
         <section class="messenger" id="messenger" data-testid="messenger">
             <div class="list-pane">
@@ -65,7 +40,7 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
                     <?php endforeach; ?>
                 </div>
                 <ul class="conv-list" id="conv-list" data-testid="conversation-list">
-                    <?php foreach ($conversations as $conv): $isActive = $conv['id'] === $activeId; include messagerieInc('conversation-item.php'); endforeach; ?>
+                    <?php foreach ($conversations as $conv): $isActive = $conv['id'] === $activeId; include dirname(__DIR__) . '/includes/messagerie/conversation-item.php'; endforeach; ?>
                 </ul>
                 <div class="empty" id="empty" hidden data-testid="empty-state">
                     <?= icon('inbox') ?>
@@ -113,10 +88,6 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
     </main>
 </div>
 <template id="tpl-ticks"><?= readTicks(false) ?></template>
-<!-- <script src="assets/js/app.js"></script> (JS déjà inclus en bas de page) -->
-</body>
-</html>
-
 <script>
     (() => {
     const $ = (s, r = document) => r.querySelector(s);
@@ -177,9 +148,17 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
         return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     }
 
-    function sendMessage() {
+    async function sendMessage() {
         const text = input.value.trim();
         if (!text || !activeId) return;
+        const conversation = $(`.conv[data-id="${activeId}"]`);
+        const recipient = Number(conversation?.dataset.recipient || 0);
+        try {
+            await window.ADH_API('messages', recipient ? {message:text, recipient} : {message:text});
+        } catch (error) {
+            alert(error.message);
+            return;
+        }
         const thread = activeThread();
         const msg = document.createElement('div');
         msg.className = 'msg msg--me is-new';
@@ -298,8 +277,6 @@ a { color: inherit; text-decoration: none; }
 
 /* Main */
 .main { flex: 1; min-width: 0; margin-left: var(--sidebar-w); display: flex; flex-direction: column; padding: 28px 32px 28px; gap: 22px; }
-.topbar { display: flex; align-items: center; gap: 14px; }
-.topbar__burger { display: none; }
 .topbar__title { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
 .topbar__sub { color: var(--muted); margin-top: 4px; }
 
@@ -439,7 +416,6 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 860px) {
     .main { margin-left: 0; padding: 14px; gap: 14px; }
-    .topbar__burger { display: grid; background: var(--surface); border: 1px solid var(--border); }
     .topbar__title { font-size: 24px; }
     .topbar__sub { display: none; }
     .messenger { grid-template-columns: 1fr; border-radius: 18px; }
@@ -455,3 +431,5 @@ a { color: inherit; text-decoration: none; }
 }
 
 </style>
+</body>
+</html>

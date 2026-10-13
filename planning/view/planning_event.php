@@ -5,7 +5,7 @@
  * Reserve aux utilisateurs connectes.
  */
 require_once __DIR__ . '/../../config/function.php';
-require_once __DIR__ . '/../controller/PlanningController.php';
+require_once __DIR__ . '/../controller/planning.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');

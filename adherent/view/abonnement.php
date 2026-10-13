@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../config/function.php';
 exige_role('ADHERENT');
 require dirname(__DIR__) . '/includes/profil/data.php';
 
@@ -10,7 +11,6 @@ require dirname(__DIR__) . '/includes/profil/data.php';
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mon abonnement – ATHLETIX</title>
 <link rel="stylesheet" href="assets/css/style.css">
-<link rel="stylesheet" href="assets/css/sidebar.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -22,7 +22,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
     <?php $activeNav = 'abonnement'; include dirname(__DIR__) . '/includes/sidebar.php'; ?>
 
     <main class="main-content">
-        <button class="burger" id="burger" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+        <?php include dirname(__DIR__) . '/includes/topbar.php'; ?>
 
 
 <!-- Hero -->
@@ -66,7 +66,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                                         <span>N° Membre : <?= htmlspecialchars($user['num_membre']); ?></span>
                                     </div>
                                 </div>
-                                <img class="qr small" src="assets/images/qr-placeholder.png" alt="QR Code fictif">
+                                <span class="qr-code-label" aria-label="Numéro de membre"><?= htmlspecialchars($user['num_membre']); ?></span>
                             </div>
                         </div>
 
@@ -100,9 +100,9 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                     <div class="progress-wrap">
                         <div class="progress-head">
                             <span>Temps restant</span>
-                            <span class="green-text"><?= $abonnement['mois_restants']; ?> mois restants</span>
+                            <span class="green-text"><?= $abonnement['mois_total'] > 0 ? (int)$abonnement['mois_restants'] . ' mois restants' : ($subscription ? 'En cours' : 'Aucune période active') ?></span>
                         </div>
-                        <?php $pct = round(($abonnement['mois_restants']/$abonnement['mois_total'])*100); ?>
+                        <?php $pct = $abonnement['mois_total'] > 0 ? max(0, min(100, (int)round(($abonnement['mois_restants'] / $abonnement['mois_total']) * 100))) : 0; ?>
                         <div class="progress"><div class="progress-fill" style="width: <?= $pct; ?>%"></div></div>
                     </div>
 
@@ -110,7 +110,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                     <div class="renew-note">
                         <i class="fa-regular fa-calendar"></i>
                         <span>Votre abonnement se renouvelle automatiquement<br>à la date d'échéance.</span>
-                        <a href="#" class="green-link">Voir les conditions <i class="fa-solid fa-chevron-right"></i></a>
+                        <a href="<?= e(url('abonnement/catalogue.php')) ?>" class="green-link">Voir les conditions <i class="fa-solid fa-chevron-right"></i></a>
                     </div>
                 </section>
 
@@ -137,7 +137,6 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                         </tbody>
                     </table>
 
-                    <a href="#" class="green-link mt">Voir tout l'historique <i class="fa-solid fa-chevron-right"></i></a>
                 </section>
             </div>
 
@@ -154,18 +153,14 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                         <span class="status-dot"><i class="fa-solid fa-circle-check"></i></span>
                         <div>
                             <strong class="green-text"><?= htmlspecialchars($abonnement['statut']); ?></strong>
-                            <p class="muted small">Tout est en ordre, profitez de votre abonnement sans interruption.</p>
+                            <p class="muted small"><?= $subscription ? 'Votre formule est en cours.' : 'Aucune formule active. Consultez les offres disponibles.' ?></p>
                         </div>
                     </div>
 
-                    <button class="btn btn-primary btn-block">
+                    <a class="btn btn-primary btn-block" href="<?= e(url('abonnement/catalogue.php')) ?>">
                         <i class="fa-regular fa-calendar"></i> Gérer mon abonnement
                         <i class="fa-solid fa-chevron-right right"></i>
-                    </button>
-                    <button class="btn btn-outline btn-block">
-                        <i class="fa-regular fa-file-lines"></i> Télécharger ma carte membre
-                        <i class="fa-solid fa-chevron-right right"></i>
-                    </button>
+                    </a>
                 </section>
 
                 <section class="card">
@@ -178,7 +173,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                             <li><i class="fa-solid fa-check"></i> <?= htmlspecialchars($av); ?></li>
                         <?php endforeach; ?>
                     </ul>
-                    <a href="#" class="green-link">Voir tous les avantages <i class="fa-solid fa-chevron-right"></i></a>
+                    <a href="<?= e(url('abonnement/catalogue.php')) ?>" class="green-link">Voir tous les avantages <i class="fa-solid fa-chevron-right"></i></a>
                 </section>
 
                 <section class="card">
@@ -187,21 +182,16 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                         <h3>Une question ?</h3>
                     </header>
                     <p class="muted small">Notre équipe est disponible pour répondre à toutes vos questions concernant votre abonnement.</p>
-                    <button class="btn btn-outline btn-block">
+                    <a class="btn btn-outline btn-block" href="<?= e(url('adherent/view/messagerie.php')) ?>">
                         Contacter l'accueil <i class="fa-solid fa-chevron-right right"></i>
-                    </button>
+                    </a>
                 </section>
             </aside>
         </div>
     </main>
 </div>
 
-<script src="assets/js/script.js"></script>
-</body>
-</html>
-
 <script>
-    // ===== ATHLETIX — JS page ABONNEMENT =====
 document.addEventListener('DOMContentLoaded', () => {
 
     // Animation de la barre de progression au chargement
@@ -214,29 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Lignes de l'historique → feedback au survol/click
-    document.querySelectorAll('.history tbody tr').forEach(row => {
-        row.style.transition = 'background .2s';
-        row.addEventListener('mouseenter', () => (row.style.background = 'rgba(182,255,46,.03)'));
-        row.addEventListener('mouseleave', () => (row.style.background = ''));
-    });
-
-    // Bouton "Télécharger ma carte membre" (mock)
-    document.querySelectorAll('.btn-outline, .btn-primary').forEach(btn => {
-        btn.addEventListener('click', () => {
-            btn.style.transform = 'scale(.98)';
-            setTimeout(() => (btn.style.transform = ''), 150);
-        });
-    });
-
-    // Chip utilisateur
-    const chip = document.querySelector('.user-chip');
-    if (chip) {
-        chip.addEventListener('click', () => {
-            chip.style.borderColor = 'var(--green)';
-            setTimeout(() => (chip.style.borderColor = ''), 500);
-        });
-    }
 });
 
 </script>
@@ -267,21 +234,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ===== Layout ===== */
 .app-shell{min-height:100vh}
 .main-content{margin-left:250px;padding:22px 36px 60px;max-width:1600px}
-.burger{display:none;position:fixed;top:14px;left:14px;z-index:40;width:42px;height:42px;border-radius:50%;background:#0f1619;border:1px solid var(--border);align-items:center;justify-content:center;font-size:16px}
-
-/* ===== Topbar ===== */
-.topbar{display:flex;justify-content:flex-end;align-items:center;margin-bottom:20px}
-.topbar-right{display:flex;align-items:center;gap:18px}
-.icon-btn{
-    position:relative;width:42px;height:42px;border-radius:50%;
-    background:#0f1619;border:1px solid var(--border);
-    display:grid;place-items:center;color:var(--muted);transition:.2s;
-}
-.icon-btn:hover{color:var(--green);border-color:var(--green)}
-.icon-btn .dot{position:absolute;top:10px;right:12px;width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 10px var(--green-glow)}
-.user-chip{display:flex;align-items:center;gap:10px;padding:4px 10px 4px 4px;background:#0f1619;border:1px solid var(--border);border-radius:40px}
-.avatar-mini{width:34px;height:34px;border-radius:50%;background:#223037;color:#cfd9dd;display:grid;place-items:center;font-weight:600}
-.user-chip i{color:var(--muted);font-size:12px}
 
 /* ===== Hero ===== */
 .hero{
@@ -381,6 +333,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .member-infos span{font-size:11px;color:var(--muted)}
 .qr{width:88px;height:88px;border-radius:6px;background:#fff;padding:4px}
 .qr.small{width:74px;height:74px}
+.qr-code-label{align-self:end;border:1px solid rgba(255,255,255,.25);border-radius:6px;padding:10px;color:#fff;font-family:monospace;font-size:12px}
 .member-card.compact{padding:18px}
 
 /* ============================================
@@ -423,6 +376,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .history th{text-align:left;font-size:12px;font-weight:500;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)}
 .history td{padding:14px 10px;font-size:13px;border-bottom:1px solid var(--border)}
 .history tr:last-child td{border-bottom:none}
+.history tbody tr{transition:background .2s}
+.history tbody tr:hover{background:rgba(182,255,46,.03)}
 
 /* ===== Statut sidebar ===== */
 .status-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
@@ -441,10 +396,10 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 }
 @media(max-width:860px){
     .main-content{margin-left:0;padding:18px}
-    .burger{display:flex}
-    .main-content{padding-top:70px}
     .hero-visual{display:none}
     .pills{grid-template-columns:1fr}
 }
 
 </style>
+</body>
+</html>

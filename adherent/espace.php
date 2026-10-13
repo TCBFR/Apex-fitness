@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../config/function.php';
+exige_role('ADHERENT');
+require_once __DIR__ . '/model/AdherentEspace.php';
 require __DIR__ . '/includes/dashboard/data.php';
 require __DIR__ . '/includes/dashboard/icons.php';
 $active = $_GET['page'] ?? 'dashboard';
@@ -33,24 +36,7 @@ $navHref = fn(string $id): string => isset($pageFiles[$id])
     <?php $activeNav = $active; include __DIR__ . '/includes/sidebar.php'; ?>
 
     <div class="main">
-        <header class="topbar">
-            <button class="burger" id="burger" data-testid="mobile-menu-btn" aria-label="Menu"><?= icon('menu', 22) ?></button>
-            <div class="topbar-right">
-                <button class="bell" id="bellBtn" data-testid="notifications-btn" aria-label="Notifications">
-                    <?= icon('bell', 20) ?><span class="dot"></span>
-                </button>
-                <div class="user-menu">
-                    <button class="avatar-btn" id="avatarBtn" data-testid="user-menu-btn">
-                        <span class="avatar"><?= e($user['initial']) ?></span><?= icon('down', 14) ?>
-                    </button>
-                    <div class="dropdown" id="userDropdown" data-testid="user-dropdown">
-                        <a href="<?= e($navHref('profil')) ?>" data-testid="dropdown-profile">Mon profil</a>
-                        <a href="<?= e($navHref('abonnement')) ?>" data-testid="dropdown-subscription">Mon abonnement</a>
-                        <a href="#" data-testid="dropdown-logout">Déconnexion</a>
-                    </div>
-                </div>
-            </div>
-        </header>
+        <?php include __DIR__ . '/includes/topbar.php'; ?>
 
         <section class="hero reveal" data-testid="hero-section" style="--hero:url('<?= e($heroImg) ?>')">
             <div class="hero-content">
@@ -66,7 +52,8 @@ $navHref = fn(string $id): string => isset($pageFiles[$id])
 
         <section class="stats">
             <?php foreach ($stats as $i => $s): ?>
-                <a href="#" class="stat reveal" style="--d:<?= ($i + 1) * 70 ?>ms" data-testid="stat-card-<?= $i ?>">
+                <?php $statPages = ['abonnement','reservations','performance','profil']; ?>
+                <a href="<?= e($navHref($statPages[$i])) ?>" class="stat reveal" style="--d:<?= ($i + 1) * 70 ?>ms" data-testid="stat-card-<?= $i ?>">
                     <span class="stat-icon"><?= icon($s['icon'], 30) ?></span>
                     <span class="stat-label"><?= e($s['label']) ?></span>
                     <span class="stat-value<?= $s['accent'] ? ' lime' : '' ?>" data-testid="stat-value-<?= $i ?>"><?= e($s['value']) ?></span>
@@ -78,14 +65,24 @@ $navHref = fn(string $id): string => isset($pageFiles[$id])
         <section class="bottom">
             <div class="panel appointments reveal" style="--d:350ms" data-testid="appointments-panel">
                 <div class="panel-head"><?= icon('calendar', 24) ?><h2>Tes prochains rendez-vous</h2></div>
+                <?php if ($upcomingReservations): ?>
+                <div class="empty upcoming-list">
+                    <?php foreach (array_slice($upcomingReservations, 0, 3) as $session): ?>
+                    <p class="empty-title"><?= e($session['titre']) ?></p>
+                    <p class="empty-sub"><?= e(dateFr($session['date_heure_debut'], true)) ?> · <?= e($session['nomsalle']) ?></p>
+                    <?php endforeach; ?>
+                    <a class="btn btn-lime btn-wide" href="<?= e($navHref('reservations')) ?>">Voir mes réservations <?= icon('chevron', 16) ?></a>
+                </div>
+                <?php else: ?>
                 <div class="empty">
                     <span class="empty-icon"><?= icon('calendar', 34) ?></span>
                     <p class="empty-title" data-testid="appointments-empty-text">Aucune séance prévue pour le moment</p>
                     <p class="empty-sub">Réserve une séance et garde le rythme !</p>
-                    <button class="btn btn-lime btn-wide" id="bookBtn" data-testid="book-session-btn">
+                    <a href="<?= e($navHref('reservations')) ?>" class="btn btn-lime btn-wide" data-testid="book-session-btn">
                         <?= icon('calendar', 16) ?> Réserver une séance <?= icon('chevron', 16) ?>
-                    </button>
+                    </a>
                 </div>
+                <?php endif; ?>
                 <span class="corner corner-tr"></span>
                 <span class="corner corner-bl"></span>
             </div>
@@ -93,11 +90,11 @@ $navHref = fn(string $id): string => isset($pageFiles[$id])
             <div class="panel discover reveal" style="--d:420ms" data-testid="discover-panel">
                 <div class="panel-head">
                     <?= icon('star', 24) ?><h2>À découvrir chez ATHLETIX</h2>
-                    <a href="#" class="see-all" data-testid="discover-see-all">Voir tout <?= icon('chevron', 13) ?></a>
+                    <a href="<?= e($navHref('planning')) ?>" class="see-all" data-testid="discover-see-all">Voir tout <?= icon('chevron', 13) ?></a>
                 </div>
                 <div class="cards">
                     <?php foreach ($discover as $i => $c): ?>
-                        <a href="#" class="dcard" data-testid="discover-card-<?= $i ?>">
+                        <a href="<?= e($navHref('planning')) ?>" class="dcard" data-testid="discover-card-<?= $i ?>">
                             <div class="dcard-img" style="background-image:url('<?= e($c['img']) ?>')"></div>
                             <div class="dcard-body">
                                 <span class="dcard-icon"><?= icon($c['icon'], 22) ?></span>
@@ -112,30 +109,6 @@ $navHref = fn(string $id): string => isset($pageFiles[$id])
         </section>
     </div>
 </div>
-
-<div class="modal" id="bookModal" data-testid="book-modal" aria-hidden="true">
-    <div class="modal-box">
-        <h3>Réserver une séance</h3>
-        <form id="bookForm">
-            <label>Activité
-                <select name="activity" data-testid="book-activity-select">
-                    <option>Musculation</option><option>Cardio</option><option>Yoga &amp; bien-être</option>
-                </select>
-            </label>
-            <label>Date<input type="date" name="date" required data-testid="book-date-input"></label>
-            <label>Heure<input type="time" name="time" required data-testid="book-time-input"></label>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-ghost" id="closeModal" data-testid="book-cancel-btn">Annuler</button>
-                <button type="submit" class="btn btn-lime" data-testid="book-submit-btn">Confirmer</button>
-            </div>
-        </form>
-    </div>
-</div>
-<div class="toast" id="toast" data-testid="toast"></div>
-
-<script src="assets/js/main.js"></script>
-</body>
-</html>
 
 <style>
 :root {
@@ -163,23 +136,6 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 
 /* Main */
 .main { flex: 1; margin-left: 250px; padding: 0 36px 36px; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; }
-.topbar { height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
-.topbar-right { display: flex; align-items: center; gap: 18px; }
-.burger { display: none; margin-right: auto; }
-.bell { position: relative; padding: 4px; color: #e5e8e5; transition: color .2s; }
-.bell:hover { color: var(--lime); }
-.bell .dot { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--lime); border: 1.5px solid var(--bg); }
-.user-menu { position: relative; }
-.avatar-btn { display: flex; align-items: center; gap: 6px; color: var(--muted); }
-.avatar { width: 30px; height: 30px; border-radius: 50%; background: #3b4250; color: #fff; font-size: 13px; font-weight: 600; display: grid; place-items: center; }
-.dropdown {
-    position: absolute; right: 0; top: 34px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-    min-width: 170px; padding: 6px; opacity: 0; transform: translateY(-6px); pointer-events: none;
-    transition: opacity .2s, transform .2s; z-index: 40;
-}
-.dropdown.open { opacity: 1; transform: none; pointer-events: auto; }
-.dropdown a { display: block; padding: 9px 10px; font-size: 13px; border-radius: 5px; }
-.dropdown a:hover { background: #20251f; color: var(--lime); }
 
 /* Hero */
 .hero {
@@ -262,19 +218,6 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 .dcard-arrow { position: absolute; right: 16px; bottom: 20px; color: var(--lime); transition: transform .2s; }
 .dcard:hover .dcard-arrow { transform: translateX(3px); }
 
-/* Modal & toast */
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(14px); display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 60; }
-.modal.open { opacity: 1; pointer-events: auto; }
-.modal-box { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: min(380px, 92vw); transform: scale(.96); transition: transform .25s; }
-.modal.open .modal-box { transform: none; }
-.modal-box h3 { font-size: 17px; margin-bottom: 16px; }
-.modal-box label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
-.modal-box input, .modal-box select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 10px; font: inherit; font-size: 13px; color-scheme: dark; }
-.modal-box input:focus, .modal-box select:focus { outline: none; border-color: var(--lime); }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
-.toast { position: fixed; bottom: 24px; right: 24px; background: var(--lime); color: #0a0c0a; font-size: 13px; font-weight: 600; padding: 12px 18px; border-radius: 8px; transform: translateY(20px); opacity: 0; transition: opacity .25s, transform .25s; z-index: 70; }
-.toast.show { opacity: 1; transform: none; }
-
 /* Reveal */
 .reveal { opacity: 0; transform: translateY(12px); animation: rise .6s cubic-bezier(.2,.7,.2,1) forwards; animation-delay: var(--d, 0ms); }
 @keyframes rise { to { opacity: 1; transform: none; } }
@@ -296,46 +239,5 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 }
 
 </style>
-
-<script>
-  (() => {
-    const $ = (id) => document.getElementById(id);
-    const dropdown = $('userDropdown');
-    const modal = $('bookModal');
-    const toast = $('toast');
-    let toastTimer;
-
-    const showToast = (msg) => {
-        toast.textContent = msg;
-        toast.classList.add('show');
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
-    };
-
-    $('avatarBtn').addEventListener('click', (e) => {
-        e.stopPropagation();
-        dropdown.classList.toggle('open');
-    });
-    document.addEventListener('click', () => dropdown.classList.remove('open'));
-
-    $('bellBtn').addEventListener('click', () => showToast('Aucune nouvelle notification'));
-
-    const toggleModal = (open) => {
-        modal.classList.toggle('open', open);
-        modal.setAttribute('aria-hidden', String(!open));
-    };
-    $('bookBtn').addEventListener('click', () => toggleModal(true));
-    $('closeModal').addEventListener('click', () => toggleModal(false));
-    modal.addEventListener('click', (e) => { if (e.target === modal) toggleModal(false); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleModal(false); });
-
-    $('bookForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const data = new FormData(e.target);
-        toggleModal(false);
-        e.target.reset();
-        showToast(`Séance ${data.get('activity')} réservée le ${data.get('date')} à ${data.get('time')}`);
-    });
-})();
-
-</script>
+</body>
+</html>

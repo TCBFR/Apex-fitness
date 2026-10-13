@@ -21,15 +21,10 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
             </div>
           </section>
 
-          <div class="pills" data-testid="planning-category-pills">
-            <button class="pill is-active" data-filter="cat" data-value="all" data-testid="filter-cat-all">Tous</button>
-            <?php foreach (MAIN_FILTERS as $k): ?>
-              <button class="pill" data-filter="cat" data-value="<?= e($k) ?>" data-testid="filter-cat-<?= e($k) ?>"><?= icon(CATEGORIES[$k]['icon'], 18) ?><?= e(CATEGORIES[$k]['label']) ?></button>
-            <?php endforeach; ?>
-          </div>
-
           <section class="panel cal-wrap">
+            <p class="demo-note" id="planning-demo-note" hidden>Planning fictif de démonstration : ces séances ne sont pas enregistrées et ne peuvent pas être réservées.</p>
             <div id="calendar" data-testid="planning-calendar"></div>
+            <div class="event-tooltip" id="event-tooltip" role="tooltip" hidden></div>
             <p class="cal-empty" id="cal-empty" hidden data-testid="calendar-empty-state">Aucune séance ne correspond à vos filtres sur cette période.</p>
           </section>
 
@@ -50,7 +45,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
             <div class="select">
               <select id="filter-coach" data-testid="filter-coach-select">
                 <option value="all">Tous les coachs</option>
-                <?php foreach (COACHES as $k => $full): ?><option value="<?= e($k) ?>">Coach <?= e($k) ?></option><?php endforeach; ?>
+                <?php foreach (atx_coaches() as $k => $full): ?><option value="<?= e($k) ?>">Coach <?= e($full) ?></option><?php endforeach; ?>
               </select><?= icon('down', 18) ?>
             </div>
             <h3 class="label">Disponibilité</h3>
@@ -63,7 +58,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
           <section class="panel side-card" data-testid="next-session-card">
             <div class="side-head">
               <h2 class="side-title"><?= icon('calendar', 22) ?>Prochaine séance</h2>
-              <a href="reservations.php" class="link" data-testid="next-session-see-all">Voir tout</a>
+              <a href="<?= e(url('adherent/view/reservations.php')) ?>" class="link" data-testid="next-session-see-all">Voir tout</a>
             </div>
             <div id="next-session"><div class="skeleton" style="height:150px"></div></div>
           </section>
@@ -102,16 +97,55 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
         </div>
       </div>
 
-<script src="assets/vendor/fullcalendar.min.js"></script>
-<script src="assets/vendor/fullcalendar-fr.js"></script>
-<?php page_foot(['assets/js/planning.js']); ?>
-
 <script>
   /* ATHLETIX — Planning (FullCalendar v6) */
 (function () {
   const ATX = window.ATX;
+  if (!window.FullCalendar) {
+    document.getElementById('cal-empty').hidden = false;
+    document.getElementById('cal-empty').textContent = 'Le calendrier n’a pas pu être chargé. Vérifiez votre connexion puis rechargez la page.';
+    return;
+  }
   const state = { cat: 'all', coach: 'all', available: false };
   const $ = (id) => document.getElementById(id);
+  const eventTooltip = $('event-tooltip');
+
+  function showEventTooltip(info) {
+    const event = info.event;
+    const session = event.extendedProps;
+    eventTooltip.style.setProperty('--c', session.color || '#CCFF00');
+    const details = [
+      ATX.frDate(session.start, { weekday: 'long', day: 'numeric', month: 'long' }) + ' · ' + ATX.hm(session.start) + ' – ' + ATX.hm(session.end),
+      'Coach ' + session.coach_full,
+      session.room,
+      session.remaining + ' place' + (session.remaining > 1 ? 's' : '') + ' restante' + (session.remaining > 1 ? 's' : ''),
+    ];
+    const status = session.is_demo
+      ? 'Séance de démonstration'
+      : session.is_booked ? 'Déjà réservée' : session.is_past ? 'Séance terminée'
+      : session.remaining <= 0 ? 'Séance complète' : 'Cliquez pour réserver';
+    const heading = document.createElement('strong');
+    heading.textContent = event.title;
+    eventTooltip.replaceChildren(heading);
+    details.forEach((detail) => {
+      const line = document.createElement('span');
+      line.textContent = detail;
+      eventTooltip.append(line);
+    });
+    const hint = document.createElement('b');
+    hint.textContent = status;
+    eventTooltip.append(hint);
+
+    eventTooltip.hidden = false;
+    const bounds = info.el.getBoundingClientRect();
+    const width = eventTooltip.offsetWidth;
+    eventTooltip.style.left = Math.max(12, Math.min(bounds.left, window.innerWidth - width - 12)) + 'px';
+    eventTooltip.style.top = Math.max(12, Math.min(bounds.top, window.innerHeight - eventTooltip.offsetHeight - 12)) + 'px';
+  }
+
+  function hideEventTooltip() {
+    eventTooltip.hidden = true;
+  }
 
   const matches = (p) =>
     (state.cat === 'all' || p.category === state.cat) &&
@@ -138,6 +172,8 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
     events: (info, success, failure) => {
       ATX.api('events', { start: info.startStr, end: info.endStr })
         .then((list) => {
+          const isDemo = list.some((event) => event.extendedProps?.is_demo);
+          $('planning-demo-note').hidden = !isDemo;
           const filtered = list.filter((ev) => matches(ev.extendedProps));
           $('cal-empty').hidden = filtered.length > 0;
           success(filtered);
@@ -156,7 +192,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
     },
     eventClassNames: (arg) => {
       const p = arg.event.extendedProps;
-      return [p.is_booked && 'is-booked', p.remaining <= 0 && 'is-full', p.is_past && 'is-past'].filter(Boolean);
+      return ['atx-ev', p.is_booked && 'is-booked', p.remaining <= 0 && 'is-full', p.is_past && 'is-past'].filter(Boolean);
     },
     eventContent: (arg) => {
       const p = arg.event.extendedProps;
@@ -172,17 +208,18 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
           '<strong>' + t + '</strong>' +
           '<span>' + ATX.hm(p.start) + ' – ' + ATX.hm(p.end) + '</span>' +
           '<span class="ev-coach">Coach ' + ATX.esc(p.coach) + '</span>' +
-          '<span class="ev-places">' + ATX.icons.user + p.booked + ' / ' + p.capacity + (p.remaining <= 0 ? ' · Complet' : '') + '</span>' +
           '</div>',
       };
     },
     eventDidMount: (arg) => {
       arg.el.style.setProperty('--c', arg.event.extendedProps.color);
       arg.el.setAttribute('data-testid', 'calendar-event-' + arg.event.id);
-      arg.el.setAttribute('title', arg.event.title + ' — Coach ' + arg.event.extendedProps.coach);
     },
+    eventMouseEnter: showEventTooltip,
+    eventMouseLeave: hideEventTooltip,
     eventClick: (info) => {
       info.jsEvent.preventDefault();
+      hideEventTooltip();
       openModal(info.event.extendedProps);
     },
     datesSet: (arg) => {
@@ -219,6 +256,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
   let current = null;
 
   function actionState(s) {
+    if (s.is_demo) return { label: 'Séance fictive', cls: 'btn-muted', action: null };
     if (s.is_past) return { label: 'Séance terminée', cls: 'btn-muted', action: null };
     if (s.is_booked) return { label: 'Annuler ma réservation', cls: 'btn-danger', action: 'cancel' };
     if (s.remaining <= 0) return { label: 'Complet', cls: 'btn-muted', action: null };
@@ -282,6 +320,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
         nextBox.innerHTML = '<p class="muted">Aucune séance à venir.</p>';
         return;
       }
+      if (s.is_demo) $('planning-demo-note').hidden = false;
       const c = ATX.categories[s.category];
       nextBox.innerHTML =
         '<div class="next-big" style="--c:' + s.color + '">' +
@@ -293,8 +332,10 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
         '<p class="muted">' + ATX.icons.user + 'Coach ' + ATX.esc(s.coach) + '</p>' +
         '<p class="muted">' + ATX.icons.user + s.remaining + ' / ' + s.capacity + ' places restantes</p>' +
         '</div></div>' +
-        (s.is_booked
-          ? '<div class="next-booked"><span class="tag tag-neon">' + ATX.icons.check + 'Réservée</span><a class="btn btn-outline btn-sm" href="reservations.php" data-testid="next-session-manage">Gérer ' + ATX.icons.right + '</a></div>'
+        (s.is_demo
+          ? '<p class="demo-note">Séance fictive, réservation désactivée.</p>'
+          : s.is_booked
+          ? '<div class="next-booked"><span class="tag tag-neon">' + ATX.icons.check + 'Réservée</span><a class="btn btn-outline btn-sm" href="' + ATX.reservationsUrl + '" data-testid="next-session-manage">Gérer ' + ATX.icons.right + '</a></div>'
           : '<button class="btn btn-primary btn-block" data-testid="next-session-book-button" data-id="' + s.id + '">Réserver ' + ATX.icons.right + '</button>');
       const bookBtn = nextBox.querySelector('[data-testid="next-session-book-button"]');
       if (bookBtn) bookBtn.addEventListener('click', () => openModal(s));
@@ -306,3 +347,4 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
 })();
 
 </script>
+<?php page_foot(); ?>

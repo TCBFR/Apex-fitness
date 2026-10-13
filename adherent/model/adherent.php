@@ -10,7 +10,7 @@ class Adherent extends Utilisateur
 
     private string $matricule;
     private string $dateInscription;
-    private string $dateFinAdhesion;
+    private ?string $dateFinAdhesion;
 
     public function __construct(
         string $nom,
