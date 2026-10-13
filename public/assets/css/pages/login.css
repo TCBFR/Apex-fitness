@@ -104,6 +104,8 @@ body{
 body.loaded .auth{opacity:1;transform:translateY(0) scale(1)}
 
 .brandline{display:flex;align-items:center;gap:14px}
+.brand-home{width:max-content;color:inherit;text-decoration:none}
+.brand-home:focus-visible{outline:2px solid var(--lime);outline-offset:6px;border-radius:4px}
 .logo{width:42px;height:42px;color:var(--lime);filter:drop-shadow(0 0 14px rgba(200,240,75,.5))}
 .brandname{font:800 24px var(--font-display);letter-spacing:.05em;line-height:1}
 .brandname span{color:var(--lime)}

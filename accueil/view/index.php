@@ -1,349 +1,158 @@
-<?php $activites = $activites ?? []; require __DIR__ . '/../../layout/header.php'; ?>
-<section class="hero">
-  <div class="hero-content">
-    <div class="hero-text">
-      <h1>Votre créneau vous attend.</h1>
-      <p>Cross-training, yoga, cycling ou musculation en accès libre : consultez le planning, réservez votre place en deux clics et venez vous entraîner.</p>
-      <div class="hero-buttons">
-        <a class="btn btn-primary" href="#planning">Voir le planning</a>
-        <a class="btn btn-secondary" href="<?= url('abonnement/catalogue.php') ?>">Comparer les abonnements</a>
+<?php
+$activites = $activites ?? [];
+$activeNav = $activeNav ?? 'accueil';
+$navLinks = [
+    'accueil' => ['Accueil', url('accueil/index.php')],
+    'activites' => ['Activités', '#activites'],
+    'abonnements' => ['Abonnements', url('abonnement/catalogue.php')],
+    'avis' => ['Avis', url('avis/public.php')],
+    'faq' => ['FAQ', url('faq/public.php')],
+    'contact' => ['Contact', url('message_contact/index.php')],
+];
+?>
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ATHLETIX : salle de sport, cours collectifs et accompagnement sportif.">
+  <title>ATHLETIX — Salle de sport et cours collectifs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="<?= e(url('assets/css/pages/home.css')) ?>">
+</head>
+<body>
+<header class="nav" id="nav" data-testid="main-nav">
+  <a class="nav-brand" href="<?= e(url('accueil/index.php')) ?>" data-testid="nav-brand" aria-label="ATHLETIX, accueil">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5 59 59H45.5L32 32.5 18.5 59H5Z" fill="currentColor"/></svg>
+    <span class="nav-brand-text">
+      <span class="nav-name">ATHLETI<span>X</span></span>
+      <span class="nav-tag">PLUS FORT CHAQUE JOUR</span>
+    </span>
+  </a>
+
+  <nav class="nav-links" id="nav-links" aria-label="Navigation principale">
+    <?php foreach ($navLinks as $key => [$label, $href]): ?>
+      <a href="<?= e($href) ?>" class="<?= $key === $activeNav ? 'active' : '' ?>" <?= $key === $activeNav ? 'aria-current="page"' : '' ?>><?= e($label) ?></a>
+    <?php endforeach; ?>
+    <a class="nav-login mobile-only" href="<?= e(url('utilisateur/connexion.php')) ?>">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.2-3.4 3.8-5 7-5s5.8 1.6 7 5"/></svg>
+      Connexion adhérent
+    </a>
+  </nav>
+
+  <div class="nav-actions">
+    <a class="nav-login desktop-login" href="<?= e(url('utilisateur/connexion.php')) ?>">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20c1.2-3.4 3.8-5 7-5s5.8 1.6 7 5"/></svg>
+      Connexion adhérent
+    </a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero" data-testid="hero-section">
+    <div class="hero-media" aria-hidden="true"><img src="<?= e(url('assets/img/home-hero.jpg')) ?>" alt=""></div>
+    <div class="hero-inner">
+      <p class="eyebrow" data-reveal>Salle de sport <i>|</i> Cours collectifs <i>|</i> Bien-être</p>
+      <h1 class="hero-title" data-testid="hero-title">
+        <span class="line"><span data-reveal>Dépasse tes limites.</span></span>
+        <span class="line lime"><span data-reveal>À ton rythme.</span></span>
+      </h1>
+      <p class="hero-sub" data-reveal>Musculation, cardio et cours collectifs : trouve l’activité qui te motive et progresse avec une équipe à tes côtés.</p>
+      <div class="hero-ctas" data-reveal>
+        <a class="btn btn-lime" href="<?= e(url('utilisateur/inscription.php')) ?>">Commencer maintenant <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost-h" href="#activites">Découvrir les activités</a>
       </div>
+      <p class="hero-note" data-reveal>Un espace conçu pour avancer, séance après séance.</p>
     </div>
-    <div class="hero-image">
-      <img src="<?= url('assets/img/section1.png') ?>" alt="Entraînement en salle" class="hero-img">
-    </div>
-  </div>
-</section>
+  </section>
 
-<section class="section section-objectifs">
-  <div class="objectifs-content">
-    <img src="<?= url('assets/img/accueil.png') ?>" alt="Des objectifs réels, des résultats durables." class="objectifs-img">
-    <div class="objectifs-text">
-      <h2>Des objectifs réels, des résultats durables.</h2>
-      <p>Notre approche personnalisée vous permet d'atteindre vos ambitions sportives avec des résultats concrets et durables.</p>
-    </div>
-  </div>
-</section>
+  <section class="features" aria-label="Les avantages ATHLETIX">
+    <article class="feature" data-reveal>
+      <span class="f-icon" aria-hidden="true">↗</span>
+      <div><h3>Équipements modernes</h3><p>Tout le nécessaire pour t’entraîner efficacement.</p></div>
+    </article>
+    <article class="feature" data-reveal>
+      <span class="f-icon" aria-hidden="true">◎</span>
+      <div><h3>Coaches à l’écoute</h3><p>Des conseils adaptés à tes objectifs.</p></div>
+    </article>
+    <article class="feature" data-reveal>
+      <span class="f-icon" aria-hidden="true">◇</span>
+      <div><h3>Des cours pour tous</h3><p>Choisis ton rythme et trouve ta discipline.</p></div>
+    </article>
+  </section>
 
-<section id="planning" class="section section-planning">
-  <div class="container">
-    <div class="section-header">
-      <h2>Prochaines séances</h2>
-      <p class="section-subtitle">Choisissez une séance et consultez les disponibilités dans le planning.</p>
+  <section class="activities section" id="activites" data-testid="activities-section">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow">Bouge comme tu veux</p>
+      <h2 class="section-title">Trouve ton <em>entraînement</em></h2>
+      <p class="section-sub">Des séances variées pour te dépasser, te défouler ou simplement prendre soin de toi.</p>
     </div>
-    
-    <?php if (!$activites): ?>
-      <p class="section-subtitle">Aucune séance n’est programmée pour le moment.</p>
-    <?php else: ?>
-    <div class="activities-grid">
-      <?php foreach ($activites as $activite): ?>
-        <div class="activity-card">
-          <div class="activity-header">
-            <h3><?= e($activite['titre']) ?></h3>
-          </div>
-          <div class="activity-body">
-            <div class="activity-details">
-              <span class="duration"><?= (int) $activite['duree_minutes'] ?> min</span>
-              <span class="capacity"><?= (int) $activite['capacite_max'] ?> places</span>
+    <?php if ($activites): ?>
+      <div class="cards">
+        <?php foreach ($activites as $activite): ?>
+          <?php
+          $titreActivite = mb_strtolower((string) ($activite['titre'] ?? ''));
+          $imageActivite = 'home-musculation.jpg';
+          $descriptionImage = 'Haltères dans une salle de sport';
+          if (str_contains($titreActivite, 'yoga')) {
+              $imageActivite = 'home-yoga.jpg';
+              $descriptionImage = 'Séance de yoga en studio';
+          } elseif (str_contains($titreActivite, 'cardio') || str_contains($titreActivite, 'hiit') || str_contains($titreActivite, 'cycling')) {
+              $imageActivite = 'home-cardio.jpg';
+              $descriptionImage = 'Séance de cardio en salle';
+          }
+          ?>
+          <article class="card-h" data-reveal>
+            <div class="card-media">
+              <img src="<?= e(url('assets/img/' . $imageActivite)) ?>" alt="<?= e($descriptionImage) ?>" loading="lazy">
             </div>
-            <p class="activity-description"><?= e($activite['description'] ?? '') ?></p>
-          </div>
-          <div class="activity-footer">
-            <a href="<?= e(url(a_role('ADHERENT') ? 'adherent/view/planning.php' : 'utilisateur/connexion.php')) ?>" class="btn btn-small">Réserver</a>
-          </div>
-        </div>
-      <?php endforeach; ?>
-    </div>
+            <div class="card-body">
+            <p class="activity-label">
+              <?= e((new DateTimeImmutable((string) $activite['date_heure_debut']))->format('d/m à H\hi')) ?>
+            </p>
+            <h3><?= e($activite['titre'] ?? 'Activité') ?></h3>
+            <p class="activity-description"><?= e($activite['description'] ?? 'Séance encadrée dans notre salle.') ?></p>
+            <div class="activity-meta">
+              <span><?= (int) ($activite['duree_minutes'] ?? 0) ?> min</span>
+              <span><?= (int) ($activite['capacite_max'] ?? 0) ?> places</span>
+            </div>
+            <a href="<?= e(url('activite/index.php')) ?>" class="text-link">Voir les activités <span aria-hidden="true">→</span></a>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <div class="empty-state" data-reveal>
+        <h3>Les prochaines séances arrivent bientôt.</h3>
+        <p>Découvre les activités proposées par ATHLETIX en attendant.</p>
+        <a class="text-link" href="<?= e(url('activite/index.php')) ?>">Voir les activités <span aria-hidden="true">→</span></a>
+      </div>
     <?php endif; ?>
-  </div>
-</section>
+  </section>
 
-<section class="section section-features">
-  <div class="container">
-    <div class="features-grid">
-      <div class="feature-card">
-        <img src="<?= url('assets/img/header.png') ?>" alt="Équipements modernes" class="feature-img">
-        <h3>Équipements modernes</h3>
-        <p>Notre salle est équipée de machines de pointe pour un entraînement optimal.</p>
-      </div>
-      <div class="feature-card">
-        <img src="<?= url('assets/img/section1.png') ?>" alt="Entraîneurs certifiés" class="feature-img">
-        <h3>Entraîneurs certifiés</h3>
-        <p>Nos coachs sont formés aux dernières techniques de fitness et nutrition.</p>
+  <section class="cta" id="cta">
+    <div class="cta-media" aria-hidden="true"><img src="<?= e(url('assets/img/home-musculation.jpg')) ?>" alt=""></div>
+    <div class="cta-inner" data-reveal>
+      <p class="eyebrow">Le prochain pas est le tien</p>
+      <h2 class="cta-title">Prêt à passer au <em>niveau supérieur&nbsp;?</em></h2>
+      <p class="cta-sub">Crée ton espace membre et découvre les offres qui correspondent à tes objectifs.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-lime" href="<?= e(url('utilisateur/inscription.php')) ?>">Créer mon compte <span aria-hidden="true">→</span></a>
+        <a class="btn btn-ghost-h" href="<?= e(url('abonnement/catalogue.php')) ?>">Voir les abonnements</a>
       </div>
     </div>
-  </div>
-</section>
+  </section>
+</main>
 
-<style>
-  /* Styles pour l'interface professionnelle et fitness */
-/* Styles pour l'interface professionnelle et fitness */
-.hero {
-  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
-  color: white;
-  padding: 4rem 0;
-  margin-bottom: 3rem;
-}
-
-.hero-content {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  gap: 2rem;
-}
-
-.hero-text h1 {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  line-height: 1.2;
-}
-
-.hero-text p {
-  font-size: 1.1rem;
-  margin-bottom: 2rem;
-  opacity: 0.9;
-}
-
-.hero-buttons {
-  display: flex;
-  gap: 1rem;
-}
-
-.btn-primary {
-  background: #ff6b6b;
-  color: white;
-  border: none;
-  padding: 0.8rem 1.5rem;
-  border-radius: 30px;
-  text-decoration: none;
-  font-weight: bold;
-  transition: all 0.3s ease;
-}
-
-.btn-primary:hover {
-  background: #ff5252;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
-}
-
-.btn-secondary {
-  background: transparent;
-  color: white;
-  border: 2px solid white;
-  padding: 0.8rem 1.5rem;
-  border-radius: 30px;
-  text-decoration: none;
-  font-weight: bold;
-  transition: all 0.3s ease;
-}
-
-.btn-secondary:hover {
-  background: white;
-  color: #2c5364;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
-}
-
-.hero-image {
-  flex: 1;
-  text-align: center;
-}
-
-.hero-img {
-  max-width: 100%;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-.section-objectifs {
-  background: #f8f9fa;
-  padding: 4rem 0;
-  margin-bottom: 3rem;
-}
-
-.objectifs-content {
-  display: flex;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  gap: 3rem;
-}
-
-.objectifs-img {
-  flex: 1;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.objectifs-text {
-  flex: 1;
-}
-
-.objectifs-text h2 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
-  color: #2c5364;
-}
-
-.section-planning {
-  padding: 4rem 0;
-  background: white;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 2rem;
-}
-
-.section-header {
-  text-align: center;
-  margin-bottom: 3rem;
-}
-
-.section-header h2 {
-  font-size: 2rem;
-  color: #2c5364;
-  margin-bottom: 1rem;
-}
-
-.section-subtitle {
-  color: #666;
-  font-size: 1.1rem;
-}
-
-.activities-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-}
-
-.activity-card {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  transition: all 0.3s ease;
-  border: 1px solid #eee;
-}
-
-.activity-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-}
-
-.activity-header {
-  background: #2c5364;
-  color: white;
-  padding: 1.5rem;
-}
-
-.activity-header h3 {
-  margin: 0;
-  font-size: 1.4rem;
-}
-
-.activity-body {
-  padding: 1.5rem;
-}
-
-.activity-details {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.duration, .capacity {
-  background: #f0f8ff;
-  padding: 0.3rem 0.8rem;
-  border-radius: 20px;
-  font-weight: bold;
-}
-
-.activity-description {
-  color: #555;
-  line-height: 1.6;
-  margin-bottom: 1.5rem;
-}
-
-.activity-footer {
-  padding: 0 1.5rem 1.5rem;
-}
-
-.btn-small {
-  background: #ff6b6b;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 20px;
-  text-decoration: none;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
-}
-
-.btn-small:hover {
-  background: #ff5252;
-  transform: scale(1.05);
-}
-
-.section-features {
-  padding: 4rem 0;
-  background: #f8f9fa;
-  margin-top: 3rem;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-}
-
-.feature-card {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-}
-
-.feature-img {
-  width: 100%;
-  height: 200px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.feature-card h3 {
-  color: #2c5364;
-  margin-bottom: 1rem;
-}
-
-@media (max-width: 768px) {
-  .hero-content {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .objectifs-content {
-    flex-direction: column;
-  }
-  
-  .hero-buttons {
-    justify-content: center;
-  }
-}
-</style>
-<?php require __DIR__ . '/../../layout/footer.php'; ?>
+<footer class="footer">
+  <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5 59 59H45.5L32 32.5 18.5 59H5Z" fill="currentColor"/></svg>
+  <p>ATHLETIΞ — Plus fort chaque jour · <a href="<?= e(url('utilisateur/connexion.php')) ?>">Espace membre</a></p>
+</footer>
+<script src="<?= e(url('assets/js/pages/home.js')) ?>" defer></script>
+</body>
+</html>

@@ -10,7 +10,8 @@ final class AccueilActivites
     public function toutes(): array
     {
         return db()->query(
-            'SELECT titre, TIMESTAMPDIFF(MINUTE, date_heure_debut, date_heure_fin) AS duree_minutes,
+            'SELECT titre, date_heure_debut,
+                    TIMESTAMPDIFF(MINUTE, date_heure_debut, date_heure_fin) AS duree_minutes,
                     capacite_max, description
              FROM activite
              WHERE date_heure_debut >= NOW()

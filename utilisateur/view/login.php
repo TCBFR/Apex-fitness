@@ -26,13 +26,13 @@ $messagesFlash = flashs();
   <section class="side">
     <div class="stripes" aria-hidden="true"></div>
     <div class="auth" id="card" data-testid="login-card">
-      <div class="brandline" data-reveal style="--d:.05s">
+      <a class="brandline brand-home" href="<?= e(url('accueil/index.php')) ?>" aria-label="Retour à l’accueil">
         <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 5 59 59H45.5L32 32.5 18.5 59H5Z" fill="currentColor"/></svg>
         <div>
           <p class="brandname" data-testid="brand-wordmark">ATHLETI<span>X</span></p>
           <p class="member">ESPACE MEMBRE</p>
         </div>
-      </div>
+      </a>
 
       <header class="panel-head">
         <h1 class="panel-title" data-testid="login-title"><span class="line"><span data-reveal style="--d:.2s">Bon retour,</span></span></h1>
