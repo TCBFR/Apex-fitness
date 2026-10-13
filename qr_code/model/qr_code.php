@@ -2,136 +2,124 @@
 
 declare(strict_types=1);
 
-final class QrCode
+/**
+ * MODÈLE — QR codes des adhérents (table `qr_code`).
+ * Accès aux données + règles métier (signature, statut). Aucune sortie HTTP, aucune image :
+ * l'image PNG est dans la vue (view/image.php), les réponses dans le contrôleur.
+ *
+ * Nécessite la constante APP_SECRET (config/config.php).
+ */
+final class GenerateurQrCode
 {
-    protected const TABLE = 'qr_code';
+    private const PREFIXE = 'ATHLETIX';
 
-    public function create(PDO $pdo, array $columns, array $data): void
+    /* ------------------------------ Règles métier ------------------------------ */
+
+    /**
+     * Valeur signée : ATHLETIX|matricule|NumUsers|jeton|signature (< 120 caractères, colonne code_qr).
+     * Le jeton aléatoire permet de regénérer un QR pour le même adhérent (code_qr est UNIQUE).
+     */
+    public function valeur(string $matricule, int $numUsers, ?string $jeton = null): string
     {
-        $this->saveRecord($pdo, $columns, $data);
+        $jeton ??= bin2hex(random_bytes(4));
+        $base = sprintf('%s|%s|%d|%s', self::PREFIXE, $matricule, $numUsers, $jeton);
+        return $base . '|' . $this->signature($base);
     }
 
-    public function update(PDO $pdo, array $columns, array $data, array $key): void
+    /** Vérifie la signature d'une valeur scannée (anti-falsification). */
+    public function verifier(string $valeur): bool
     {
-        $this->saveRecord($pdo, $columns, $data, $key);
+        $pos = strrpos($valeur, '|');
+        if ($pos === false) {
+            return false;
+        }
+        $base = substr($valeur, 0, $pos);
+        return str_starts_with($base, self::PREFIXE . '|')
+            && hash_equals($this->signature($base), substr($valeur, $pos + 1));
     }
 
-    public function findById(PDO $pdo, array $columns, array $key): ?array
+    /**
+     * Statut d'une valeur scannée : FALSIFIE | INCONNU | DESACTIVE | EXPIRE | VALIDE.
+     * (L'abonnement est vérifié par le contrôleur, qui croise ce modèle avec Abonnement.)
+     *
+     * @return array{statut: string, membre: ?array, numUsers: ?int}
+     */
+    public function controler(PDO $pdo, string $valeur): array
     {
-        $where = $this->keyWhere($columns, $key);
-        $query = $pdo->prepare(
-            'SELECT * FROM ' . $this->quote(static::TABLE) . ' WHERE ' . $where['sql']
+        if (!$this->verifier($valeur)) {
+            return ['statut' => 'FALSIFIE', 'membre' => null, 'numUsers' => null];
+        }
+        $qr = $this->trouverParValeur($pdo, $valeur);
+        if ($qr === null) {
+            return ['statut' => 'INCONNU', 'membre' => null, 'numUsers' => null];
+        }
+
+        $membre = ['nom_complet' => $qr['prenom'] . ' ' . $qr['nom'], 'matricule' => $qr['matriculeadh']];
+        $numUsers = (int) $qr['NumUsers'];
+
+        if ((int) $qr['actif_qr'] !== 1) {
+            $statut = 'DESACTIVE';
+        } elseif (strtotime((string) $qr['date_expiration_qr']) <= time()) {
+            $statut = 'EXPIRE';
+        } else {
+            $statut = 'VALIDE';
+        }
+        return ['statut' => $statut, 'membre' => $membre, 'numUsers' => $numUsers];
+    }
+
+    /* ---------------------------- Base de données ---------------------------- */
+
+    /**
+     * Crée le QR d'un adhérent (désactive les précédents) et renvoie sa valeur.
+     * À appeler dans la transaction de fin de souscription, après la création de la ligne adherent.
+     */
+    public function creerPourAdherent(PDO $pdo, int $numUsers, string $matricule, DateTimeInterface $expiration): string
+    {
+        $valeur = $this->valeur($matricule, $numUsers);
+        $pdo->prepare('UPDATE qr_code SET actif_qr = 0 WHERE NumUsers = ?')->execute([$numUsers]);
+        $pdo->prepare(
+            'INSERT INTO qr_code (code_qr, date_expiration_qr, actif_qr, NumUsers) VALUES (?, ?, 1, ?)'
+        )->execute([$valeur, $expiration->format('Y-m-d H:i:s'), $numUsers]);
+        return $valeur;
+    }
+
+    /** QR actif et non expiré d'un adhérent, ou null. */
+    public function actifPourAdherent(PDO $pdo, int $numUsers): ?array
+    {
+        $st = $pdo->prepare(
+            'SELECT Numqr, code_qr, date_generation_qr, date_expiration_qr
+               FROM qr_code
+              WHERE NumUsers = ? AND actif_qr = 1 AND date_expiration_qr > NOW()
+           ORDER BY date_generation_qr DESC, Numqr DESC
+              LIMIT 1'
         );
-        $query->execute($where['values']);
-        return $query->fetch() ?: null;
+        $st->execute([$numUsers]);
+        $row = $st->fetch();
+        return $row === false ? null : $row;
     }
 
-    public function findAll(PDO $pdo, array $columns): array
+    /** Ligne qr_code d'une valeur scannée + identité de l'adhérent (sans filtrer actif/expiration). */
+    public function trouverParValeur(PDO $pdo, string $valeur): ?array
     {
-        $primary = $this->primaryKey($columns);
-        $order = implode(', ', array_map(fn(string $name): string => $this->quote($name), $primary));
-        return $pdo->query(
-            'SELECT * FROM ' . $this->quote(static::TABLE) . ' ORDER BY ' . $order . ' LIMIT 250'
-        )->fetchAll();
+        $st = $pdo->prepare(
+            'SELECT q.Numqr, q.actif_qr, q.date_expiration_qr, q.NumUsers,
+                    u.nomUsers AS nom, u.prenomUsers AS prenom, a.matriculeadh
+               FROM qr_code q
+               JOIN utilisateur u ON u.NumUsers = q.NumUsers
+               JOIN adherent a ON a.NumUsers = q.NumUsers
+              WHERE q.code_qr = ?
+              LIMIT 1'
+        );
+        $st->execute([$valeur]);
+        $row = $st->fetch();
+        return $row === false ? null : $row;
     }
 
-    public function delete(PDO $pdo, array $columns, array $key): void
+    private function signature(string $base): string
     {
-        $where = $this->keyWhere($columns, $key);
-        $pdo->prepare(
-            'DELETE FROM ' . $this->quote(static::TABLE) . ' WHERE ' . $where['sql']
-        )->execute($where['values']);
-    }
-
-    private function saveRecord(PDO $pdo, array $columns, array $input, ?array $key = null): void
-    {
-        $primary = $this->primaryKey($columns);
-        $fields = [];
-        $values = [];
-        foreach ($columns as $column) {
-            $name = $column['COLUMN_NAME'];
-            $extra = strtolower($column['EXTRA']);
-            if (str_contains($extra, 'auto_increment') || str_contains($extra, 'generated')) continue;
-            if ($key !== null && in_array($name, $primary, true)) continue;
-
-            $boolean = $column['DATA_TYPE'] === 'tinyint' && $column['COLUMN_TYPE'] === 'tinyint(1)';
-            if ($boolean) $value = isset($input[$name]) ? 1 : 0;
-            elseif (array_key_exists($name, $input)) $value = is_scalar($input[$name]) ? trim((string) $input[$name]) : '';
-            else continue;
-
-            if (stripos($name, 'password') !== false) {
-                if ($value === '' && $key !== null) continue;
-                if ($value === '') {
-                    throw new InvalidArgumentException('Le mot de passe est obligatoire.');
-                }
-                if (strlen($value) < 8) {
-                    throw new InvalidArgumentException('Le mot de passe doit faire 8 caractères minimum.');
-                }
-                $value = password_hash($value, PASSWORD_DEFAULT);
-            }
-            if ($value === '' && !$boolean) {
-                if ($column['IS_NULLABLE'] === 'YES') $value = null;
-                elseif ($column['COLUMN_DEFAULT'] !== null) continue;
-                else throw new InvalidArgumentException('Le champ « ' . $name . ' » est obligatoire.');
-            }
-            if (is_string($value) && in_array($column['DATA_TYPE'], ['datetime', 'timestamp'], true)) {
-                $value = str_replace('T', ' ', $value);
-                if (strlen($value) === 16) $value .= ':00';
-            }
-            $fields[] = $name;
-            $values[] = $value;
+        if (!defined('APP_SECRET') || APP_SECRET === '') {
+            throw new RuntimeException('APP_SECRET manquant dans config/config.php.');
         }
-
-        if ($key === null) {
-            $names = array_map(fn(string $name): string => $this->quote($name), $fields);
-            $sql = $fields
-                ? 'INSERT INTO ' . $this->quote(static::TABLE) . ' (' . implode(', ', $names) .
-                    ') VALUES (' . implode(', ', array_fill(0, count($fields), '?')) . ')'
-                : 'INSERT INTO ' . $this->quote(static::TABLE) . ' () VALUES ()';
-            $pdo->prepare($sql)->execute($values);
-            return;
-        }
-
-        if (!$fields) throw new InvalidArgumentException('Aucune valeur modifiable n’a été fournie.');
-        $where = $this->keyWhere($columns, $key);
-        $set = implode(', ', array_map(fn(string $name): string => $this->quote($name) . ' = ?', $fields));
-        $pdo->prepare(
-            'UPDATE ' . $this->quote(static::TABLE) . ' SET ' . $set . ' WHERE ' . $where['sql']
-        )->execute([...$values, ...$where['values']]);
+        return substr(hash_hmac('sha256', $base, APP_SECRET), 0, 16);
     }
-
-    private function primaryKey(array $columns): array
-    {
-        $primary = array_values(array_map(
-            static fn(array $column): string => $column['COLUMN_NAME'],
-            array_filter($columns, static fn(array $column): bool => $column['COLUMN_KEY'] === 'PRI')
-        ));
-        if (!$primary) throw new RuntimeException('Cette table ne possède pas de clé primaire.');
-        return $primary;
-    }
-
-    private function keyWhere(array $columns, array $key): array
-    {
-        $primary = $this->primaryKey($columns);
-        if (count($key) !== count($primary)) throw new InvalidArgumentException('Clé de ligne invalide.');
-        $parts = [];
-        $values = [];
-        foreach ($primary as $column) {
-            if (!array_key_exists($column, $key) || !is_scalar($key[$column])) {
-                throw new InvalidArgumentException('Clé de ligne invalide.');
-            }
-            $parts[] = $this->quote($column) . ' = ?';
-            $values[] = $key[$column];
-        }
-        return ['sql' => implode(' AND ', $parts), 'values' => $values];
-    }
-
-    private function quote(string $identifier): string
-    {
-        if (!preg_match('/\A[A-Za-z_][A-Za-z0-9_]*\z/', $identifier)) {
-            throw new InvalidArgumentException('Identifiant SQL invalide.');
-        }
-        return '`' . $identifier . '`';
-    }
-
 }

@@ -12,6 +12,12 @@ $pages = [
     'activite/index.php' => '../activite/index.php',
     'adherent/index.php' => '../adherent/index.php',
     'adherent/espace.php' => '../adherent/espace.php',
+    'adherent/view/messagerie.php' => '../adherent/view/messagerie.php',
+    'adherent/view/planning.php' => '../adherent/view/planning.php',
+    'adherent/view/reservations.php' => '../adherent/view/reservations.php',
+    'adherent/view/performance.php' => '../adherent/view/performance.php',
+    'adherent/view/abonnement.php' => '../adherent/view/abonnement.php',
+    'adherent/view/profil.php' => '../adherent/view/profil.php',
     'admin/index.php' => '../admin/index.php',
     'admin/espace.php' => '../admin/espace.php',
     'avis/index.php' => '../avis/index.php',
@@ -44,6 +50,11 @@ $pages = [
     'utilisateur/connexion.php' => '../utilisateur/connexion.php',
     'utilisateur/deconnexion.php' => '../utilisateur/deconnexion.php',
     'config/install.php' => '../config/install.php',
+    'adherent/profil-update.php'        => '../adherent/profil-update.php',
+    'adherent/profil-notifications.php' => '../adherent/profil-notifications.php',
+    'adherent/profil-qr.php'            => '../adherent/profil-qr.php',
+    'qr_code/verifier.php'              => '../qr_code/verifier.php',
+    'qr_code/verifier-api.php'          => '../qr_code/verifier-api.php',
 ];
 
 $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);

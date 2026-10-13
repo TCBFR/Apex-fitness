@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../faq/controller/FaqController.php';
 require_once __DIR__ . '/../message_contact/controller/MessageContactController.php';
+require_once __DIR__ . '/../planning/controller/planning.php';
 exige_role('EMPLOYE');
 
 $moi    = utilisateur()['NumUsers'];
@@ -15,6 +16,7 @@ $transitionsMaintenance = [
   'En cours' => ['En attente de piece', 'À valider'],
   'En attente de piece' => ['En cours', 'À valider'],
 ];
+$planning = new PlanningController();
 
 $pdo->exec(
   'CREATE TABLE IF NOT EXISTS intervention (
@@ -100,51 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirige('employe/espace.php?onglet=messages');
   }
 
-    /* ---- creer un creneau ------------------------------------------ */
-    if ($action === 'creer_creneau') {
-        $numact   = (int) $_POST['activite'];
-        $numsalle = (int) $_POST['salle'];
-        $debut    = $_POST['debut'] ?? '';
-        $duree    = max(15, (int) $_POST['duree']);
-        $capacite = max(1, (int) $_POST['capacite']);
-        $coach    = ($_POST['coach'] ?? '') !== '' ? (int) $_POST['coach'] : null;
-
-        try {
-            if (strtotime($debut) === false) {
-                throw new RuntimeException('Date de début invalide.');
-            }
-            $fin = date('Y-m-d H:i:s', strtotime($debut) + $duree * 60);
-
-            // La capacite ne peut pas depasser celle de la salle
-            $q = $pdo->prepare('SELECT capacitesalle FROM salle WHERE Numsalle = ?');
-            $q->execute([$numsalle]);
-            $capSalle = (int) $q->fetchColumn();
-            if ($capacite > $capSalle) {
-                throw new RuntimeException("La salle accueille au maximum $capSalle personnes.");
-            }
-
-            // Chevauchement dans la meme salle
-            $q = $pdo->prepare(
-                'SELECT COUNT(*) FROM creneaux
-                 WHERE Numsalle = ? AND date_heure_debut < ? AND date_heure_fin > ?');
-            $q->execute([$numsalle, $fin, $debut]);
-            if ((int) $q->fetchColumn() > 0) {
-                throw new RuntimeException('Cette salle est déjà occupée sur ce créneau.');
-            }
-
-            $pdo->prepare(
-                'INSERT INTO creneaux (date_heure_debut, date_heure_fin, capacite_max, Numsalle, Numact, NumUsers_coach)
-                 VALUES (?, ?, ?, ?, ?, ?)')
-                ->execute([date('Y-m-d H:i:s', strtotime($debut)), $fin, $capacite, $numsalle, $numact, $coach]);
-
-            journalise('CREATION_CRENEAU', 'Numcreneaux=' . $pdo->lastInsertId());
-            flash('succes', 'Créneau ajouté au planning.');
-        } catch (RuntimeException $ex) {
-            flash('erreur', $ex->getMessage());
-        } catch (PDOException $ex) {
-            flash('erreur', 'Création impossible : la salle est déjà prise à cette heure exacte.');
-        }
-        redirige('employe/espace.php?onglet=creneaux');
+    /* ---- planning : creer / supprimer un creneau ------------------- */
+    if (!$maintenance && PlanningController::estAction('employe', $action)) {
+        $planning->traiter('employe', (int) $moi, 'employe/espace.php?onglet=creneaux');
     }
 
     /* ---- declarer une panne ---------------------------------------- */
@@ -539,26 +499,10 @@ $statutsAdherent = [
   ['libelle_statut' => 'Expire'],
 ];
 
-$creneaux = $pdo->query(
-  "SELECT a.*, a.titre AS libelleact, s.nomsalle,
-      (SELECT COUNT(*) FROM reservation r
-       WHERE r.Numactivite = a.Numactivite AND r.statut_reservation <> 'Annulee') AS places_prises
-   FROM activite a
-   JOIN salle s ON s.Numsalle = a.Numsalle
-   ORDER BY a.date_heure_debut DESC
-   LIMIT 40"
-)->fetchAll();
-
-$activites = $pdo->query(
-  'SELECT Numactivite AS Numact, titre AS libelleact,
-      TIMESTAMPDIFF(MINUTE, date_heure_debut, date_heure_fin) AS duree_minutes
-   FROM activite ORDER BY titre'
-)->fetchAll();
-$salles    = $pdo->query('SELECT * FROM salle ORDER BY nomsalle')->fetchAll();
-$coachs    = $pdo->query(
-    "SELECT e.NumUsers, u.nomUsers, u.prenomUsers FROM employe e
-     JOIN utilisateur u ON u.NumUsers=e.NumUsers
-     JOIN fonction f ON f.Numfonc=e.Numfonc WHERE f.libellefonc='Coach sportif'")->fetchAll();
+$planningDonnees = [];
+if ($onglet === 'creneaux') {
+  $planningDonnees = $planning->donnees('employe', (int) $moi);
+}
 
 $equipements = $pdo->query(
   "SELECT eq.*, eq.Numequip AS num_inventaire, t.libelletypeequip,
@@ -645,6 +589,9 @@ $titrePage = $maintenance ? 'Gestion des tickets' : 'Espace employé';
   <title><?= e($titrePage) ?> - <?= e(APP_NOM) ?></title>
   <link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
   <link rel="stylesheet" href="<?= e(url('assets/css/pages/admin.css')) ?>">
+  <?php if ($onglet === 'creneaux'): ?>
+    <link rel="stylesheet" href="<?= e(url('assets/css/pages/planning.css')) ?>">
+  <?php endif; ?>
 </head>
 <body class="admin-page employee-page">
 <div class="admin-shell">
@@ -763,68 +710,7 @@ $titrePage = $maintenance ? 'Gestion des tickets' : 'Espace employé';
 
 <?php elseif ($onglet === 'creneaux'): ?>
 
-  <div class="form" style="margin-bottom:26px">
-    <h2 style="font-size:18px">Ajouter un créneau</h2>
-    <form method="post" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;align-items:end">
-      <?= champ_csrf() ?>
-      <input type="hidden" name="action" value="creer_creneau">
-
-      <div><label for="activite">Activité</label>
-        <select id="activite" name="activite" required>
-          <?php foreach ($activites as $a): ?>
-            <option value="<?= (int) $a['Numact'] ?>" data-duree="<?= (int) $a['duree_minutes'] ?>">
-              <?= e($a['libelleact']) ?></option>
-          <?php endforeach; ?>
-        </select></div>
-
-      <div><label for="salle">Salle</label>
-        <select id="salle" name="salle" required>
-          <?php foreach ($salles as $s): ?>
-            <option value="<?= (int) $s['Numsalle'] ?>"><?= e($s['nomsalle']) ?> (<?= (int) $s['capacitesalle'] ?>)</option>
-          <?php endforeach; ?>
-        </select></div>
-
-      <div><label for="debut">Début</label>
-        <input type="datetime-local" id="debut" name="debut" required></div>
-
-      <div><label for="duree">Durée (min)</label>
-        <input type="number" id="duree" name="duree" value="60" min="15" step="15" required></div>
-
-      <div><label for="capacite">Places</label>
-        <input type="number" id="capacite" name="capacite" value="15" min="1" required></div>
-
-      <div><label for="coach">Coach</label>
-        <select id="coach" name="coach">
-          <option value="">Sans coach</option>
-          <?php foreach ($coachs as $c): ?>
-            <option value="<?= (int) $c['NumUsers'] ?>"><?= e($c['prenomUsers'] . ' ' . $c['nomUsers']) ?></option>
-          <?php endforeach; ?>
-        </select></div>
-
-      <div><button class="btn btn-vert" type="submit">Ajouter au planning</button></div>
-    </form>
-    <p class="aide">Deux activités ne peuvent pas occuper la même salle au même moment : le contrôle est fait côté serveur et par une contrainte d'unicité en base.</p>
-  </div>
-
-  <div class="table-scroll">
-    <table class="tableau">
-      <thead><tr><th>Activité</th><th>Créneau</th><th>Salle</th><th>Occupation</th></tr></thead>
-      <tbody>
-      <?php foreach ($creneaux as $c):
-          $pct = $c['capacite_max'] > 0 ? round($c['places_prises'] / $c['capacite_max'] * 100) : 0; ?>
-        <tr>
-          <td><?= e($c['libelleact']) ?></td>
-          <td><?= jourHeure($c['date_heure_debut'], $c['date_heure_fin']) ?></td>
-          <td><?= e($c['nomsalle']) ?></td>
-          <td style="min-width:180px">
-            <div class="jauge"><i class="<?= $pct >= 100 ? 'pleine' : '' ?>" style="width:<?= $pct ?>%"></i></div>
-            <span class="mono"><?= (int) $c['places_prises'] ?>/<?= (int) $c['capacite_max'] ?></span>
-          </td>
-        </tr>
-      <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
+  <?php $mode = 'employe'; require __DIR__ . '/../planning/view/planning.php'; ?>
 
 <?php elseif ($onglet === 'creer-ticket'): ?>
 
@@ -1090,6 +976,12 @@ $titrePage = $maintenance ? 'Gestion des tickets' : 'Espace employé';
     </main>
   </div>
 </div>
+<?php if ($onglet === 'creneaux'):
+  foreach (PlanningController::FC_SCRIPTS as $src): ?>
+    <script src="<?= e($src) ?>"></script>
+  <?php endforeach; ?>
+  <script src="<?= e(url('assets/js/planning.js')) ?>"></script>
+<?php endif; ?>
 <script src="<?= e(url('assets/js/app.js')) ?>"></script>
 </body>
 </html>

@@ -4,10 +4,18 @@ require_once __DIR__ . '/../config/function.php';
 require_once __DIR__ . '/../utilisateur/model/utilisateur.php';
 exige_role('ADMIN');
 
-$onglet = $_GET['onglet'] ?? 'utilisateurs';
-if (!is_string($onglet) || !in_array($onglet, ['utilisateurs', 'maintenance', 'avis', 'statistiques', 'messages'], true)) {
-    $onglet = 'utilisateurs';
+$ongletsAutorises = [
+    'dashboard', 'utilisateurs', 'adherents', 'coachs',
+    'abonnements', 'paiements', 'planning', 'activites',
+    'reservations', 'salles', 'equipements', 'maintenance',
+    'avis', 'messages'
+];
+
+$onglet = $_GET['onglet'] ?? 'dashboard';
+if (!is_string($onglet) || !in_array($onglet, $ongletsAutorises, true)) {
+    $onglet = 'dashboard';
 }
+
 $vueCompte = $_GET['compte'] ?? 'liste';
 $vueMaintenance = $_GET['maintenance'] ?? 'liste';
 $pdo    = db();
@@ -19,6 +27,7 @@ foreach ($fonctions as $fonction) {
         break;
     }
 }
+
 /* =====================================================================
    ACTIONS
    ===================================================================== */
@@ -28,14 +37,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'creer_utilisateur') {
         try {
-        $num = Utilisateur::creerCompte($_POST);
-        journalise('CREATION_UTILISATEUR', 'NumUsers=' . $num);
-        flash('succes', 'Compte créé.');
-      } catch (Throwable $exception) {
-        $message = $exception instanceof PDOException && str_contains($exception->getMessage(), 'Duplicate')
+            $num = Utilisateur::creerCompte($_POST);
+            journalise('CREATION_UTILISATEUR', 'NumUsers=' . $num);
+            flash('succes', 'Compte créé.');
+        } catch (Throwable $exception) {
+            $message = $exception instanceof PDOException && str_contains($exception->getMessage(), 'Duplicate')
                 ? 'Cette adresse e-mail est déjà utilisée.'
-          : $exception->getMessage();
-        flash('erreur', $message);
+                : $exception->getMessage();
+            flash('erreur', $message);
         }
         redirige('admin/espace.php?onglet=utilisateurs');
     }
@@ -81,27 +90,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'ajouter_adherent') {
         $num = (int) $_POST['utilisateur'];
         try {
-        Utilisateur::ajouterAdherent($num);
+            Utilisateur::ajouterAdherent($num);
             journalise('AJOUT_ROLE_ADHERENT', 'NumUsers=' . $num);
             flash('succes', 'Rôle adhérent ajouté : le cumul employé + adhérent est autorisé.');
-      } catch (Throwable $exception) {
-        flash('erreur', 'Ajout impossible : ' . $exception->getMessage());
+        } catch (Throwable $exception) {
+            flash('erreur', 'Ajout impossible : ' . $exception->getMessage());
         }
         redirige('admin/espace.php?onglet=utilisateurs');
     }
 
-      if ($action === 'modifier_utilisateur') {
+    if ($action === 'modifier_utilisateur') {
         try {
-          Utilisateur::modifierCompte((int) $_POST['utilisateur'], $_POST);
-          journalise('MODIFICATION_UTILISATEUR', 'NumUsers=' . (int) $_POST['utilisateur']);
-          flash('succes', 'Compte mis à jour.');
+            Utilisateur::modifierCompte((int) $_POST['utilisateur'], $_POST);
+            journalise('MODIFICATION_UTILISATEUR', 'NumUsers=' . (int) $_POST['utilisateur']);
+            flash('succes', 'Compte mis à jour.');
         } catch (Throwable $exception) {
-          flash('erreur', $exception->getMessage());
+            flash('erreur', $exception->getMessage());
         }
         redirige('admin/espace.php?onglet=utilisateurs');
-      }
+    }
 
-    /* ---- repondre a un avis ----------------------------------------- */
     if ($action === 'repondre_avis') {
         $num = (int) ($_POST['num_interaction'] ?? 0);
         $reponse = trim((string) ($_POST['reponse'] ?? ''));
@@ -119,12 +127,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'supprimer') {
         $num = (int) $_POST['utilisateur'];
-      try {
-        Utilisateur::supprimerCompte($num, (int) utilisateur()['NumUsers']);
+        try {
+            Utilisateur::supprimerCompte($num, (int) utilisateur()['NumUsers']);
             journalise('SUPPRESSION_UTILISATEUR', 'NumUsers=' . $num);
             flash('succes', 'Compte supprimé.');
-      } catch (Throwable $exception) {
-        flash('erreur', $exception->getMessage());
+        } catch (Throwable $exception) {
+            flash('erreur', $exception->getMessage());
         }
         redirige(($_POST['retour'] ?? '') === 'maintenance'
             ? 'admin/espace.php?onglet=maintenance'
@@ -145,19 +153,19 @@ $compteModifie = null;
 $compteConsulte = null;
 $technicienSelectionne = null;
 foreach ($utilisateurs as $user) {
-  if ((int) $user['NumUsers'] === (int) ($_GET['id'] ?? 0)) {
-    if ($vueCompte === 'modifier') {
-      $compteModifie = $user;
-    } elseif ($vueCompte === 'voir') {
-      $compteConsulte = $user;
+    if ((int) $user['NumUsers'] === (int) ($_GET['id'] ?? 0)) {
+        if ($vueCompte === 'modifier') {
+            $compteModifie = $user;
+        } elseif ($vueCompte === 'voir') {
+            $compteConsulte = $user;
+        }
     }
-  }
-  foreach ($techniciensMaintenance as $technicien) {
-      if ((int) $technicien['NumUsers'] === (int) ($_GET['id'] ?? 0)) {
-          $technicienSelectionne = $technicien;
-          break;
-      }
-  }
+    foreach ($techniciensMaintenance as $technicien) {
+        if ((int) $technicien['NumUsers'] === (int) ($_GET['id'] ?? 0)) {
+            $technicienSelectionne = $technicien;
+            break;
+        }
+    }
 }
 
 $statsRoles = [
@@ -167,6 +175,7 @@ $statsRoles = [
     'adherents' => count(array_filter($utilisateurs, fn($u) => $u['est_adherent'])),
     'cumuls'    => count(array_filter($utilisateurs, fn($u) => $u['est_employe'] && $u['est_adherent'])),
 ];
+$stats = $statsRoles;
 
 $parActivite = $pdo->query(
   "SELECT a.titre AS libelleact, COUNT(r.Numres) AS n
@@ -215,13 +224,22 @@ $adminUser = utilisateur();
       <span class="admin-brand-mark">A</span>
       <span><strong>Apex Fitness</strong><small>Administration</small></span>
     </a>
-    <nav class="admin-navigation" aria-label="Menu administration">
-    <?php foreach ([
-        'utilisateurs' => 'Utilisateurs et rôles',
-        'maintenance'  => 'Techniciens de maintenance',
-        'avis'         => 'Avis clients',
-        'statistiques' => 'Statistiques',
-        'messages'     => 'Messages reçus',
+    <nav class="admin-navigation">
+<?php foreach ([
+    'dashboard'    => 'Tableau de bord',
+    'utilisateurs' => 'Utilisateurs',
+    'adherents'    => 'Adhérents',
+    'coachs'       => 'Coachs',
+    'abonnements'  => 'Abonnements',
+    'paiements'    => 'Paiements',
+    'planning'     => 'Planning',
+    'activites'    => 'Activités',
+    'reservations' => 'Réservations',
+    'salles'       => 'Salles',
+    'equipements'  => 'Équipements',
+    'maintenance'  => 'Maintenance',
+    'avis'         => 'Avis clients',
+    'messages'     => 'Messages',
     ] as $cle => $lib): ?>
       <a href="<?= e(url('admin/espace.php?onglet=' . $cle)) ?>" <?= $onglet === $cle ? 'aria-current="page"' : '' ?>><?= e($lib) ?></a>
     <?php endforeach; ?>
@@ -251,18 +269,30 @@ $adminUser = utilisateur();
     <main class="admin-content">
       <div class="admin-heading">
         <div>
-          <p class="admin-eyebrow">TABLEAU DE BORD</p>
+          <p class="admin-eyebrow">ESPACE ADMIN</p>
           <h2><?= e([
+              'dashboard'    => 'Tableau de bord',
               'utilisateurs' => 'Utilisateurs et rôles',
-              'maintenance' => 'Techniciens de maintenance',
-              'avis' => 'Avis clients',
-              'statistiques' => 'Statistiques',
-              'messages' => 'Messages reçus',
+              'adherents'    => 'Gestion des adhérents',
+              'coachs'       => 'Gestion des coachs',
+              'abonnements'  => 'Gestion des abonnements',
+              'paiements'    => 'Gestion des paiements',
+              'planning'     => 'Planning',
+              'activites'    => 'Gestion des activités',
+              'reservations' => 'Gestion des réservations',
+              'salles'       => 'Gestion des salles',
+              'equipements'  => 'Gestion des équipements',
+              'maintenance'  => 'Techniciens de maintenance',
+              'avis'         => 'Avis clients',
+              'messages'     => 'Messages reçus',
           ][$onglet] ?? 'Administration') ?></h2>
         </div>
       </div>
-<?php if ($onglet === 'avis'): ?>
 
+<?php if ($onglet === 'dashboard'): ?>
+  <?php require __DIR__ . '/view/dashboard.php'; ?>
+
+<?php elseif ($onglet === 'avis'): ?>
   <?php if (!$avisAdmin): ?>
     <div class="vide">Aucun avis publié pour le moment.</div>
   <?php else: ?>
@@ -319,59 +349,14 @@ $adminUser = utilisateur();
     <?php require __DIR__ . '/view/techniciens-maintenance.php'; ?>
   <?php endif; ?>
 
-<?php elseif ($onglet === 'statistiques'): ?>
-
-  <div class="barres">
-    <h2 style="font-size:17px">Réservations par activité</h2>
-    <?php foreach ($parActivite as $r):
-        $pct = round((int) $r['n'] / $maxRes * 100); ?>
-      <div class="barre">
-        <span><?= e($r['libelleact']) ?></span>
-        <span class="piste"><span class="part" style="width:<?= $pct ?>%"></span></span>
-        <span class="n"><?= (int) $r['n'] ?></span>
-      </div>
-    <?php endforeach; ?>
-  </div>
-
-  <div class="grille-3" style="margin-top:26px;align-items:start">
-    <article class="carte">
-      <h3>Adhérents par formule</h3>
-      <table class="tableau" style="border:0">
-        <tbody>
-        <?php foreach ($parAbonnement as $a): ?>
-          <tr><td><?= e($a['libelle_abo']) ?> <span class="mono">(<?= e($a['type_abo']) ?>)</span></td>
-              <td style="text-align:right"><?= (int) $a['n'] ?></td></tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table>
-    </article>
-
-    <article class="carte">
-      <h3>Matériel par état</h3>
-      <table class="tableau" style="border:0">
-        <tbody>
-        <?php foreach ($parEtat as $x): ?>
-          <tr><td><?= e($x['libelle_statut']) ?></td><td style="text-align:right"><?= (int) $x['n'] ?></td></tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table>
-    </article>
-
-    <article class="carte">
-      <h3>Recettes par mois</h3>
-      <table class="tableau" style="border:0">
-        <tbody>
-        <?php foreach ($recettes as $r): ?>
-          <tr><td class="mono"><?= e($r['mois']) ?></td>
-              <td style="text-align:right"><?= euros($r['total']) ?> <span class="mono">(<?= (int) $r['n'] ?>)</span></td></tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table>
-    </article>
-  </div>
-
 <?php elseif ($onglet === 'messages'): ?>
   <?php require __DIR__ . '/../message_contact/view/admin-contact.php'; ?>
+
+<?php else: ?>
+  <div class="dashboard-box" style="background:#fff; padding:20px; border-radius:12px;">
+    <h3>Module en cours de développement</h3>
+    <p>La section <strong><?= e($onglet) ?></strong> est en cours de configuration et sera bientôt disponible.</p>
+  </div>
 <?php endif; ?>
     </main>
   </div>

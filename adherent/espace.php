@@ -1,623 +1,341 @@
 <?php
-require_once __DIR__ . '/../config/function.php';
-require_once __DIR__ . '/../message_contact/controller/MessageContactController.php';
-require_once __DIR__ . '/../avis/controller/AvisController.php';
-exige_role('ADHERENT');
+require __DIR__ . '/includes/dashboard/data.php';
+require __DIR__ . '/includes/dashboard/icons.php';
+$active = $_GET['page'] ?? 'dashboard';
 
-$moi    = utilisateur()['NumUsers'];
-$onglet = $_GET['onglet'] ?? 'planning';
-$messageController = new MessageController();
-$st = db()->prepare(
-  "SELECT COUNT(*)
-   FROM interaction_adherent i
-   JOIN avis a ON a.NumInteraction = i.NumInteraction
-   WHERE i.NumUsers = ? AND i.type_interaction = 'AVIS'"
-);
-$st->execute([$moi]);
-$aDejaPublieAvis = (int) $st->fetchColumn() > 0;
+// Pages du dossier adherent/ : le site passe par le routeur index.php?route=...
+$pageFiles = [
+    'dashboard'    => 'espace.php',
+    'planning'     => 'view/planning.php',
+    'reservations' => 'view/reservations.php',
+    'performance'  => 'view/performance.php',
+    'abonnement'   => 'view/abonnement.php',
+    'messages'     => 'view/messagerie.php',
+    'profil'       => 'view/profil.php',
+];
+$navHref = fn(string $id): string => isset($pageFiles[$id])
+    ? 'index.php?route=adherent/' . $pageFiles[$id]
+    : '?page=' . $id;
 
-if (!in_array($onglet, ['planning', 'reservations', 'abonnement', 'avis', 'messages'], true)
-    || ($onglet === 'avis' && $aDejaPublieAvis)) {
-  redirige('adherent/espace.php?onglet=planning');
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'publier_avis') {
-  verifie_csrf();
-  if ($aDejaPublieAvis) {
-    flash('erreur', 'Vous avez déjà publié un avis.');
-    redirige('adherent/espace.php?onglet=planning');
-  }
-  if (a_role('EMPLOYE')) {
-    http_response_code(403);
-    flash('erreur', 'Seuls les adhérents non employés peuvent publier un avis.');
-    redirige('adherent/espace.php?onglet=avis');
-  }
-  try {
-    $avisController = new AvisController();
-    $avisController->creer((int) $moi, (int) ($_POST['note'] ?? 0), (string) ($_POST['commentaire'] ?? ''));
-    journalise('AVIS_SALLE', 'Apex Fitness');
-    flash('succes', 'Merci pour votre avis.');
-  } catch (Throwable $exception) {
-    flash('erreur', $exception->getMessage());
-    redirige('adherent/espace.php?onglet=avis');
-  }
-  redirige('adherent/espace.php?onglet=planning');
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'repondre_message') {
-  verifie_csrf();
-  try {
-    $messageController->set($moi, (int) ($_POST['message_parent'] ?? 0), (string) ($_POST['message'] ?? ''));
-    flash('succes', 'Réponse envoyée.');
-  } catch (Throwable $exception) {
-    flash('erreur', $exception->getMessage());
-  }
-  redirige('adherent/espace.php?onglet=messages');
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'envoyer_message') {
-  verifie_csrf();
-  try {
-    $messageController->setInitial($moi, (string) ($_POST['message'] ?? ''));
-    flash('succes', 'Message envoyé à l’équipe.');
-  } catch (Throwable $exception) {
-    flash('erreur', $exception->getMessage());
-  }
-  redirige('adherent/espace.php?onglet=messages');
-}
-
-$messages = $messageController->getAllThreads($moi);
-
-/* ---------------------------------------------------------------------
-   Fiche adherent : statut et abonnement en cours
-   --------------------------------------------------------------------- */
-$st = db()->prepare(
-  "SELECT ad.*,
-      CASE WHEN ad.Date_finadh IS NULL OR ad.Date_finadh >= CURDATE()
-         THEN 'Actif' ELSE 'Expire' END AS libelle_statut,
-      (SELECT su.Numabo
-       FROM souscrire su
-       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
-       ORDER BY su.date_debut DESC LIMIT 1) AS Numabo,
-      (SELECT abo.libelle_abo
-       FROM souscrire su
-       JOIN abonnement abo ON abo.Numabo = su.Numabo
-       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
-       ORDER BY su.date_debut DESC LIMIT 1) AS libelle_abo,
-      (SELECT o.type_offre
-       FROM souscrire su
-       JOIN abonnement abo ON abo.Numabo = su.Numabo
-       JOIN offre o ON o.Numoffre = abo.Numoffre
-       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
-       ORDER BY su.date_debut DESC LIMIT 1) AS type_abo,
-      (SELECT su.date_debut
-       FROM souscrire su
-       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
-       ORDER BY su.date_debut DESC LIMIT 1) AS date_debut,
-      (SELECT su.date_fin
-       FROM souscrire su
-       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
-       ORDER BY su.date_debut DESC LIMIT 1) AS date_fin,
-      (SELECT su.statut_souscription
-       FROM souscrire su
-       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
-       ORDER BY su.date_debut DESC LIMIT 1) AS statut_souscription,
-      (SELECT f.nb_reservations_max_mois
-       FROM souscrire su
-       JOIN abonnement abo ON abo.Numabo = su.Numabo
-       JOIN freemium f ON f.Numoffre = abo.Numoffre
-       WHERE su.NumUsers = ad.NumUsers AND su.statut_souscription = 'En cours'
-       ORDER BY su.date_debut DESC LIMIT 1) AS nb_reservations_max_mois
-     FROM adherent ad
-     WHERE ad.NumUsers = ?");
-$st->execute([$moi]);
-$fiche = $st->fetch();
-
-$estActif = $fiche && $fiche['libelle_statut'] === 'Actif';
-
-/* ---------------------------------------------------------------------
-   ACTION : reserver un creneau
-   Les quatre regles du cahier des charges sont verifiees ici, cote
-   serveur, dans une transaction. Le JS n'est qu'un confort.
-   --------------------------------------------------------------------- */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'reserver') {
-    verifie_csrf();
-    $numCreneau = (int) ($_POST['creneau'] ?? 0);
-    $pdo = db();
-
-    try {
-        $pdo->beginTransaction();
-
-        // Regle 1 : l'adherent doit etre actif
-        if (!$estActif) {
-            throw new RuntimeException(
-                'Votre compte est ' . mb_strtolower($fiche['libelle_statut'] ?? 'inconnu') .
-                '. Régularisez votre abonnement à l\'accueil avant de réserver.');
-        }
-
-        // Verrou sur le creneau pour eviter deux reservations simultanees
-        $q = $pdo->prepare(
-            'SELECT c.Numcreneaux, c.capacite_max, c.date_heure_debut, a.libelleact
-             FROM creneaux c JOIN activite a ON a.Numact = c.Numact
-             WHERE c.Numcreneaux = ? FOR UPDATE');
-        $q->execute([$numCreneau]);
-        $creneau = $q->fetch();
-
-        if (!$creneau) {
-            throw new RuntimeException('Ce créneau n\'existe plus.');
-        }
-        if (strtotime($creneau['date_heure_debut']) < time()) {
-            throw new RuntimeException('Ce créneau est déjà passé.');
-        }
-
-        // Regle 2 : creneau complet
-        $q = $pdo->prepare(
-            "SELECT COUNT(*) FROM reservation
-             WHERE Numcreneaux = ? AND statut_reservation <> 'Annulee'");
-        $q->execute([$numCreneau]);
-        if ((int) $q->fetchColumn() >= (int) $creneau['capacite_max']) {
-            throw new RuntimeException(
-                'Le créneau est complet (' . (int) $creneau['capacite_max'] . ' places).');
-        }
-
-        // Regle 3 : double reservation
-        $q = $pdo->prepare(
-            "SELECT Numres, statut_reservation FROM reservation
-             WHERE NumUsers = ? AND Numcreneaux = ?");
-        $q->execute([$moi, $numCreneau]);
-        $existante = $q->fetch();
-
-        if ($existante && $existante['statut_reservation'] !== 'Annulee') {
-            throw new RuntimeException('Vous avez déjà une réservation sur ce créneau.');
-        }
-
-        // Regle 4 : quota mensuel de l'offre Freemium
-        if ($fiche['type_abo'] === 'FREEMIUM') {
-            $q = $pdo->prepare(
-                "SELECT COUNT(*) FROM reservation r
-                 JOIN creneaux c ON c.Numcreneaux = r.Numcreneaux
-                 WHERE r.NumUsers = ? AND r.statut_reservation <> 'Annulee'
-                   AND YEAR(c.date_heure_debut) = YEAR(?) AND MONTH(c.date_heure_debut) = MONTH(?)");
-            $q->execute([$moi, $creneau['date_heure_debut'], $creneau['date_heure_debut']]);
-            $quota = (int) $fiche['nb_reservations_max_mois'];
-            if ((int) $q->fetchColumn() >= $quota) {
-                throw new RuntimeException(
-                    "L'offre Freemium est limitée à $quota réservations par mois.");
-            }
-        }
-
-        if ($existante) {   // une annulation precedente est reactivee
-            $pdo->prepare(
-                "UPDATE reservation SET statut_reservation = 'Reservee',
-                        date_heure_reservation = NOW() WHERE Numres = ?")
-                ->execute([$existante['Numres']]);
-        } else {
-            $pdo->prepare(
-                'INSERT INTO reservation (NumUsers, Numcreneaux) VALUES (?, ?)')
-                ->execute([$moi, $numCreneau]);
-        }
-
-        $pdo->commit();
-        journalise('RESERVATION', 'Numcreneaux=' . $numCreneau);
-        flash('succes', 'Réservation enregistrée pour ' . $creneau['libelleact'] . '.');
-
-    } catch (RuntimeException $ex) {
-        $pdo->rollBack();
-        flash('erreur', $ex->getMessage());
-    } catch (PDOException $ex) {
-        $pdo->rollBack();
-        flash('erreur', 'La réservation a échoué. Réessayez dans un instant.');
-    }
-    redirige('adherent/espace.php?onglet=planning');
-}
-
-/* ---------------------------------------------------------------------
-   ACTION : annuler une reservation
-   --------------------------------------------------------------------- */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'annuler') {
-    verifie_csrf();
-    $numRes = (int) ($_POST['reservation'] ?? 0);
-
-    $q = db()->prepare(
-        'SELECT r.Numres, c.date_heure_debut FROM reservation r
-         JOIN creneaux c ON c.Numcreneaux = r.Numcreneaux
-         WHERE r.Numres = ? AND r.NumUsers = ?');
-    $q->execute([$numRes, $moi]);
-    $res = $q->fetch();
-
-    if (!$res) {
-        flash('erreur', 'Réservation introuvable.');
-    } elseif (strtotime($res['date_heure_debut']) - time() < 2 * 3600) {
-        flash('erreur', 'L\'annulation n\'est plus possible moins de 2 heures avant le cours.');
-    } else {
-        db()->prepare("UPDATE reservation SET statut_reservation = 'Annulee' WHERE Numres = ?")
-            ->execute([$numRes]);
-        journalise('ANNULATION', 'Numres=' . $numRes);
-        flash('succes', 'Réservation annulée, la place est de nouveau disponible.');
-    }
-    redirige('adherent/espace.php?onglet=reservations');
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'annuler_abonnement') {
-    verifie_csrf();
-    $st = db()->prepare(
-        "SELECT Numabo, date_debut FROM souscrire
-         WHERE NumUsers = ? AND statut_souscription = 'En cours'
-         ORDER BY date_debut DESC LIMIT 1"
-    );
-    $st->execute([$moi]);
-    $actif = $st->fetch();
-
-    if (!$actif) {
-        flash('erreur', 'Vous n’avez pas d’abonnement actif à annuler.');
-    } else {
-        $finMois = date('Y-m-d', strtotime('last day of this month'));
-        db()->prepare(
-            "UPDATE souscrire SET statut_souscription = 'Resiliee', date_fin = ?
-             WHERE NumUsers = ? AND statut_souscription = 'En cours'"
-        )->execute([$finMois, $moi]);
-        journalise('RESILIATION_ABONNEMENT', 'NumUsers=' . $moi . '; Numabo=' . (int) $actif['Numabo']);
-        flash('info', 'Votre abonnement actuel est annulé jusqu’à la fin du mois. Choisissez une nouvelle formule pour reprendre au début du mois prochain.');
-    }
-    redirige('paiement/payer.php?switch=1');
-}
-
-/* ---------------------------------------------------------------------
-   Donnees des onglets
-   --------------------------------------------------------------------- */
-$tables = array_map('strtolower', db()->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN));
-$planningDisponible = in_array('creneaux', $tables, true)
-  && in_array('reservation', $tables, true)
-  && in_array('v_creneau_places', $tables, true);
-
-if ($planningDisponible) {
-  $creneaux = db()->query(
-    'SELECT * FROM v_creneau_places WHERE date_heure_debut >= NOW()
-     ORDER BY date_heure_debut')->fetchAll();
-
-  $st = db()->prepare(
-    "SELECT Numcreneaux, statut_reservation FROM reservation
-     WHERE NumUsers = ? AND statut_reservation <> 'Annulee'");
-  $st->execute([$moi]);
-  $dejaReserves = array_column($st->fetchAll(), 'statut_reservation', 'Numcreneaux');
-
-  $st = db()->prepare(
-    'SELECT r.*, c.date_heure_debut, c.date_heure_fin, a.libelleact, s.nomsalle
-     FROM reservation r
-     JOIN creneaux c ON c.Numcreneaux = r.Numcreneaux
-     JOIN activite a ON a.Numact = c.Numact
-     JOIN salle s    ON s.Numsalle = c.Numsalle
-     WHERE r.NumUsers = ?
-     ORDER BY c.date_heure_debut DESC');
-  $st->execute([$moi]);
-  $mesReservations = $st->fetchAll();
-} else {
-  $creneaux = [];
-  $dejaReserves = [];
-  $mesReservations = [];
-}
-
-$st = db()->prepare(
-    'SELECT p.*, ab.libelle_abo FROM paiement p
-     JOIN abonnement ab ON ab.Numabo = p.Numabo
-  WHERE p.NumUsers = ? ORDER BY p.date_paiement DESC');
-$st->execute([$moi]);
-$mesPaiements = $st->fetchAll();
-
-$reservationsAvenir = count(array_filter(
-  $mesReservations,
-  static fn(array $reservation): bool =>
-    $reservation['statut_reservation'] === 'Reservee' &&
-    strtotime($reservation['date_heure_debut']) > time()
-));
-$titrePage = 'Mon espace';
-$adherentUser = utilisateur();
-$flashMessages = flashs();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><?= e($titrePage) ?> - <?= e(APP_NOM) ?></title>
-  <link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
-  <link rel="stylesheet" href="<?= e(url('assets/css/pages/admin.css')) ?>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATHLETIX — Tableau de bord</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body class="admin-page">
-<div class="admin-shell">
-  <aside class="admin-sidebar">
-    <a class="admin-brand" href="<?= e(url('adherent/espace.php?onglet=planning')) ?>">
-      <span class="admin-brand-mark">A</span>
-      <span><strong>Apex Fitness</strong><small>Espace adhérent</small></span>
-    </a>
-    <nav class="admin-navigation" aria-label="Menu adhérent">
-      <?php foreach ([
-        'planning' => 'Planning',
-        'reservations' => 'Mes réservations',
-        'abonnement' => 'Mon abonnement',
-        'avis' => 'Mes avis',
-        'messages' => 'Messages',
-      ] as $cle => $lib): ?>
-        <?php if ($cle === 'avis' && $aDejaPublieAvis) continue; ?>
-        <a href="<?= e(url('adherent/espace.php?onglet=' . $cle)) ?>" <?= $onglet === $cle ? 'aria-current="page"' : '' ?>><?= e($lib) ?></a>
-      <?php endforeach; ?>
-    </nav>
-  </aside>
-  <div class="admin-main">
-    <div class="admin-topbar">
-      <div>
-        <p class="admin-eyebrow">ESPACE SÉCURISÉ</p>
-        <h1>Mon espace</h1>
-      </div>
-      <div class="admin-account">
-        <span><?= e(($adherentUser['prenomUsers'] ?? '') . ' ' . ($adherentUser['nomUsers'] ?? '')) ?></span>
-        <a href="<?= e(url('utilisateur/deconnexion.php')) ?>">Déconnexion</a>
-      </div>
-    </div>
-    <?php if ($flashMessages): ?>
-      <div class="admin-flashes">
-        <?php foreach ($flashMessages as $message): ?>
-          <p class="flash flash-<?= e($message['type']) ?>"><?= e($message['message']) ?></p>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
-    <main class="admin-content">
-      <div class="admin-heading">
-        <div>
-          <p class="admin-eyebrow">VOTRE ESPACE PERSONNEL</p>
-          <h2><?= e([
-            'planning' => 'Aperçu du planning',
-            'reservations' => 'Mes réservations',
-            'abonnement' => 'Mon abonnement',
-            'avis' => 'Partager votre expérience',
-            'messages' => 'Messages',
-          ][$onglet]) ?></h2>
-        </div>
-      </div>
-      <?php if ($onglet !== 'avis'): ?>
-      <div class="compteurs">
-        <div class="compteur">
-          <div class="v"><?= e($fiche['libelle_statut']) ?></div>
-          <div class="k">statut du compte</div>
-        </div>
-        <div class="compteur">
-          <div class="v"><?= $reservationsAvenir ?></div>
-          <div class="k">réservations à venir</div>
-        </div>
-        <div class="compteur">
-          <div class="v"><?= count($creneaux) ?></div>
-          <div class="k">créneaux au planning</div>
-        </div>
-      </div>
-      <?php endif; ?>
+<body>
+<div class="app">
+    <?php $activeNav = $active; include __DIR__ . '/includes/sidebar.php'; ?>
 
-  <?php if ($onglet === 'planning'): ?>
-
-    <?php if (!$estActif): ?>
-      <p class="flash flash-info">Votre compte est <?= e(mb_strtolower($fiche['libelle_statut'])) ?> :
-         la réservation est bloquée jusqu'à régularisation à l'accueil.</p>
-    <?php endif; ?>
-
-    <?php if (!$creneaux): ?>
-      <div class="vide">Aucun créneau à venir n'est encore programmé.</div>
-    <?php else: ?>
-      <div class="creneaux">
-        <?php foreach ($creneaux as $c):
-            $num = (int) $c['Numcreneaux'];
-            $restantes = (int) $c['places_restantes'];
-            $pct = $c['capacite_max'] > 0 ? round($c['places_prises'] / $c['capacite_max'] * 100) : 0;
-            $deja = isset($dejaReserves[$num]);
-        ?>
-          <article class="creneau" id="c<?= $num ?>">
-            <h3><?= e($c['libelleact']) ?></h3>
-            <p class="when"><?= jourHeure($c['date_heure_debut'], $c['date_heure_fin']) ?>
-               &middot; <?= e($c['nomsalle']) ?></p>
-            <div class="jauge"><i class="<?= $restantes === 0 ? 'pleine' : '' ?>" style="width:<?= $pct ?>%"></i></div>
-            <div class="bas">
-              <span class="tag <?= $restantes === 0 ? 'tag-bad' : ($restantes <= 3 ? 'tag-warn' : 'tag-ok') ?>">
-                <?= $restantes === 0 ? 'Complet' : $restantes . ' place' . ($restantes > 1 ? 's' : '') ?>
-              </span>
-
-              <?php if ($deja): ?>
-                <span class="tag tag-mute">Déjà réservé</span>
-              <?php else: ?>
-                <form method="post" style="margin:0">
-                  <?= champ_csrf() ?>
-                  <input type="hidden" name="action" value="reserver">
-                  <input type="hidden" name="creneau" value="<?= $num ?>">
-                  <button class="btn btn-sm btn-vert" type="submit"
-                          <?= ($restantes === 0 || !$estActif) ? 'disabled' : '' ?>>Réserver</button>
-                </form>
-              <?php endif; ?>
+    <div class="main">
+        <header class="topbar">
+            <button class="burger" id="burger" data-testid="mobile-menu-btn" aria-label="Menu"><?= icon('menu', 22) ?></button>
+            <div class="topbar-right">
+                <button class="bell" id="bellBtn" data-testid="notifications-btn" aria-label="Notifications">
+                    <?= icon('bell', 20) ?><span class="dot"></span>
+                </button>
+                <div class="user-menu">
+                    <button class="avatar-btn" id="avatarBtn" data-testid="user-menu-btn">
+                        <span class="avatar"><?= e($user['initial']) ?></span><?= icon('down', 14) ?>
+                    </button>
+                    <div class="dropdown" id="userDropdown" data-testid="user-dropdown">
+                        <a href="<?= e($navHref('profil')) ?>" data-testid="dropdown-profile">Mon profil</a>
+                        <a href="<?= e($navHref('abonnement')) ?>" data-testid="dropdown-subscription">Mon abonnement</a>
+                        <a href="#" data-testid="dropdown-logout">Déconnexion</a>
+                    </div>
+                </div>
             </div>
-          </article>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
+        </header>
 
-  <?php elseif ($onglet === 'reservations'): ?>
-
-    <?php if (!$mesReservations): ?>
-      <div class="vide">
-        Vous n'avez encore aucune réservation.
-        <p style="margin-top:14px"><a class="btn btn-vert" href="?onglet=planning">Voir le planning</a></p>
-      </div>
-    <?php else: ?>
-      <div class="table-scroll">
-        <table class="tableau">
-          <thead><tr><th>Activité</th><th>Créneau</th><th>Salle</th><th>Réservée le</th><th>Statut</th><th></th></tr></thead>
-          <tbody>
-          <?php foreach ($mesReservations as $r):
-              $aVenir = strtotime($r['date_heure_debut']) > time();
-              $cls = $r['statut_reservation'] === 'Annulee' ? 'tag-mute'
-                   : ($r['statut_reservation'] === 'Absente' ? 'tag-bad' : 'tag-ok');
-          ?>
-            <tr>
-              <td><?= e($r['libelleact']) ?></td>
-              <td><?= jourHeure($r['date_heure_debut'], $r['date_heure_fin']) ?></td>
-              <td><?= e($r['nomsalle']) ?></td>
-              <td class="mono"><?= dateFr($r['date_heure_reservation'], true) ?></td>
-              <td><span class="tag <?= $cls ?>"><?= e($r['statut_reservation']) ?></span></td>
-              <td>
-                <?php if ($aVenir && $r['statut_reservation'] === 'Reservee'): ?>
-                  <form method="post" style="margin:0">
-                    <?= champ_csrf() ?>
-                    <input type="hidden" name="action" value="annuler">
-                    <input type="hidden" name="reservation" value="<?= (int) $r['Numres'] ?>">
-                    <button class="btn btn-sm btn-danger" type="submit"
-                            data-confirme="Annuler cette réservation ?">Annuler</button>
-                  </form>
-                <?php endif; ?>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
-      <p class="note">L'annulation reste possible jusqu'à 2 heures avant le début du cours.</p>
-    <?php endif; ?>
-
-  <?php elseif ($onglet === 'avis'): ?>
-
-    <section class="review-card" aria-labelledby="review-form-title">
-      <div class="review-card-heading">
-        <span class="review-mark" aria-hidden="true">A</span>
-        <div>
-          <p class="admin-eyebrow">VOTRE RETOUR COMPTE</p>
-          <h3 id="review-form-title">Partager votre expérience</h3>
-          <p>Aidez-nous à rendre chaque visite chez Apex Fitness encore meilleure.</p>
-        </div>
-      </div>
-      <form method="post" class="review-form">
-        <?= champ_csrf() ?>
-        <input type="hidden" name="action" value="publier_avis">
-        <fieldset class="review-rating">
-          <legend>Quelle note donneriez-vous à votre expérience&nbsp;?</legend>
-          <div class="review-stars">
-            <?php for ($note = 5; $note >= 1; $note--): ?>
-              <input class="review-rating-input" type="radio" id="note-avis-<?= $note ?>"
-                     name="note" value="<?= $note ?>" required>
-              <label class="review-rating-label" for="note-avis-<?= $note ?>">
-                <span aria-hidden="true">★</span>
-                <span class="sr"><?= $note ?> sur 5</span>
-              </label>
-            <?php endfor; ?>
-          </div>
-          <p class="review-hint">De 1 étoile (décevant) à 5 étoiles (excellent)</p>
-        </fieldset>
-        <div class="review-comment">
-          <label for="commentaire-avis">Votre commentaire</label>
-          <textarea id="commentaire-avis" name="commentaire" rows="5" minlength="10" maxlength="2000" required
-                    placeholder="Qu’avez-vous apprécié ? Que pourrions-nous améliorer ?"></textarea>
-          <p class="review-hint">10 caractères minimum · 2 000 caractères maximum</p>
-        </div>
-        <div class="review-form-footer">
-          <p>Votre avis sera publié après son envoi.</p>
-          <button class="btn btn-vert" type="submit">Publier mon avis</button>
-        </div>
-      </form>
-    </section>
-
-  <?php elseif ($onglet === 'messages'): ?>
-
-    <div class="form" style="max-width:760px;margin-bottom:20px">
-      <h2 style="font-size:18px">Écrire à l’équipe</h2>
-      <form method="post">
-        <?= champ_csrf() ?>
-        <input type="hidden" name="action" value="envoyer_message">
-        <textarea name="message" rows="3" placeholder="Votre message à l’équipe..." required></textarea>
-        <button class="btn btn-vert btn-sm" type="submit">Envoyer</button>
-      </form>
-    </div>
-
-    <?php if (!$messages): ?>
-      <div class="vide">Aucun message reçu.</div>
-    <?php else: foreach ($messages as $thread): $last = end($thread); ?>
-      <article class="carte message-conversation">
-        <h3>Historique de la conversation</h3>
-        <div class="messages-fil">
-          <?php foreach ($thread as $message): $estMoi = (int) $message['NumUsers_emetteur'] === $moi; ?>
-            <div class="message-bulle <?= $estMoi ? 'message-droite' : 'message-gauche' ?>">
-              <strong><?= $estMoi ? 'Vous' : e($message['prenomUsers'] . ' ' . $message['nomUsers']) ?></strong>
-              <p><?= nl2br(e($message['message'])) ?></p>
-              <small><?= dateFr($message['date_envoi'], true) ?></small>
+        <section class="hero reveal" data-testid="hero-section" style="--hero:url('<?= e($heroImg) ?>')">
+            <div class="hero-content">
+                <p class="eyebrow">Bonjour, <?= e($user['name']) ?></p>
+                <h1 data-testid="hero-title">Prêt à repousser<br>tes <em>limites</em> ?</h1>
+                <p class="hero-sub">Bienvenue dans ton espace ATHLETIX.</p>
+                <a href="<?= e($navHref('planning')) ?>" class="btn btn-lime" data-testid="hero-explore-planning-btn">
+                    Explorer le planning <?= icon('chevron', 16) ?>
+                </a>
             </div>
-          <?php endforeach; ?>
-        </div>
-        <?php if ((int) $last['NumUsers_destinataire'] === $moi): ?>
-          <form method="post" class="message-reponse">
-            <?= champ_csrf() ?>
-            <input type="hidden" name="action" value="repondre_message">
-            <input type="hidden" name="message_parent" value="<?= (int) $last['IdMessage'] ?>">
-            <textarea name="message" rows="2" placeholder="Répondre à ce message..." required></textarea>
-            <button class="btn btn-vert btn-sm" type="submit">Répondre</button>
-          </form>
-        <?php endif; ?>
-      </article>
-    <?php endforeach; endif; ?>
+            <div class="hero-sign" aria-hidden="true">PLUS<br>FORT<br>CHAQUE<br>JOUR</div>
+        </section>
 
-  <?php else: ?>
+        <section class="stats">
+            <?php foreach ($stats as $i => $s): ?>
+                <a href="#" class="stat reveal" style="--d:<?= ($i + 1) * 70 ?>ms" data-testid="stat-card-<?= $i ?>">
+                    <span class="stat-icon"><?= icon($s['icon'], 30) ?></span>
+                    <span class="stat-label"><?= e($s['label']) ?></span>
+                    <span class="stat-value<?= $s['accent'] ? ' lime' : '' ?>" data-testid="stat-value-<?= $i ?>"><?= e($s['value']) ?></span>
+                    <span class="stat-arrow"><?= icon('chevron', 16) ?></span>
+                </a>
+            <?php endforeach; ?>
+        </section>
 
-    <div class="grille-3" style="grid-template-columns:1fr 1fr;align-items:start">
-      <article class="carte">
-        <h3>Ma formule</h3>
-        <?php if ($fiche['libelle_abo']): ?>
-          <p class="prix" style="font-size:28px;font-weight:600;margin:6px 0"><?= e($fiche['libelle_abo']) ?></p>
-          <p class="muted">
-            Du <?= dateFr($fiche['date_debut']) ?> au <?= dateFr($fiche['date_fin']) ?><br>
-            Souscription <?= e(mb_strtolower($fiche['statut_souscription'])) ?>
-          </p>
-          <form method="post" style="margin-top:12px">
-            <?= champ_csrf() ?>
-            <input type="hidden" name="action" value="annuler_abonnement">
-            <button class="btn btn-danger btn-sm" type="submit" data-confirme="Annuler votre abonnement actuel et choisir une autre formule ?">Annuler mon abonnement</button>
-          </form>
-        <?php else: ?>
-          <p class="muted">Aucune souscription en cours.</p>
-        <?php endif; ?>
-          <p style="margin-top:12px"><a class="btn btn-vert btn-sm" href="<?= url('paiement/payer.php') ?>">Payer maintenant</a>
-            <a class="btn btn-ghost btn-sm" href="<?= url('abonnement/catalogue.php') ?>">Voir les formules</a></p>
-      </article>
+        <section class="bottom">
+            <div class="panel appointments reveal" style="--d:350ms" data-testid="appointments-panel">
+                <div class="panel-head"><?= icon('calendar', 24) ?><h2>Tes prochains rendez-vous</h2></div>
+                <div class="empty">
+                    <span class="empty-icon"><?= icon('calendar', 34) ?></span>
+                    <p class="empty-title" data-testid="appointments-empty-text">Aucune séance prévue pour le moment</p>
+                    <p class="empty-sub">Réserve une séance et garde le rythme !</p>
+                    <button class="btn btn-lime btn-wide" id="bookBtn" data-testid="book-session-btn">
+                        <?= icon('calendar', 16) ?> Réserver une séance <?= icon('chevron', 16) ?>
+                    </button>
+                </div>
+                <span class="corner corner-tr"></span>
+                <span class="corner corner-bl"></span>
+            </div>
 
-      <article class="carte">
-        <h3>Ma fiche</h3>
-        <p class="muted">
-          Matricule <?= e($fiche['matriculeadh']) ?><br>
-          Inscrit depuis le <?= dateFr($fiche['Date_inscriptionadh']) ?><br>
-          Fin d'abonnement : <?= dateFr($fiche['Date_finadh']) ?><br>
-          <?= e(utilisateur()['mailUsers']) ?>
-        </p>
-        <p><a class="btn btn-ghost btn-sm" href="<?= url('message_contact/index.php?sujet=' . urlencode('Modification de ma fiche')) ?>">Demander une correction</a></p>
-      </article>
+            <div class="panel discover reveal" style="--d:420ms" data-testid="discover-panel">
+                <div class="panel-head">
+                    <?= icon('star', 24) ?><h2>À découvrir chez ATHLETIX</h2>
+                    <a href="#" class="see-all" data-testid="discover-see-all">Voir tout <?= icon('chevron', 13) ?></a>
+                </div>
+                <div class="cards">
+                    <?php foreach ($discover as $i => $c): ?>
+                        <a href="#" class="dcard" data-testid="discover-card-<?= $i ?>">
+                            <div class="dcard-img" style="background-image:url('<?= e($c['img']) ?>')"></div>
+                            <div class="dcard-body">
+                                <span class="dcard-icon"><?= icon($c['icon'], 22) ?></span>
+                                <h3><?= e($c['title']) ?></h3>
+                                <p><?= e($c['text']) ?></p>
+                                <span class="dcard-arrow"><?= icon('arrow', 14) ?></span>
+                            </div>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </section>
     </div>
-
-    <h2 style="margin-top:34px">Mes paiements</h2>
-    <?php if (!$mesPaiements): ?>
-      <div class="vide">Aucun paiement enregistré.</div>
-    <?php else: ?>
-      <div class="table-scroll">
-        <table class="tableau">
-          <thead><tr><th>Date</th><th>Formule</th><th>Moyen</th><th>Montant</th></tr></thead>
-          <tbody>
-          <?php foreach ($mesPaiements as $p): ?>
-            <tr>
-              <td class="mono"><?= dateFr($p['date_paiement'], true) ?></td>
-              <td><?= e($p['libelle_abo']) ?></td>
-              <td><?= e($p['moyen_paiement']) ?></td>
-              <td><?= euros($p['montant']) ?></td>
-            </tr>
-          <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
-    <?php endif; ?>
-
-  <?php endif; ?>
 </div>
 
-    </main>
-  </div>
+<div class="modal" id="bookModal" data-testid="book-modal" aria-hidden="true">
+    <div class="modal-box">
+        <h3>Réserver une séance</h3>
+        <form id="bookForm">
+            <label>Activité
+                <select name="activity" data-testid="book-activity-select">
+                    <option>Musculation</option><option>Cardio</option><option>Yoga &amp; bien-être</option>
+                </select>
+            </label>
+            <label>Date<input type="date" name="date" required data-testid="book-date-input"></label>
+            <label>Heure<input type="time" name="time" required data-testid="book-time-input"></label>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="closeModal" data-testid="book-cancel-btn">Annuler</button>
+                <button type="submit" class="btn btn-lime" data-testid="book-submit-btn">Confirmer</button>
+            </div>
+        </form>
+    </div>
 </div>
-<script src="<?= e(url('assets/js/app.js')) ?>"></script>
+<div class="toast" id="toast" data-testid="toast"></div>
+
+<script src="assets/js/main.js"></script>
 </body>
 </html>
+
+<style>
+:root {
+    --bg: #0b0d0c;
+    --sidebar: #0e1110;
+    --panel: #121514;
+    --panel-2: #161a18;
+    --border: #1f2422;
+    --text: #f2f4f1;
+    --muted: #9aa19c;
+    --lime: #c6f432;
+    --lime-dark: #a8d61c;
+    --radius: 10px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text); font-family: 'Archivo', sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
+::selection { background: var(--lime); color: #000; }
+.ico { flex-shrink: 0; }
+
+.app { display: flex; min-height: 100vh; }
+
+
+/* Main */
+.main { flex: 1; margin-left: 250px; padding: 0 36px 36px; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; }
+.topbar { height: 64px; flex-shrink: 0; display: flex; align-items: center; justify-content: flex-end; }
+.topbar-right { display: flex; align-items: center; gap: 18px; }
+.burger { display: none; margin-right: auto; }
+.bell { position: relative; padding: 4px; color: #e5e8e5; transition: color .2s; }
+.bell:hover { color: var(--lime); }
+.bell .dot { position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%; background: var(--lime); border: 1.5px solid var(--bg); }
+.user-menu { position: relative; }
+.avatar-btn { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: #3b4250; color: #fff; font-size: 13px; font-weight: 600; display: grid; place-items: center; }
+.dropdown {
+    position: absolute; right: 0; top: 34px; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    min-width: 170px; padding: 6px; opacity: 0; transform: translateY(-6px); pointer-events: none;
+    transition: opacity .2s, transform .2s; z-index: 40;
+}
+.dropdown.open { opacity: 1; transform: none; pointer-events: auto; }
+.dropdown a { display: block; padding: 9px 10px; font-size: 13px; border-radius: 5px; }
+.dropdown a:hover { background: #20251f; color: var(--lime); }
+
+/* Hero */
+.hero {
+    position: relative; height: clamp(250px, 33vh, 400px); flex-shrink: 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border);
+    background:
+        linear-gradient(90deg, #0b0d0c 0%, rgba(11,13,12,.94) 32%, rgba(11,13,12,.35) 62%, rgba(11,13,12,.2) 100%),
+        linear-gradient(0deg, rgba(198,244,50,.08), rgba(198,244,50,.08)),
+        var(--hero) center 40% / cover no-repeat;
+    display: flex; align-items: center; padding: 0 48px;
+}
+.hero::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(90deg, transparent 0 140px, rgba(198,244,50,.05) 140px 142px);
+}
+.hero-content { position: relative; z-index: 2; }
+.eyebrow { text-transform: uppercase; letter-spacing: 2.8px; font-size: 13px; color: #cfd4d0; margin-bottom: 14px; }
+.hero h1 { font-size: clamp(38px, 3.6vw, 58px); line-height: 1.12; font-weight: 800; letter-spacing: -.5px; }
+.hero h1 em { font-style: normal; color: var(--lime); }
+.hero-sub { font-size: 16px; color: #d6dad7; margin: 14px 0 26px; }
+.hero-sign {
+    position: absolute; left: 47%; top: 50%; transform: translateY(-50%); z-index: 1;
+    font-size: 15px; font-weight: 700; line-height: 1.35; color: rgba(255,255,255,.55); letter-spacing: 1.4px;
+    padding-left: 14px; border-left: 2px solid var(--lime);
+}
+
+/* Buttons */
+.btn {
+    display: inline-flex; align-items: center; gap: 10px; padding: 13px 22px; border-radius: 6px;
+    font-size: 14.5px; font-weight: 600; transition: background-color .2s, transform .2s, box-shadow .2s;
+}
+.btn-lime { background: var(--lime); color: #0a0c0a; }
+.btn-lime:hover { background: #d6ff52; transform: translateY(-1px); box-shadow: 0 6px 22px rgba(198,244,50,.25); }
+.btn-lime:active { transform: translateY(0); }
+.btn-ghost { border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { background: #1a1e1c; }
+.btn-wide { padding: 15px 32px; }
+
+/* Stats */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 22px 0; flex-shrink: 0; }
+.stat {
+    position: relative; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px 26px; min-height: 140px; display: flex; flex-direction: column;
+    transition: border-color .2s, transform .2s, background-color .2s;
+}
+.stat:hover { border-color: #34402a; transform: translateY(-2px); background: var(--panel-2); }
+.stat-icon { color: var(--lime); margin-bottom: 14px; }
+.stat-label { font-size: 14px; color: #c8cdc9; }
+.stat-value { font-size: 22px; font-weight: 700; margin-top: 6px; }
+.stat-value.lime { color: var(--lime); }
+.stat-arrow { position: absolute; right: 22px; bottom: 24px; color: #c8cdc9; transition: transform .2s, color .2s; }
+.stat:hover .stat-arrow { transform: translateX(3px); color: var(--lime); }
+
+/* Bottom panels */
+.bottom { display: grid; grid-template-columns: 0.95fr 1.1fr; gap: 20px; flex: 1; }
+.panel { position: relative; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 26px; overflow: hidden; min-height: 320px; display: flex; flex-direction: column; }
+.panel-head { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.panel-head h2 { font-size: 17px; font-weight: 600; }
+.see-all { margin-left: auto; font-size: 13px; color: var(--lime); display: flex; align-items: center; gap: 4px; }
+.see-all:hover { text-decoration: underline; }
+
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; text-align: center; padding: 8px 0 4px; position: relative; z-index: 2; }
+.empty-icon { width: 80px; height: 80px; border-radius: 50%; border: 1px solid #3a403c; display: grid; place-items: center; margin-bottom: 20px; color: #e9ece9; }
+.empty-title { font-size: 17px; font-weight: 500; }
+.empty-sub { font-size: 14px; color: var(--muted); margin: 10px 0 26px; }
+.corner { position: absolute; width: 0; height: 0; z-index: 1; }
+.corner-tr { top: 0; right: 0; border-top: 96px solid rgba(198,244,50,.9); border-left: 70px solid transparent;
+    filter: drop-shadow(-6px 6px 0 rgba(198,244,50,.18)); clip-path: polygon(30% 0, 100% 0, 100% 100%); }
+.corner-bl { bottom: 0; left: 0; border-bottom: 88px solid rgba(198,244,50,.9); border-right: 64px solid transparent;
+    clip-path: polygon(0 0, 0 100%, 70% 100%); }
+
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; flex: 1; }
+.dcard { background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px; overflow: hidden; display: flex; flex-direction: column; transition: border-color .2s, transform .25s; }
+.dcard:hover { border-color: rgba(198,244,50,.5); transform: translateY(-3px); }
+.dcard-img { flex: 1; min-height: 150px; background-size: cover; background-position: center; filter: saturate(.75) brightness(.8); transition: filter .3s; }
+.dcard:hover .dcard-img { filter: saturate(1) brightness(.95); }
+.dcard-body { position: relative; padding: 16px 16px 20px; }
+.dcard-icon { color: var(--lime); display: block; margin-bottom: 8px; }
+.dcard h3 { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+.dcard p { font-size: 13px; color: var(--muted); margin-top: 7px; line-height: 1.5; padding-right: 26px; }
+.dcard-arrow { position: absolute; right: 16px; bottom: 20px; color: var(--lime); transition: transform .2s; }
+.dcard:hover .dcard-arrow { transform: translateX(3px); }
+
+/* Modal & toast */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,.65); backdrop-filter: blur(14px); display: grid; place-items: center; opacity: 0; pointer-events: none; transition: opacity .25s; z-index: 60; }
+.modal.open { opacity: 1; pointer-events: auto; }
+.modal-box { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 24px; width: min(380px, 92vw); transform: scale(.96); transition: transform .25s; }
+.modal.open .modal-box { transform: none; }
+.modal-box h3 { font-size: 17px; margin-bottom: 16px; }
+.modal-box label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.modal-box input, .modal-box select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 10px; font: inherit; font-size: 13px; color-scheme: dark; }
+.modal-box input:focus, .modal-box select:focus { outline: none; border-color: var(--lime); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--lime); color: #0a0c0a; font-size: 13px; font-weight: 600; padding: 12px 18px; border-radius: 8px; transform: translateY(20px); opacity: 0; transition: opacity .25s, transform .25s; z-index: 70; }
+.toast.show { opacity: 1; transform: none; }
+
+/* Reveal */
+.reveal { opacity: 0; transform: translateY(12px); animation: rise .6s cubic-bezier(.2,.7,.2,1) forwards; animation-delay: var(--d, 0ms); }
+@keyframes rise { to { opacity: 1; transform: none; } }
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .bottom { grid-template-columns: 1fr; }
+    .hero-sign { display: none; }
+}
+@media (max-width: 860px) {
+    .main { margin-left: 0; padding: 0 14px 20px; min-height: auto; }
+    .burger { display: block; }
+    .hero h1 { font-size: 30px; }
+    .hero { padding: 0 24px; }
+    .dcard-img { min-height: 120px; }
+    .cards { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+
+</style>
+
+<script>
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    const dropdown = $('userDropdown');
+    const modal = $('bookModal');
+    const toast = $('toast');
+    let toastTimer;
+
+    const showToast = (msg) => {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+    };
+
+    $('avatarBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('open');
+    });
+    document.addEventListener('click', () => dropdown.classList.remove('open'));
+
+    $('bellBtn').addEventListener('click', () => showToast('Aucune nouvelle notification'));
+
+    const toggleModal = (open) => {
+        modal.classList.toggle('open', open);
+        modal.setAttribute('aria-hidden', String(!open));
+    };
+    $('bookBtn').addEventListener('click', () => toggleModal(true));
+    $('closeModal').addEventListener('click', () => toggleModal(false));
+    modal.addEventListener('click', (e) => { if (e.target === modal) toggleModal(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') toggleModal(false); });
+
+    $('bookForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const data = new FormData(e.target);
+        toggleModal(false);
+        e.target.reset();
+        showToast(`Séance ${data.get('activity')} réservée le ${data.get('date')} à ${data.get('time')}`);
+    });
+})();
+
+</script>

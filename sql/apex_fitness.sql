@@ -184,6 +184,7 @@ CREATE TABLE salle (
 CREATE TABLE activite (
   Numactivite       INT AUTO_INCREMENT PRIMARY KEY,
   titre             VARCHAR(100) NOT NULL,
+  type_activite     VARCHAR(20)  NOT NULL DEFAULT 'cardio',
   description       TEXT,
   niveau            VARCHAR(20),
   date_heure_debut  DATETIME NOT NULL,
@@ -193,7 +194,9 @@ CREATE TABLE activite (
   date_finprogent   DATE,
   Numsalle          INT NOT NULL,
   NumUsers          INT NOT NULL,          -- employe (coach)
+  id_serie          CHAR(32) NULL,
   UNIQUE KEY uk_salle_debut (Numsalle, date_heure_debut),
+  KEY idx_activite_serie (id_serie),
   FOREIGN KEY (Numsalle) REFERENCES salle(Numsalle),
   FOREIGN KEY (NumUsers) REFERENCES employe(NumUsers)
 ) ENGINE=InnoDB;
