@@ -16,6 +16,7 @@ $erreur = $erreur ?? null;
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="<?= e(url('assets/css/pages/login.css')) ?>">
+  <link rel="stylesheet" href="<?= e(url('assets/css/commune/commune.css')) ?>">
 </head>
 <body class="signup-page">
 <main class="stage" id="stage">
@@ -91,5 +92,6 @@ $erreur = $erreur ?? null;
   </section>
 </main>
 <script src="<?= e(url('assets/js/pages/signup.js')) ?>" defer></script>
+<script src="<?= e(url('assets/js/commune/commune.js')) ?>" defer></script>
 </body>
 </html>
