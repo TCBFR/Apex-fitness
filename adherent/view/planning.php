@@ -258,8 +258,9 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
   function actionState(s) {
     if (s.is_demo) return { label: 'Séance fictive', cls: 'btn-muted', action: null };
     if (s.is_past) return { label: 'Séance terminée', cls: 'btn-muted', action: null };
-    if (s.is_booked) return { label: 'Annuler ma réservation', cls: 'btn-danger', action: 'cancel' };
-    if (s.remaining <= 0) return { label: 'Complet', cls: 'btn-muted', action: null };
+    if (s.is_booked) return s.can_cancel ? { label: 'Annuler ma réservation', cls: 'btn-danger', action: 'cancel' } : { label: 'Annulation close (moins de 2 h)', cls: 'btn-muted', action: null };
+    if (s.is_waitlisted) return { label: 'Quitter la liste d’attente', cls: 'btn-outline', action: 'waitlist_leave' };
+    if (s.remaining <= 0) return { label: 'Rejoindre la liste d’attente', cls: 'btn-outline', action: 'waitlist_join' };
     return { label: 'Réserver cette séance', cls: 'btn-primary', action: 'book' };
   }
 
@@ -301,6 +302,15 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
     const btn = e.currentTarget;
     if (!current || !btn.dataset.action) return;
     btn.disabled = true;
+    if (btn.dataset.action === 'waitlist_join' || btn.dataset.action === 'waitlist_leave') {
+      try {
+        await ATX.api(btn.dataset.action, {id: current.id}, 'POST');
+        current.is_waitlisted = btn.dataset.action === 'waitlist_join';
+        calendar.refetchEvents();
+        fillModal(current);
+      } catch (error) { alert(error.message); btn.disabled = false; }
+      return;
+    }
     const updated = await ATX.bookAction(btn.dataset.action, current.id);
     if (updated) {
       fillModal(updated);

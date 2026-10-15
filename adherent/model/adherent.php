@@ -57,6 +57,7 @@ class Adherent extends Utilisateur
                 $this->dateInscription,
                 $this->dateFinAdhesion !== '' ? $this->dateFinAdhesion : null,
             ]);
+            (new GenerateurQrCode())->assurerPourAdherent($pdo, $id, $this->matricule);
             $pdo->commit();
             return $id;
         } catch (Throwable $erreur) {

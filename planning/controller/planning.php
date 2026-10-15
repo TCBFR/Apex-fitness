@@ -24,6 +24,9 @@ final class PlanningController
         'cardio'      => 'Cardio',
         'musculation' => 'Musculation',
         'yoga'        => 'Yoga et bien-être',
+        'cross'       => 'Cross Training',
+        'pilates'     => 'Pilates',
+        'abdos'       => 'Abdos et gainage',
         'boxe'        => 'Boxe',
         'danse'       => 'Danse',
     ];
@@ -87,6 +90,7 @@ final class PlanningController
                     'restantes'   => $restantes,
                     'complet'     => $complet,
                     'reserve'     => (int) $r['reserve'] > 0,
+                    'enAttente'   => (int) ($r['en_attente'] ?? 0) > 0,
                     'serie'       => $r['id_serie'] !== null,
                     'passe'       => $tsDebut < time(),
                 ],

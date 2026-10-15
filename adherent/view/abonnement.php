@@ -66,7 +66,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                                         <span>N° Membre : <?= htmlspecialchars($user['num_membre']); ?></span>
                                     </div>
                                 </div>
-                                <span class="qr-code-label" aria-label="Numéro de membre"><?= htmlspecialchars($user['num_membre']); ?></span>
+                                <img class="qr" src="<?= e($user['qr_image']) ?>" alt="QR code de votre carte adhérent">
                             </div>
                         </div>
 
@@ -110,7 +110,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                     <div class="renew-note">
                         <i class="fa-regular fa-calendar"></i>
                         <span>Votre abonnement se renouvelle automatiquement<br>à la date d'échéance.</span>
-                        <a href="<?= e(url('abonnement/catalogue.php')) ?>" class="green-link">Voir les conditions <i class="fa-solid fa-chevron-right"></i></a>
+                        <a href="<?= e(url('adherent/view/offres.php')) ?>" class="green-link">Voir les conditions <i class="fa-solid fa-chevron-right"></i></a>
                     </div>
                 </section>
 
@@ -157,7 +157,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                         </div>
                     </div>
 
-                    <a class="btn btn-primary btn-block" href="<?= e(url('abonnement/catalogue.php')) ?>">
+                    <a class="btn btn-primary btn-block" href="<?= e(url('adherent/view/offres.php')) ?>">
                         <i class="fa-regular fa-calendar"></i> Gérer mon abonnement
                         <i class="fa-solid fa-chevron-right right"></i>
                     </a>
@@ -173,7 +173,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                             <li><i class="fa-solid fa-check"></i> <?= htmlspecialchars($av); ?></li>
                         <?php endforeach; ?>
                     </ul>
-                    <a href="<?= e(url('abonnement/catalogue.php')) ?>" class="green-link">Voir tous les avantages <i class="fa-solid fa-chevron-right"></i></a>
+                    <a href="<?= e(url('adherent/view/offres.php')) ?>" class="green-link">Voir tous les avantages <i class="fa-solid fa-chevron-right"></i></a>
                 </section>
 
                 <section class="card">
@@ -233,7 +233,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 /* ===== Layout ===== */
 .app-shell{min-height:100vh}
-.main-content{margin-left:250px;padding:22px 36px 60px;max-width:1600px}
+.main-content{width:calc(100% - 250px);min-width:0;margin-left:250px;padding:0 0 60px;max-width:1600px}
+.main-content > .hero,.main-content > .grid-2{margin-inline:36px}
 
 /* ===== Hero ===== */
 .hero{
@@ -271,8 +272,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hero-tag{color:#fff;font-weight:800;font-size:20px;letter-spacing:1px;line-height:1}
 
 /* ===== Grid ===== */
-.grid-2{display:grid;grid-template-columns:1fr 400px;gap:22px}
-.col-main,.col-side{display:flex;flex-direction:column;gap:22px}
+.grid-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:22px;min-width:0}
+.col-main,.col-side{display:flex;flex-direction:column;gap:22px;min-width:0}
 
 /* ===== Card ===== */
 .card{
@@ -395,7 +396,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     .sub-main-grid{grid-template-columns:1fr}
 }
 @media(max-width:860px){
-    .main-content{margin-left:0;padding:18px}
+    .main-content{width:100%;margin-left:0;padding:0 0 18px}
+    .main-content > .hero,.main-content > .grid-2{margin-inline:18px}
     .hero-visual{display:none}
     .pills{grid-template-columns:1fr}
 }

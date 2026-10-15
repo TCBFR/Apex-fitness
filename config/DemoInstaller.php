@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/../qr_code/model/qr_code.php';
+
 final class DemoInstaller
 {
     private const DEMO_PASSWORD = 'apex2026';
@@ -175,6 +177,7 @@ final class DemoInstaller
         $requete->execute([$utilisateurId]);
 
         if ($requete->fetchColumn() !== false) {
+            (new GenerateurQrCode())->assurerPourAdherent($this->pdo, $utilisateurId, $matricule);
             return;
         }
 
@@ -183,6 +186,7 @@ final class DemoInstaller
              VALUES (?, ?, CURRENT_DATE)'
         );
         $requete->execute([$utilisateurId, $matricule]);
+        (new GenerateurQrCode())->assurerPourAdherent($this->pdo, $utilisateurId, $matricule);
     }
 
     private function marquerComptesDemo(): void

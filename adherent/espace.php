@@ -135,7 +135,8 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
 
 
 /* Main */
-.main { flex: 1; margin-left: 250px; padding: 0 36px 36px; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; }
+.main { flex: 1; width: calc(100% - 250px); margin-left: 250px; padding: 0 0 36px; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; }
+.main > .hero, .main > .stats, .main > .bottom { margin-inline: 36px; }
 
 /* Hero */
 .hero {
@@ -229,7 +230,8 @@ button { font: inherit; cursor: pointer; border: 0; background: none; color: inh
     .hero-sign { display: none; }
 }
 @media (max-width: 860px) {
-    .main { margin-left: 0; padding: 0 14px 20px; min-height: auto; }
+    .main { width: 100%; margin-left: 0; padding: 0 0 20px; min-height: auto; }
+    .main > .hero, .main > .stats, .main > .bottom { margin-inline: 14px; }
     .burger { display: block; }
     .hero h1 { font-size: 30px; }
     .hero { padding: 0 24px; }

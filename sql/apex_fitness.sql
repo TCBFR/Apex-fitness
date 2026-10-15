@@ -13,6 +13,24 @@ CREATE TABLE utilisateur (
   Date_CreationUsers DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+CREATE TABLE commune (
+  id_commune  INT AUTO_INCREMENT PRIMARY KEY,
+  code_insee  CHAR(5)      NOT NULL,
+  nom_commune VARCHAR(100) NOT NULL,
+  code_postal CHAR(5)      NOT NULL,
+  UNIQUE KEY uq_commune_cp (code_insee, code_postal),
+  KEY idx_commune_nom (nom_commune),
+  KEY idx_commune_cp (code_postal)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO commune (code_insee, nom_commune, code_postal) VALUES
+('19031', 'Brive-la-Gaillarde', '19100'),
+('19272', 'Tulle', '19000');
+
+ALTER TABLE adherent
+  ADD COLUMN id_commune INT NULL,
+  ADD CONSTRAINT fk_adherent_commune FOREIGN KEY (id_commune) REFERENCES commune (id_commune);
+
 CREATE TABLE compte_demo (
   NumUsers INT PRIMARY KEY,
   FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE CASCADE
@@ -87,6 +105,7 @@ CREATE TABLE qr_code (
   date_expiration_qr DATETIME NOT NULL,
   actif_qr           BOOLEAN NOT NULL DEFAULT 1,
   NumUsers           INT NOT NULL,
+  UNIQUE KEY uq_qr_adherent (NumUsers),
   FOREIGN KEY (NumUsers) REFERENCES adherent(NumUsers) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -214,6 +233,33 @@ CREATE TABLE reservation (
   UNIQUE KEY uk_adh_activite (NumUsers, Numactivite),
   FOREIGN KEY (NumUsers)    REFERENCES adherent(NumUsers)    ON DELETE CASCADE,
   FOREIGN KEY (Numactivite) REFERENCES activite(Numactivite) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE liste_attente (
+  Numattente INT AUTO_INCREMENT PRIMARY KEY,
+  NumUsers INT NOT NULL,
+  Numactivite INT NOT NULL,
+  date_inscription DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_attente_adherent_activite (NumUsers, Numactivite),
+  KEY idx_attente_ordre (Numactivite, date_inscription),
+  FOREIGN KEY (NumUsers) REFERENCES adherent(NumUsers) ON DELETE CASCADE,
+  FOREIGN KEY (Numactivite) REFERENCES activite(Numactivite) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE notification_adherent (
+  Numnotification INT AUTO_INCREMENT PRIMARY KEY,
+  NumUsers INT NOT NULL,
+  Numres INT NULL,
+  type_notification VARCHAR(30) NOT NULL,
+  titre VARCHAR(120) NOT NULL,
+  message VARCHAR(500) NOT NULL,
+  date_creation DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  date_lecture DATETIME NULL,
+  email_envoye_le DATETIME NULL,
+  UNIQUE KEY uk_notification_res_type (Numres, type_notification),
+  KEY idx_notification_user_date (NumUsers, date_creation),
+  FOREIGN KEY (NumUsers) REFERENCES adherent(NumUsers) ON DELETE CASCADE,
+  FOREIGN KEY (Numres) REFERENCES reservation(Numres) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- 4. STATUT (heritage XT), EQUIPEMENT, MAINTENANCE
@@ -445,3 +491,56 @@ FROM (
 ) AS demo
 JOIN type_equipement te ON te.libelletypeequip = demo.type_nom
 JOIN statut s ON s.libelle_statut = 'Disponible' AND s.type_statut = 'EQUIPEMENT';
+
+-- Parcours de démonstration du compte Awa : adhésion active et vrais cours
+-- futurs en base pour tester la réservation depuis le planning adhérent.
+UPDATE adherent
+SET Date_inscriptionadh = CURRENT_DATE,
+    Date_finadh = DATE_ADD(CURRENT_DATE, INTERVAL 1 YEAR)
+WHERE NumUsers = (SELECT NumUsers FROM utilisateur WHERE mailUsers = 'awa.diallo@mail.fr');
+
+INSERT INTO souscrire (NumUsers, Numabo, date_debut, date_fin, statut_souscription)
+SELECT u.NumUsers, a.Numabo, CURRENT_DATE, DATE_ADD(CURRENT_DATE, INTERVAL 1 MONTH), 'En cours'
+FROM utilisateur u
+JOIN adherent ad ON ad.NumUsers = u.NumUsers
+JOIN abonnement a ON a.libelle_abo = 'Premium' AND a.actif_abo = 1
+WHERE u.mailUsers = 'awa.diallo@mail.fr'
+  AND NOT EXISTS (
+    SELECT 1 FROM souscrire s
+    WHERE s.NumUsers = u.NumUsers AND s.Numabo = a.Numabo
+      AND s.statut_souscription = 'En cours'
+  );
+
+INSERT INTO salle (nomsalle, capacitesalle, localisationsalle, superficiesalle, etatsalle) VALUES
+  ('Studio cardio', 16, 'Rez-de-chaussée', 85.00, 'Ouverte'),
+  ('Studio zen', 14, 'Étage 1', 70.00, 'Ouverte'),
+  ('Zone cross', 12, 'Rez-de-chaussée', 95.00, 'Ouverte'),
+  ('Plateau muscu', 20, 'Rez-de-chaussée', 140.00, 'Ouverte');
+
+INSERT INTO activite
+  (titre, type_activite, description, niveau, date_heure_debut, date_heure_fin,
+   capacite_max, Numsalle, NumUsers)
+SELECT cours.titre, cours.type_activite, cours.description, 'Tous niveaux',
+       TIMESTAMP(DATE_ADD(CURRENT_DATE, INTERVAL cours.jour DAY), cours.debut),
+       TIMESTAMP(DATE_ADD(CURRENT_DATE, INTERVAL cours.jour DAY), cours.fin),
+       cours.capacite, s.Numsalle, coach.NumUsers
+FROM (
+  SELECT 'Cardio HIIT' AS titre, 'cardio' AS type_activite,
+         'Circuit cardio encadré, adapté à tous les niveaux.' AS description,
+         1 AS jour, '09:00:00' AS debut, '10:00:00' AS fin, 16 AS capacite,
+         'Studio cardio' AS salle
+  UNION ALL SELECT 'Yoga Flow', 'yoga', 'Mobilité, respiration et renforcement doux.',
+         2, '12:00:00', '13:00:00', 14, 'Studio zen'
+  UNION ALL SELECT 'Cross Training', 'cross', 'Séance fonctionnelle en petit groupe.',
+         3, '17:30:00', '18:30:00', 12, 'Zone cross'
+  UNION ALL SELECT 'Renforcement musculaire', 'musculation', 'Travail complet guidé par le coach.',
+         4, '18:00:00', '19:00:00', 20, 'Plateau muscu'
+) AS cours
+JOIN salle s ON s.nomsalle = cours.salle
+JOIN utilisateur coach ON coach.mailUsers = 'lina.moreau@apex.fr'
+JOIN employe e ON e.NumUsers = coach.NumUsers
+WHERE NOT EXISTS (
+  SELECT 1 FROM activite existante
+  WHERE existante.Numsalle = s.Numsalle
+    AND existante.date_heure_debut = TIMESTAMP(DATE_ADD(CURRENT_DATE, INTERVAL cours.jour DAY), cours.debut)
+);

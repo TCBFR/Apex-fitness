@@ -16,6 +16,28 @@
     });
   }
 
+  /* --- navigation ATHLETIX partagée ------------------------------- */
+  var menuToggle = document.getElementById("menu-toggle");
+  var mainNav = document.getElementById("main-nav");
+  if (menuToggle && mainNav) {
+    function fermerNavigation() {
+      document.body.classList.remove("menu-open");
+      menuToggle.setAttribute("aria-expanded", "false");
+      menuToggle.setAttribute("aria-label", "Ouvrir le menu");
+    }
+    menuToggle.addEventListener("click", function () {
+      var ouvert = document.body.classList.toggle("menu-open");
+      menuToggle.setAttribute("aria-expanded", String(ouvert));
+      menuToggle.setAttribute("aria-label", ouvert ? "Fermer le menu" : "Ouvrir le menu");
+    });
+    mainNav.querySelectorAll("a").forEach(function (lien) {
+      lien.addEventListener("click", fermerNavigation);
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") fermerNavigation();
+    });
+  }
+
   /* --- filtrage instantane des tableaux ------------------------------
      Usage : <input data-filtre="#id-du-tableau">
              <select data-filtre="#id-du-tableau" data-colonne="4">

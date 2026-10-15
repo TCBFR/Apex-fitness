@@ -41,18 +41,19 @@ function atx_all_sessions(): array
     $q=db()->prepare("SELECT a.Numactivite,a.titre,a.type_activite,a.niveau,a.date_heure_debut,a.date_heure_fin,a.capacite_max,
         s.nomsalle,u.prenomUsers AS coach,
         (SELECT COUNT(*) FROM reservation r WHERE r.Numactivite=a.Numactivite AND r.statut_reservation<>'Annulee') AS places,
-        (SELECT COUNT(*) FROM reservation r WHERE r.Numactivite=a.Numactivite AND r.NumUsers=? AND r.statut_reservation<>'Annulee') AS mine
+        (SELECT COUNT(*) FROM reservation r WHERE r.Numactivite=a.Numactivite AND r.NumUsers=? AND r.statut_reservation<>'Annulee') AS mine,
+        (SELECT COUNT(*) FROM liste_attente la WHERE la.Numactivite=a.Numactivite AND la.NumUsers=?) AS waitlisted
         FROM activite a JOIN salle s ON s.Numsalle=a.Numsalle JOIN utilisateur u ON u.NumUsers=a.NumUsers
         WHERE a.date_heure_debut>=DATE_SUB(NOW(),INTERVAL 14 DAY) AND a.date_heure_debut<DATE_ADD(NOW(),INTERVAL 60 DAY)
         ORDER BY a.date_heure_debut");
-    $q->execute([$userId]); $out=[];
+    $q->execute([$userId, $userId]); $out=[];
     foreach($q->fetchAll() as $row){
         $start=str_replace(' ','T',$row['date_heure_debut']); $end=str_replace(' ','T',$row['date_heure_fin']);
         $cat=isset(CATEGORIES[$row['type_activite']])?$row['type_activite']:'cardio';
         $out[(string)$row['Numactivite']]=['id'=>(string)$row['Numactivite'],'title'=>$row['titre'],'category'=>$cat,
             'coach'=>$row['coach'],'coach_full'=>$row['coach'],'level'=>$row['niveau']?:'Tous niveaux','room'=>$row['nomsalle'],
             'date'=>substr($start,0,10),'start'=>$start,'end'=>$end,'capacity'=>(int)$row['capacite_max'],
-            'base_booked'=>(int)$row['places'],'is_booked'=>(bool)$row['mine']];
+            'base_booked'=>(int)$row['places'],'is_booked'=>(bool)$row['mine'],'is_waitlisted'=>(bool)$row['waitlisted']];
     }
     uasort($out,static fn($a,$b)=>strcmp($a['start'],$b['start']));
     return $cache=$out;

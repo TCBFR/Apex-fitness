@@ -5,73 +5,24 @@
 
 .admin-shell {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-}
-
-.admin-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  padding: 24px 16px;
-  background: #15171b;
-  color: #fff;
-}
-
-.admin-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #fff;
-  text-decoration: none;
-}
-
-.admin-brand-mark {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  background: #1e5f4b;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.admin-brand strong,
-.admin-brand small {
-  display: block;
-}
-
-.admin-brand small {
-  margin-top: 3px;
-  color: #aeb4ba;
-}
-
-.admin-navigation {
-  display: grid;
-  gap: 6px;
-}
-
-.admin-navigation a,
-.admin-back {
-  padding: 11px 12px;
-  color: #c3c9d0;
-  text-decoration: none;
-  border-radius: 3px;
-}
-
-.admin-navigation a:hover,
-.admin-navigation a[aria-current="page"] {
-  background: #29312e;
-  color: #fff;
-}
-
-.admin-back {
-  margin-top: auto;
-  border: 1px solid #454c55;
 }
 
 .admin-main {
   min-width: 0;
+  margin-left: 250px;
+}
+
+.admin-menu-button {
+  display: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dcdad2;
+  border-radius: 8px;
+  background: #fff;
+  color: #15171b;
+  cursor: pointer;
 }
 
 .admin-topbar {
@@ -481,10 +432,6 @@
   transform: translateY(-1px);
 }
 
-.employee-page .admin-navigation a {
-  transition: background-color .15s ease, color .15s ease;
-}
-
 .ticket-form-card {
   max-width: 900px;
   padding: 30px;
@@ -660,27 +607,9 @@
   text-decoration: underline;
 }
 
-@media (max-width: 800px) {
-  .admin-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-sidebar {
-    gap: 18px;
-    padding: 16px;
-  }
-
-  .admin-navigation {
-    display: flex;
-    overflow-x: auto;
-  }
-
-  .admin-navigation a {
-    white-space: nowrap;
-  }
-
-  .admin-back {
-    margin-top: 0;
+@media (max-width: 860px) {
+  .admin-main {
+    margin-left: 0;
   }
 
   .admin-topbar,
@@ -691,6 +620,11 @@
 
   .admin-topbar {
     min-height: 76px;
+  }
+
+  .admin-menu-button {
+    display: inline-flex;
+    flex: 0 0 40px;
   }
 
   .admin-flashes {

@@ -276,7 +276,10 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* Main */
-.main { flex: 1; min-width: 0; margin-left: var(--sidebar-w); display: flex; flex-direction: column; padding: 28px 32px 28px; gap: 22px; }
+.main { flex: 1; min-width: 0; margin-left: var(--sidebar-w); display: flex; flex-direction: column; padding: 0 0 28px; gap: 0; }
+.main > .page-title,.main > .messenger { margin-inline: 32px; }
+.main > .page-title { margin-top: 24px; }
+.main > .messenger { margin-top: 20px; }
 .topbar__title { font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
 .topbar__sub { color: var(--muted); margin-top: 4px; }
 
@@ -411,11 +414,14 @@ a { color: inherit; text-decoration: none; }
 /* Tablet */
 @media (max-width: 1180px) {
     .messenger { grid-template-columns: 300px 1fr; }
-    .main { padding: 22px; }
+    .main { padding: 0 0 22px; }
 }
 
 @media (max-width: 860px) {
-    .main { margin-left: 0; padding: 14px; gap: 14px; }
+    .main { margin-left: 0; padding: 0 0 14px; gap: 0; }
+    .main > .page-title,.main > .messenger { margin-inline: 14px; }
+    .main > .page-title { margin-top: 14px; }
+    .main > .messenger { margin-top: 14px; }
     .topbar__title { font-size: 24px; }
     .topbar__sub { display: none; }
     .messenger { grid-template-columns: 1fr; border-radius: 18px; }

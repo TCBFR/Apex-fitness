@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../config/function.php';
+require_once __DIR__ . '/../../qr_code/model/qr_code.php';
 
 final class Paiement
 {
@@ -217,6 +218,13 @@ final class Paiement
         $exists = $this->pdo->prepare('SELECT 1 FROM adherent WHERE NumUsers = ?');
         $exists->execute([$numUtilisateur]);
         if ($exists->fetch()) {
+            $matricule = $this->pdo->prepare('SELECT matriculeadh FROM adherent WHERE NumUsers = ?');
+            $matricule->execute([$numUtilisateur]);
+            (new GenerateurQrCode())->assurerPourAdherent(
+                $this->pdo,
+                $numUtilisateur,
+                (string) $matricule->fetchColumn()
+            );
             return;
         }
 
@@ -224,14 +232,16 @@ final class Paiement
             "SELECT Numstatut FROM statut WHERE type_statut = 'ADHERENT' AND libelle_statut = 'Actif'"
         )->fetchColumn();
 
+        $matricule = 'ADH-' . str_pad((string) $numUtilisateur, 4, '0', STR_PAD_LEFT);
         $this->pdo->prepare(
             'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh, Numstatut)
              VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 MONTH), ?)'
         )->execute([
             $numUtilisateur,
-            'ADH-' . str_pad((string) $numUtilisateur, 4, '0', STR_PAD_LEFT),
+            $matricule,
             $actif,
         ]);
+        (new GenerateurQrCode())->assurerPourAdherent($this->pdo, $numUtilisateur, $matricule);
     }
 
     private function abonnementEnCours(int $numUtilisateur): ?array

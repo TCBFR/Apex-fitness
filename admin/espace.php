@@ -206,6 +206,43 @@ $maxRes = max(1, ...array_map(fn($r) => (int) $r['n'], $parActivite ?: [['n' => 
 
 $flashMessages = flashs();
 $adminUser = utilisateur();
+$adminNavigation = [
+    'dashboard' => ['Tableau de bord', 'home'],
+    'utilisateurs' => ['Utilisateurs', 'users'],
+    'adherents' => ['Adhérents', 'user'],
+    'coachs' => ['Coachs', 'users'],
+    'abonnements' => ['Abonnements', 'card'],
+    'paiements' => ['Paiements', 'card'],
+    'planning' => ['Planning', 'calendar'],
+    'activites' => ['Activités', 'activity'],
+    'reservations' => ['Réservations', 'bag'],
+    'salles' => ['Salles', 'building'],
+    'equipements' => ['Équipements', 'tool'],
+    'maintenance' => ['Maintenance', 'tool'],
+    'avis' => ['Avis clients', 'star'],
+    'messages' => ['Messages', 'message'],
+];
+$sidebarItems = [];
+foreach ($adminNavigation as $id => [$label, $icon]) {
+    $sidebarItems[] = [
+        'id' => $id,
+        'label' => $label,
+        'icon' => $icon,
+        'href' => url('admin/espace.php?onglet=' . $id),
+    ];
+}
+$sidebarActive = $onglet;
+$sidebarHome = url('admin/espace.php?onglet=dashboard');
+$sidebarLabel = 'Navigation administration';
+$sidebarSubtitle = 'Administration';
+$topbarUser = utilisateur();
+$topbarTitle = 'Administration';
+$topbarContext = 'Espace sécurisé';
+$topbarClass = 'admin-topbar';
+$topbarLinks = [
+    ['label' => 'Mon espace', 'href' => url('admin/espace.php?onglet=dashboard')],
+    ['label' => 'Déconnexion', 'href' => url('utilisateur/deconnexion.php')],
+];
 ?>
 
 <!DOCTYPE html>
@@ -219,44 +256,10 @@ $adminUser = utilisateur();
 </head>
 <body class="admin-page">
 <div class="admin-shell">
-  <aside class="admin-sidebar">
-    <a class="admin-brand" href="<?= e(url('admin/espace.php')) ?>">
-      <span class="admin-brand-mark">A</span>
-      <span><strong>Apex Fitness</strong><small>Administration</small></span>
-    </a>
-    <nav class="admin-navigation">
-<?php foreach ([
-    'dashboard'    => 'Tableau de bord',
-    'utilisateurs' => 'Utilisateurs',
-    'adherents'    => 'Adhérents',
-    'coachs'       => 'Coachs',
-    'abonnements'  => 'Abonnements',
-    'paiements'    => 'Paiements',
-    'planning'     => 'Planning',
-    'activites'    => 'Activités',
-    'reservations' => 'Réservations',
-    'salles'       => 'Salles',
-    'equipements'  => 'Équipements',
-    'maintenance'  => 'Maintenance',
-    'avis'         => 'Avis clients',
-    'messages'     => 'Messages',
-    ] as $cle => $lib): ?>
-      <a href="<?= e(url('admin/espace.php?onglet=' . $cle)) ?>" <?= $onglet === $cle ? 'aria-current="page"' : '' ?>><?= e($lib) ?></a>
-    <?php endforeach; ?>
-    </nav>
-  </aside>
+  <?php require __DIR__ . '/../layout/sidebar.php'; ?>
 
   <div class="admin-main">
-    <div class="admin-topbar">
-      <div>
-        <p class="admin-eyebrow">ESPACE SÉCURISÉ</p>
-        <h1>Administration</h1>
-      </div>
-      <div class="admin-account">
-        <span><?= e(($adminUser['prenomUsers'] ?? '') . ' ' . ($adminUser['nomUsers'] ?? '')) ?></span>
-        <a href="<?= e(url('utilisateur/deconnexion.php')) ?>">Déconnexion</a>
-      </div>
-    </div>
+    <?php require __DIR__ . '/../layout/topbar.php'; ?>
 
     <?php if ($flashMessages): ?>
       <div class="admin-flashes">

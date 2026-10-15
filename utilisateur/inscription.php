@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/function.php';
+require_once __DIR__ . '/../commune/model/commune.php';
 require_once __DIR__ . '/controller/InscriptionController.php';
 
 if (connecte()) {
@@ -13,17 +14,18 @@ $donnees = [
     'nom' => '',
     'prenom' => '',
     'date_naissance' => '',
-    'ville' => '',
-    'code_postal' => '',
     'mail' => '',
     'adresse_postale' => '',
 ];
+$commune = ['id_commune' => '', 'nom_commune' => '', 'code_postal' => ''];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifie_csrf();
     foreach ($donnees as $champ => $_) {
         $donnees[$champ] = trim((string) ($_POST[$champ] ?? ''));
     }
+    // Réaffiche la commune choisie si le formulaire revient avec une erreur.
+    $commune = CommuneModel::trouver((int) ($_POST['id_commune'] ?? 0)) ?? $commune;
 
     try {
         (new InscriptionController())->inscrire($_POST);

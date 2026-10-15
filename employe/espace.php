@@ -580,6 +580,38 @@ $titresOnglets = [
   'messages' => 'Messages reçus',
 ];
 $titrePage = $maintenance ? 'Gestion des tickets' : 'Espace employé';
+$employeeNavigation = $maintenance
+  ? ['maintenance' => ['Gestion des tickets', 'tool']]
+  : [
+      'tableau' => ['Tableau de bord', 'home'],
+      'creneaux' => ['Créneaux', 'calendar'],
+      'adherents' => ['Adhérents', 'users'],
+      'creer-ticket' => ['Créer un ticket', 'plus'],
+      'materiel' => ['Matériel', 'tool'],
+      'faq' => ['Questions', 'help'],
+      'messages' => ['Messages reçus', 'message'],
+    ];
+$sidebarItems = [];
+foreach ($employeeNavigation as $id => [$label, $icon]) {
+  $sidebarItems[] = [
+    'id' => $id,
+    'label' => $label,
+    'icon' => $icon,
+    'href' => url('employe/espace.php?onglet=' . $id),
+  ];
+}
+$sidebarActive = $onglet;
+$sidebarHome = url('employe/espace.php?onglet=' . ($maintenance ? 'maintenance' : 'tableau'));
+$sidebarLabel = $maintenance ? 'Navigation maintenance' : 'Navigation employé';
+$sidebarSubtitle = $maintenance ? 'Maintenance' : 'Espace employé';
+$topbarUser = utilisateur();
+$topbarTitle = $maintenance ? 'Maintenance' : 'Espace employé';
+$topbarContext = 'Espace sécurisé';
+$topbarClass = 'admin-topbar';
+$topbarLinks = [
+  ['label' => 'Mon espace', 'href' => $sidebarHome],
+  ['label' => 'Déconnexion', 'href' => url('utilisateur/deconnexion.php')],
+];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -595,29 +627,9 @@ $titrePage = $maintenance ? 'Gestion des tickets' : 'Espace employé';
 </head>
 <body class="admin-page employee-page">
 <div class="admin-shell">
-  <aside class="admin-sidebar">
-    <a class="admin-brand" href="<?= e(url('employe/espace.php?onglet=' . ($maintenance ? 'maintenance' : 'tableau'))) ?>">
-      <span class="admin-brand-mark">A</span>
-      <span><strong>Apex Fitness</strong><small><?= $maintenance ? 'Maintenance' : 'Espace employé' ?></small></span>
-    </a>
-    <nav class="admin-navigation" aria-label="<?= $maintenance ? 'Menu maintenance' : 'Menu employé' ?>">
-      <?php foreach ($titresOnglets as $cle => $lib): ?>
-        <?php if (($maintenance && $cle !== 'maintenance') || (!$maintenance && $cle === 'maintenance')) continue; ?>
-        <a href="<?= e(url('employe/espace.php?onglet=' . $cle)) ?>" <?= $onglet === $cle ? 'aria-current="page"' : '' ?>><?= e($lib) ?></a>
-      <?php endforeach; ?>
-    </nav>
-  </aside>
+  <?php require __DIR__ . '/../layout/sidebar.php'; ?>
   <div class="admin-main">
-    <div class="admin-topbar">
-      <div>
-        <p class="admin-eyebrow">ESPACE SÉCURISÉ</p>
-        <h1><?= $maintenance ? 'Maintenance' : 'Espace employé' ?></h1>
-      </div>
-      <div class="admin-account">
-        <span><?= e(($employeUser['prenomUsers'] ?? '') . ' ' . ($employeUser['nomUsers'] ?? '')) ?></span>
-        <a href="<?= e(url('utilisateur/deconnexion.php')) ?>">Déconnexion</a>
-      </div>
-    </div>
+    <?php require __DIR__ . '/../layout/topbar.php'; ?>
     <?php if ($flashMessages): ?>
       <div class="admin-flashes">
         <?php foreach ($flashMessages as $message): ?>

@@ -1,8 +1,14 @@
 <?php
 require_once __DIR__ . '/../../model/AdherentEspace.php';
+require_once dirname(__DIR__, 3) . '/qr_code/model/qr_code.php';
 $space = new AdherentEspace();
 $memberId = (int)utilisateur()['NumUsers'];
 $profile = $space->profil($memberId);
+(new GenerateurQrCode())->assurerPourAdherent(
+    db(),
+    $memberId,
+    (string) ($profile['matricule'] ?? '')
+);
 $subscription = $space->abonnement($memberId);
 $paymentQuery = db()->prepare('SELECT p.date_paiement,p.montant,a.libelle_abo FROM paiement p JOIN abonnement a ON a.Numabo=p.Numabo WHERE p.NumUsers=? ORDER BY p.date_paiement DESC LIMIT 12');
 $paymentQuery->execute([$memberId]);
@@ -25,6 +31,7 @@ $user = [
     'ville'=>'', 'adresse_l1'=>'', 'adresse_l2'=>'', 'date_naissance'=>'', 'sexe'=>'',
     'membre_depuis'=>dateFr($profile['inscrit_le'] ?? $profile['cree_le'] ?? null),
     'num_membre'=>$profile['matricule'] ?? '', 'avatar'=>'assets/images/avatar.png',
+    'qr_image'=>url('qr_code/image.php'),
     'initiale'=>mb_strtoupper(mb_substr($profile['prenom'] ?? '?',0,1)).'.',
 ];
 $abonnement = [

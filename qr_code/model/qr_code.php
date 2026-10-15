@@ -21,7 +21,7 @@ final class GenerateurQrCode
      */
     public function valeur(string $matricule, int $numUsers, ?string $jeton = null): string
     {
-        $jeton ??= bin2hex(random_bytes(4));
+        $jeton ??= bin2hex(random_bytes(16));
         $base = sprintf('%s|%s|%d|%s', self::PREFIXE, $matricule, $numUsers, $jeton);
         return $base . '|' . $this->signature($base);
     }
@@ -70,17 +70,44 @@ final class GenerateurQrCode
     /* ---------------------------- Base de données ---------------------------- */
 
     /**
-     * Crée le QR d'un adhérent (désactive les précédents) et renvoie sa valeur.
-     * À appeler dans la transaction de fin de souscription, après la création de la ligne adherent.
+     * Crée ou remplace le QR d'un adhérent et renvoie sa valeur.
      */
     public function creerPourAdherent(PDO $pdo, int $numUsers, string $matricule, DateTimeInterface $expiration): string
     {
         $valeur = $this->valeur($matricule, $numUsers);
-        $pdo->prepare('UPDATE qr_code SET actif_qr = 0 WHERE NumUsers = ?')->execute([$numUsers]);
         $pdo->prepare(
-            'INSERT INTO qr_code (code_qr, date_expiration_qr, actif_qr, NumUsers) VALUES (?, ?, 1, ?)'
+            'INSERT INTO qr_code (code_qr, date_expiration_qr, actif_qr, NumUsers)
+             VALUES (?, ?, 1, ?)
+             ON DUPLICATE KEY UPDATE code_qr = VALUES(code_qr),
+                 date_generation_qr = CURRENT_TIMESTAMP,
+                 date_expiration_qr = VALUES(date_expiration_qr), actif_qr = 1'
         )->execute([$valeur, $expiration->format('Y-m-d H:i:s'), $numUsers]);
         return $valeur;
+    }
+
+    /** Crée une carte permanente une seule fois pour un adhérent. */
+    public function assurerPourAdherent(PDO $pdo, int $numUsers, string $matricule): string
+    {
+        $requete = $pdo->prepare(
+            'SELECT Numqr, code_qr FROM qr_code WHERE NumUsers = ?
+             ORDER BY date_generation_qr DESC, Numqr DESC LIMIT 1'
+        );
+        $requete->execute([$numUsers]);
+        $qr = $requete->fetch();
+        if ($qr !== false) {
+            $pdo->prepare('UPDATE qr_code SET actif_qr = 0 WHERE NumUsers = ?')->execute([$numUsers]);
+            $pdo->prepare(
+                'UPDATE qr_code SET actif_qr = 1, date_expiration_qr = ? WHERE Numqr = ?'
+            )->execute(['9999-12-31 23:59:59', (int) $qr['Numqr']]);
+            return (string) $qr['code_qr'];
+        }
+
+        return $this->creerPourAdherent(
+            $pdo,
+            $numUsers,
+            $matricule,
+            new DateTimeImmutable('9999-12-31 23:59:59')
+        );
     }
 
     /** QR actif et non expiré d'un adhérent, ou null. */

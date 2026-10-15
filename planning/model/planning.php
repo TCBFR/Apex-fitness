@@ -53,14 +53,16 @@ final class Planning
                       WHERE r.Numactivite = a.Numactivite AND r.statut_reservation <> 'Annulee') AS places_prises,
                     (SELECT COUNT(*) FROM reservation r2
                       WHERE r2.Numactivite = a.Numactivite AND r2.NumUsers = ?
-                        AND r2.statut_reservation <> 'Annulee') AS reserve
+                        AND r2.statut_reservation <> 'Annulee') AS reserve,
+                    (SELECT COUNT(*) FROM liste_attente la
+                      WHERE la.Numactivite = a.Numactivite AND la.NumUsers = ?) AS en_attente
              FROM activite a
              JOIN salle s       ON s.Numsalle = a.Numsalle
              JOIN utilisateur u ON u.NumUsers = a.NumUsers
              WHERE a.date_heure_debut < ? AND a.date_heure_fin > ?
              ORDER BY a.date_heure_debut"
         );
-        $st->execute([$numUsers, $fin, $debut]);
+        $st->execute([$numUsers, $numUsers, $fin, $debut]);
         return $st->fetchAll();
     }
 

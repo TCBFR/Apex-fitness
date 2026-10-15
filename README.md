@@ -27,6 +27,24 @@ point d’entrée à partir d’une liste de routes autorisées.
 Prérequis : PHP 8.1 ou supérieur (le code utilise `never`, `str_contains`,
 les fonctions fléchées), MySQL 5.7 / MariaDB 10.4 ou supérieur.
 
+### Liste d’attente et rappels adhérent
+
+Pour une base déjà installée, appliquer une fois la migration
+`sql/migrations/20261014_adherent_waitlist_reminders.sql`. Les nouvelles
+installations récupèrent ces tables depuis `sql/apex_fitness.sql`.
+
+Les rappels sont affichés dans « Mes réservations » 24 heures avant le cours.
+Pour les générer régulièrement, ajouter une tâche cron exécutée toutes les
+15 minutes (remplacer `/chemin/vers/apex-fitness` par le chemin du projet) :
+
+```
+*/15 * * * * /usr/bin/php /chemin/vers/apex-fitness/scripts/rappels_seances.php
+```
+
+Une annulation est possible jusqu’à deux heures avant le cours. La place
+libérée est attribuée au premier adhérent éligible de la liste d’attente, qui
+reçoit une notification dans son compte.
+
 Mot de passe commun aux comptes de démonstration : `apex2026`.
 
 | Compte | Rôles | À tester |
@@ -35,7 +53,7 @@ Mot de passe commun aux comptes de démonstration : `apex2026`.
 | camille.roux@apex.fr | Employée **et** adhérente | le cumul autorisé par l'héritage T |
 | marc.anselme@apex.fr | Employé, maintenance | déclaration de panne, interventions |
 | s.nabil@mail.fr | Adhérent actif | réservation, annulation |
-| awa.diallo@mail.fr | Adhérente expirée | réservation refusée |
+| awa.diallo@mail.fr | Adhérente active (Premium) | réservation de cours au planning |
 | h.lemoine@mail.fr | Adhérent suspendu | réservation refusée |
 
 ## Arborescence

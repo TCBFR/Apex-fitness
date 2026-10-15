@@ -11,8 +11,9 @@ $sessions = atx_sessions_view(fn($s) => $s['date'] === $date);
 function action_button(array $s): string
 {
     if ($s['is_past']) return '<button class="btn btn-muted" disabled data-testid="session-action-' . e($s['id']) . '">Terminée</button>';
-    if ($s['is_booked']) return '<button class="btn btn-danger" data-action="cancel" data-id="' . e($s['id']) . '" data-testid="session-action-' . e($s['id']) . '">Annuler ' . icon('x', 16) . '</button>';
-    if ($s['remaining'] <= 0) return '<button class="btn btn-muted" disabled data-testid="session-action-' . e($s['id']) . '">Complet</button>';
+    if ($s['is_booked']) return $s['can_cancel'] ? '<button class="btn btn-danger" data-action="cancel" data-id="' . e($s['id']) . '" data-testid="session-action-' . e($s['id']) . '">Annuler ' . icon('x', 16) . '</button>' : '<span class="btn btn-muted" data-testid="session-action-' . e($s['id']) . '">Annulation close (moins de 2 h)</span>';
+    if ($s['is_waitlisted']) return '<button class="btn btn-outline" data-action="waitlist_leave" data-id="' . e($s['id']) . '" data-testid="session-action-' . e($s['id']) . '">Quitter la liste d’attente</button>';
+    if ($s['remaining'] <= 0) return '<button class="btn btn-outline" data-action="waitlist_join" data-id="' . e($s['id']) . '" data-testid="session-action-' . e($s['id']) . '">Liste d’attente</button>';
     return '<button class="btn btn-primary" data-action="book" data-id="' . e($s['id']) . '" data-testid="session-action-' . e($s['id']) . '">Réserver ' . icon('right', 16) . '</button>';
 }
 
@@ -39,7 +40,7 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
               <?php foreach ($sessions as $s): ?>
                 <article class="sess-card<?= $s['is_booked'] ? ' is-booked' : '' ?>" style="--c:<?= e($s['color']) ?>"
                          data-id="<?= e($s['id']) ?>" data-cat="<?= e($s['category']) ?>" data-coach="<?= e($s['coach']) ?>"
-                         data-level="<?= e($s['level']) ?>" data-remaining="<?= (int)$s['remaining'] ?>" data-testid="session-card-<?= e($s['id']) ?>">
+                         data-level="<?= e($s['level']) ?>" data-remaining="<?= (int)$s['remaining'] ?>" data-waitlisted="<?= $s['is_waitlisted'] ? '1' : '0' ?>" data-testid="session-card-<?= e($s['id']) ?>">
                   <div class="sess-img" style="background-image:url('<?= e($s['image']) ?>')"></div>
                   <div class="sess-time"><strong><?= e(hm($s['start'])) ?></strong><span>- <?= e(hm($s['end'])) ?></span></div>
                   <div class="sess-info">
@@ -63,12 +64,13 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
               <span class="list-icon"><?= icon('calcheck', 26) ?></span>
               <div>
                 <h2>Mes réservations</h2>
-                <p>Vos séances à venir. Vous pouvez annuler à tout moment avant le début.</p>
+                <p>Annulez jusqu’à 2 heures avant le début du cours. Les places libérées sont proposées à la liste d’attente.</p>
               </div>
               <span class="count-pill" id="my-count" data-testid="my-bookings-count">0</span>
             </div>
             <div class="my-list" id="my-list" data-testid="my-bookings-list"><div class="skeleton" style="height:64px"></div></div>
           </section>
+
         </div>
 
         <aside class="col-side">
@@ -162,8 +164,9 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
   function buttonHtml(s) {
     const tid = ' data-testid="session-action-' + s.id + '"';
     if (s.is_past) return '<button class="btn btn-muted" disabled' + tid + '>Terminée</button>';
-    if (s.is_booked) return '<button class="btn btn-danger" data-action="cancel" data-id="' + s.id + '"' + tid + '>Annuler ' + ATX.icons.right.replace('m9 18 6-6-6-6', 'M18 6 6 18M6 6l12 12') + '</button>';
-    if (s.remaining <= 0) return '<button class="btn btn-muted" disabled' + tid + '>Complet</button>';
+    if (s.is_booked) return s.can_cancel ? '<button class="btn btn-danger" data-action="cancel" data-id="' + s.id + '"' + tid + '>Annuler ' + ATX.icons.right.replace('m9 18 6-6-6-6', 'M18 6 6 18M6 6l12 12') + '</button>' : '<span class="btn btn-muted"' + tid + '>Annulation close (moins de 2 h)</span>';
+    if (s.is_waitlisted) return '<button class="btn btn-outline" data-action="waitlist_leave" data-id="' + s.id + '"' + tid + '>Quitter la liste d’attente</button>';
+    if (s.remaining <= 0) return '<button class="btn btn-outline" data-action="waitlist_join" data-id="' + s.id + '"' + tid + '>Liste d’attente</button>';
     return '<button class="btn btn-primary" data-action="book" data-id="' + s.id + '"' + tid + '>Réserver ' + ATX.icons.right + '</button>';
   }
 
@@ -183,6 +186,17 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
     const btn = ev.target.closest('[data-action]');
     if (!btn) return;
     btn.disabled = true;
+    if (btn.dataset.action === 'waitlist_join' || btn.dataset.action === 'waitlist_leave') {
+      try {
+        await ATX.api(btn.dataset.action, {id: btn.dataset.id}, 'POST');
+        const card = btn.closest('.sess-card');
+        if (card) {
+          card.dataset.waitlisted = btn.dataset.action === 'waitlist_join' ? '1' : '0';
+          btn.outerHTML = buttonHtml({id:btn.dataset.id, is_waitlisted:card.dataset.waitlisted === '1', is_booked:false, remaining:Number(card.dataset.remaining), is_past:false});
+        }
+      } catch (error) { alert(error.message); btn.disabled = false; }
+      return;
+    }
     const s = await ATX.bookAction(btn.dataset.action, btn.dataset.id);
     if (s) {
       updateCard(s);
@@ -212,7 +226,7 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
             '<div class="my-main"><strong>' + ATX.esc(s.title) + '</strong>' +
             '<small>' + ATX.frDate(s.start, { weekday: 'short', day: 'numeric', month: 'short' }) + ' · ' + ATX.hm(s.start) + ' – ' + ATX.hm(s.end) + ' · Coach ' + ATX.esc(s.coach) + '</small></div>' +
             '<a class="btn btn-ghost btn-sm" href="' + ATX.reservationsUrl + '&date=' + encodeURIComponent(s.date) + '" data-testid="my-booking-goto-' + s.id + '">Voir</a>' +
-            '<button class="btn btn-danger btn-sm" data-action="cancel" data-id="' + s.id + '" data-testid="my-booking-cancel-' + s.id + '">Annuler</button>' +
+            (s.can_cancel ? '<button class="btn btn-danger btn-sm" data-action="cancel" data-id="' + s.id + '" data-testid="my-booking-cancel-' + s.id + '">Annuler</button>' : '<span class="btn btn-muted btn-sm">Annulation close</span>') +
             '</div>'
           );
         })
@@ -224,6 +238,7 @@ hero('calweek', 'Réservations', 'Réservez vos séances en quelques clics et ac
 
   apply();
   loadMy();
+
 })();
 
 </script>

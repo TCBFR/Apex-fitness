@@ -10,6 +10,11 @@ const DB_PORT = 8889;
 
 const APP_NOM = 'Fitness';
 const APP_BASE = '';
+// En production, définir APP_SECRET dans l'environnement avec une clé aléatoire longue.
+defined('APP_SECRET') || define(
+    'APP_SECRET',
+    getenv('APP_SECRET') ?: 'athletix-local-development-key-change-before-deploy-9f83d6b2'
+);
 
 ini_set('display_errors', '1');
 error_reporting(E_ALL);

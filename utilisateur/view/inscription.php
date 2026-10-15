@@ -1,8 +1,9 @@
 <?php
 $donnees = $donnees ?? [
-    'nom' => '', 'prenom' => '', 'date_naissance' => '', 'ville' => '',
-    'code_postal' => '', 'mail' => '', 'adresse_postale' => '',
+    'nom' => '', 'prenom' => '', 'date_naissance' => '',
+    'mail' => '', 'adresse_postale' => '',
 ];
+$commune = $commune ?? ['id_commune' => '', 'nom_commune' => '', 'code_postal' => ''];
 $erreur = $erreur ?? null;
 ?>
 <!doctype html>
@@ -51,12 +52,15 @@ $erreur = $erreur ?? null;
           <div class="input-wrap"><input type="text" name="date_naissance" id="date_naissance" value="<?= e($donnees['date_naissance']) ?>" placeholder="JJ-MM-AAAA" aria-label="Date de naissance (jour-mois-année)" autocomplete="bday" inputmode="numeric" pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}" maxlength="10" required></div>
           <p class="field-msg"></p>
         </div>
-        <div class="field">
-          <div class="input-wrap"><input type="text" name="ville" id="ville" value="<?= e($donnees['ville']) ?>" placeholder="Ville" autocomplete="address-level2" maxlength="100" required></div>
+        <div class="field commune-recherche">
+          <div class="input-wrap"><input type="text" id="commune" value="<?= e((string) $commune['nom_commune']) ?>" data-url="<?= e(url('commune/recherche.php')) ?>" placeholder="Commune (saisir au moins 2 caractères)" aria-label="Commune" autocomplete="off" required></div>
+          <div class="commune-resultats" id="commune-resultats" hidden></div>
+          <input type="hidden" name="id_commune" id="id_commune" value="<?= e((string) $commune['id_commune']) ?>">
+          <p id="commune-message" aria-live="polite"></p>
           <p class="field-msg"></p>
         </div>
         <div class="field">
-          <div class="input-wrap"><input type="text" name="code_postal" id="code_postal" value="<?= e($donnees['code_postal']) ?>" placeholder="Code postal" autocomplete="postal-code" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" required></div>
+          <div class="input-wrap"><input type="text" id="code_postal" value="<?= e((string) $commune['code_postal']) ?>" placeholder="Code postal" aria-label="Code postal" readonly tabindex="-1"></div>
           <p class="field-msg"></p>
         </div>
         <div class="field">

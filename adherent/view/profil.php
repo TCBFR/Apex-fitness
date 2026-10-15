@@ -3,6 +3,12 @@ require_once __DIR__ . '/../../config/function.php';
 exige_role('ADHERENT');
 require dirname(__DIR__) . '/includes/profil/data.php';
 
+$commune = [
+    'id_commune' => $user['id_commune'] ?? '',
+    'nom_commune' => $user['nom_commune'] ?? '',
+    'code_postal' => $user['code_postal'] ?? '',
+];
+
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -15,6 +21,8 @@ require dirname(__DIR__) . '/includes/profil/data.php';
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="<?= e(url('assets/css/commune.css')) ?>">
+<script src="<?= e(url('assets/js/commune.js')) ?>" defer></script>
 </head>
 <body>
 
@@ -91,6 +99,11 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                                 <input class="field-value" type="<?= $key === 'email' ? 'email' : ($key === 'telephone' ? 'tel' : 'text') ?>" name="<?= e($key) ?>" value="<?= e($user[$key]) ?>" <?= $key !== 'telephone' ? 'required' : '' ?>>
                             </label>
                             <?php endforeach; ?>
+                            <?php include dirname(__DIR__, 2) . '/commune/view/champ.php'; ?>
+                            <label class="field field-wide">
+                                <span class="field-label">Adresse</span>
+                                <input class="field-value" type="text" name="adresse_postale" value="<?= e((string) ($user['adresse_postale'] ?? '')) ?>" maxlength="255" required>
+                            </label>
                         </div>
                         <p id="profileMessage" role="status" aria-live="polite"></p>
                     </form>
@@ -154,7 +167,7 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                                     <span>N° Membre : <?= htmlspecialchars($user['num_membre']); ?></span>
                                 </div>
                             </div>
-                            <span class="qr-member-number"><?= e($user['num_membre']) ?></span>
+                            <img class="qr-member-number" src="<?= e($user['qr_image']) ?>" alt="QR code de votre carte adhérent">
                         </div>
                     </div>
 
@@ -270,7 +283,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 
 /* ===== Layout ===== */
 .app-shell{min-height:100vh}
-.main-content{margin-left:250px;padding:22px 36px 60px;max-width:1600px}
+.main-content{width:calc(100% - 250px);min-width:0;margin-left:250px;padding:0 0 60px;max-width:1600px}
+.main-content > .hero,.main-content > .grid-2{margin-inline:36px}
 
 /* ===== Hero ===== */
 .hero{
@@ -308,8 +322,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .hero-tag{color:#fff;font-weight:800;font-size:20px;letter-spacing:1px;line-height:1}
 
 /* ===== Grid ===== */
-.grid-2{display:grid;grid-template-columns:1fr 400px;gap:22px}
-.col-main,.col-side{display:flex;flex-direction:column;gap:22px}
+.grid-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:22px;min-width:0}
+.col-main,.col-side{display:flex;flex-direction:column;gap:22px;min-width:0}
 
 /* ===== Card ===== */
 .card{
@@ -376,6 +390,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .field-label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:none}
 .field .field-value{width:100%;background:transparent;border:0;color:var(--text);font:inherit;font-size:14px;outline:none}
 .field-value{font-size:14px;font-weight:500;line-height:1.4}
+.field-wide{grid-column:1 / -1}
 
 /* ===== Preferences ===== */
 .prefs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
@@ -414,7 +429,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .member-infos{margin-top:34px;display:flex;flex-direction:column;gap:3px}
 .member-infos strong{font-size:14px}
 .member-infos span{font-size:11px;color:var(--muted)}
-.qr-member-number{display:grid;place-items:center;width:88px;height:88px;border:1px solid var(--border);border-radius:6px;font:12px 'JetBrains Mono',monospace;color:var(--green);overflow-wrap:anywhere;text-align:center;padding:8px}
+.qr-member-number{display:block;width:88px;height:88px;border:1px solid var(--border);border-radius:6px;background:#fff;object-fit:contain;padding:4px}
 
 /* ===== Sub-grid (profil sidebar abonnement) ===== */
 .sub-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px}
@@ -431,7 +446,8 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     .form-grid,.prefs-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:860px){
-    .main-content{margin-left:0;padding:18px}
+    .main-content{width:100%;margin-left:0;padding:0 0 18px}
+    .main-content > .hero,.main-content > .grid-2{margin-inline:18px}
     .identity-card{grid-template-columns:1fr;text-align:center}
     .avatar-ring{margin:0 auto}
     .hero-visual{display:none}

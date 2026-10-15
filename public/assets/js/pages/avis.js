@@ -1,1 +1,5 @@
-// Les filtres d'avis sont des liens serveur, sans logique JavaScript necessaire.
+/* Vue Avis : filtre les avis par note. */
+(function () {
+  'use strict';
+  window.Athletix.initFilter('reviews');
+})();

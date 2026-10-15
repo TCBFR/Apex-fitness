@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/qr_code/model/qr_code.php';
+
 class Utilisateur
 {
     protected const TABLE = 'utilisateur';
@@ -305,11 +307,20 @@ class Utilisateur
 
     public static function ajouterAdherent(int $id): void
     {
-        $requete = db()->prepare(
-            'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh)
-             VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR))'
-        );
-        $requete->execute([$id, 'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT)]);
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $matricule = 'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
+            $pdo->prepare(
+                'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh)
+                 VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR))'
+            )->execute([$id, $matricule]);
+            self::creerQrAdherent($pdo, $id, $matricule);
+            $pdo->commit();
+        } catch (Throwable $exception) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $exception;
+        }
     }
 
     public static function inscrireAdherent(array $data): int
@@ -369,6 +380,11 @@ class Utilisateur
                 $codePostal,
                 $adresse,
             ]);
+            self::creerQrAdherent(
+                $pdo,
+                $id,
+                'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT)
+            );
             $pdo->commit();
 
             return $id;
@@ -438,10 +454,17 @@ class Utilisateur
             )->execute([$id, 'EMP-' . str_pad((string) $id, 3, '0', STR_PAD_LEFT), $function]);
         }
         if (in_array('ADHERENT', $roles, true)) {
+            $matricule = 'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT);
             $pdo->prepare(
                 'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh)
                  VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR))'
-            )->execute([$id, 'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT)]);
+            )->execute([$id, $matricule]);
+            self::creerQrAdherent($pdo, $id, $matricule);
         }
+    }
+
+    private static function creerQrAdherent(PDO $pdo, int $id, string $matricule): void
+    {
+        (new GenerateurQrCode())->assurerPourAdherent($pdo, $id, $matricule);
     }
 }
