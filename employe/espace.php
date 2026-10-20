@@ -10,6 +10,7 @@ $onglet = $_GET['onglet'] ?? 'tableau';
 $pdo    = db();
 $faq = new FaqController();
 $maintenance = est_technicien_maintenance();
+$accueil = fonction_employe((int) $moi) === 'Accueil';
 $messageController = new MessageController();
 $transitionsMaintenance = [
   'En attente' => ['En cours', 'En attente de piece', 'À valider'],
@@ -56,6 +57,9 @@ if ($maintenance && $onglet !== 'maintenance') {
 if (!$maintenance && $onglet === 'maintenance') {
   redirige('employe/espace.php?onglet=tableau');
 }
+if (!$maintenance && !$accueil && $onglet === 'messages') {
+  redirige('employe/espace.php?onglet=tableau');
+}
 
 /* =====================================================================
    ACTIONS
@@ -80,6 +84,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     http_response_code(403);
     flash('erreur', 'Seul l’employé qui a créé le ticket peut le fermer après validation.');
     redirige('employe/espace.php?onglet=maintenance');
+  }
+
+  if (!$accueil && in_array($action, ['repondre_message', 'supprimer_message'], true)) {
+    http_response_code(403);
+    flash('erreur', 'La messagerie des adhérents est réservée à l’employé d’accueil.');
+    redirige('employe/espace.php?onglet=tableau');
   }
 
   if (!$maintenance && $action === 'repondre_message') {
@@ -565,7 +575,7 @@ $statutsMaint = $pdo->query(
 )->fetchAll();
 
 $questionsFaq = $faq->questions();
-$messages = $maintenance ? [] : $messageController->getAllThreads($moi);
+$messages = $accueil ? $messageController->getAllThreads((int) $moi) : [];
 $statutsTickets = array_count_values(array_column($maintenances, 'libelle_statut'));
 $employeUser = utilisateur();
 $flashMessages = flashs();
@@ -591,6 +601,9 @@ $employeeNavigation = $maintenance
       'faq' => ['Questions', 'help'],
       'messages' => ['Messages reçus', 'message'],
     ];
+if (!$accueil) {
+  unset($employeeNavigation['messages']);
+}
 $sidebarItems = [];
 foreach ($employeeNavigation as $id => [$label, $icon]) {
   $sidebarItems[] = [
@@ -722,7 +735,7 @@ $topbarLinks = [
 
 <?php elseif ($onglet === 'creneaux'): ?>
 
-  <?php $mode = 'employe'; require __DIR__ . '/../planning/view/planning.php'; ?>
+  <?php require __DIR__ . '/view/planning.php'; ?>
 
 <?php elseif ($onglet === 'creer-ticket'): ?>
 
@@ -992,7 +1005,6 @@ $topbarLinks = [
   foreach (PlanningController::FC_SCRIPTS as $src): ?>
     <script src="<?= e($src) ?>"></script>
   <?php endforeach; ?>
-  <script src="<?= e(url('assets/js/planning.js')) ?>"></script>
 <?php endif; ?>
 <script src="<?= e(url('assets/js/app.js')) ?>"></script>
 </body>

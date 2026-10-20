@@ -1,9 +1,11 @@
 <?php
 require_once dirname(__DIR__) . '/includes/planning/layout.php';
 require_once dirname(__DIR__) . '/model/AdherentEspace.php';
+require_once dirname(__DIR__) . '/controller/AdherentController.php';
 $perf = atx_performance_data();
 $next = atx_next_session();
 $member = (new AdherentEspace())->profil((int)utilisateur()['NumUsers']);
+$objectives = (new AdherentController())->objectifs((int)utilisateur()['NumUsers'], 12);
 page_head('performances', 'Mes performances');
 $goalPct = $perf['goal']['target'] > 0 ? round($perf['goal']['done'] / $perf['goal']['target'] * 100) : 0;
 ?>
@@ -69,21 +71,6 @@ $goalPct = $perf['goal']['target'] > 0 ? round($perf['goal']['done'] / $perf['go
             </div>
           </section>
 
-          <section class="panel" data-testid="history-card">
-            <div class="side-head">
-              <h2 class="side-title"><?= icon('dumbbell', 24) ?>Historique des entraînements</h2>
-              <a href="<?= e(url('adherent/view/reservations.php')) ?>" class="link" data-testid="history-see-all">Voir tout <?= icon('right', 14) ?></a>
-            </div>
-            <div class="history">
-              <?php foreach ($perf['history'] as $i => $h): ?>
-                <div class="hist" data-testid="history-item-<?= $i ?>">
-                  <span class="hist-img" style="background-image:url('<?= e(CAT_IMAGES[$h['cat']]) ?>')"></span>
-                  <div><strong><?= e($h['title']) ?></strong><small><?= e(fr_date((new DateTimeImmutable($h['meta']))->format('Y-m-d'), 'day')) ?> · <?= e($h['duration']) ?></small></div>
-                  <span class="hist-check"><?= icon('check', 16) ?></span>
-                </div>
-              <?php endforeach; ?>
-            </div>
-          </section>
         </div>
 
         <aside class="col-side">
@@ -111,22 +98,40 @@ $goalPct = $perf['goal']['target'] > 0 ? round($perf['goal']['done'] / $perf['go
           <section class="panel side-card" data-testid="objectives-card">
             <div class="side-head">
               <h2 class="side-title"><?= icon('target', 22) ?>Objectifs</h2>
-              <a href="#objectives-card" class="link" data-testid="objectives-see-all">Voir tous <?= icon('right', 14) ?></a>
-            </div>
-            <div class="objectives">
-              <div class="ring" style="--p:<?= $goalPct ?>" data-testid="objectives-ring">
-                <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="ring-bg"/><circle cx="60" cy="60" r="50" class="ring-fg" pathLength="100"/></svg>
-                <div><strong><?= $goalPct ?>%</strong><small>Objectif mensuel</small></div>
+              <div class="seg objective-views" role="tablist" aria-label="Vues des objectifs">
+                <button type="button" id="objective-tab-overview" class="seg-btn is-active" data-objective-view="overview" role="tab" aria-controls="objective-panel-overview" aria-selected="true">Vue globale</button>
+                <button type="button" id="objective-tab-daily" class="seg-btn" data-objective-view="daily" role="tab" aria-controls="objective-panel-daily" aria-selected="false">Quotidien</button>
               </div>
-              <ul class="obj-list">
-                <?php foreach ($perf['objectives'] as $i => $o): ?>
-                  <li data-testid="objective-<?= $i ?>">
-                    <span class="obj-icon" style="color:<?= e($o['color']) ?>"><?= icon($o['icon'], 20) ?></span>
-                    <div><p><span><?= e($o['label']) ?></span><b><?= e($o['text']) ?></b></p>
-                      <div class="bar"><i style="width:<?= (int)$o['pct'] ?>%;background:<?= e($o['color']) ?>"></i></div></div>
-                  </li>
+            </div>
+            <div id="objective-panel-overview" class="objective-panel" data-objective-panel="overview" role="tabpanel" aria-labelledby="objective-tab-overview">
+              <div class="objectives">
+                <div class="ring" style="--p:<?= $goalPct ?>" data-testid="objectives-ring">
+                  <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" class="ring-bg"/><circle cx="60" cy="60" r="50" class="ring-fg" pathLength="100"/></svg>
+                  <div><strong><?= $goalPct ?>%</strong><small>Objectif mensuel</small></div>
+                </div>
+                <ul class="obj-list">
+                  <?php foreach (($perf['objectives'] ?? []) as $i => $objective): ?>
+                    <li data-testid="objective-<?= $i ?>">
+                      <span class="obj-icon" style="color:<?= e($objective['color']) ?>"><?= icon($objective['icon'], 20) ?></span>
+                      <div><p><span><?= e($objective['label']) ?></span><b><?= e($objective['text']) ?></b></p>
+                        <div class="bar"><i style="width:<?= (int)$objective['pct'] ?>%;background:<?= e($objective['color']) ?>"></i></div></div>
+                    </li>
+                  <?php endforeach; ?>
+                </ul>
+              </div>
+            </div>
+            <div id="objective-panel-daily" class="objective-panel" data-objective-panel="daily" role="tabpanel" aria-labelledby="objective-tab-daily" hidden>
+              <p class="muted">Coche les objectifs atteints aujourd’hui.</p>
+              <ul class="daily-objectives" id="daily-objectives">
+                <?php foreach ($objectives['available'] as $objective): ?>
+                  <li><label><input type="checkbox" data-objective="<?= e($objective) ?>" <?= in_array($objective, $objectives['done'], true) ? 'checked' : '' ?>><span><?= e($objective) ?></span></label></li>
                 <?php endforeach; ?>
               </ul>
+              <div class="objective-history-head"><strong>Historique</strong>
+                <label class="sr-only" for="objective-period">Période de l’historique</label>
+                <select id="objective-period"><option value="1">30 derniers jours</option><option value="3" selected>3 derniers mois</option><option value="12">12 derniers mois</option></select>
+              </div>
+              <div id="objective-history" class="objective-history" aria-live="polite"></div>
             </div>
           </section>
 
@@ -136,8 +141,47 @@ $goalPct = $perf['goal']['target'] > 0 ? round($perf['goal']['done'] / $perf['go
         </aside>
       </div>
 <script>window.ATX_PERF = <?= json_encode($perf['series'], JSON_UNESCAPED_UNICODE) ?>;</script>
+<script>window.ATX_OBJECTIVES = <?= json_encode(['today'=>$objectives['today'], 'history'=>$objectives['history']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;</script>
 <script>
 (() => {
+  const objectiveViews = document.querySelectorAll('[data-objective-view]');
+  objectiveViews.forEach(button => button.addEventListener('click', () => {
+    objectiveViews.forEach(view => {
+      const active = view === button;
+      view.classList.toggle('is-active', active);
+      view.setAttribute('aria-selected', String(active));
+    });
+    document.querySelectorAll('[data-objective-panel]').forEach(panel => {
+      panel.hidden = panel.dataset.objectivePanel !== button.dataset.objectiveView;
+    });
+  }));
+
+  const api = (action, data) => window.ADH_API(action, data);
+  const checks = document.querySelectorAll('[data-objective]');
+  checks.forEach(input => input.addEventListener('change', async () => {
+    input.disabled = true;
+    try {
+      const result = await api('objectives', {date: window.ATX_OBJECTIVES.today, objectif: input.dataset.objective, atteint: input.checked});
+      window.ATX_OBJECTIVES.history = result.history;
+      renderObjectiveHistory(Number(document.getElementById('objective-period').value));
+    } catch (error) { input.checked = !input.checked; alert(error.message); }
+    finally { input.disabled = false; }
+  }));
+  function renderObjectiveHistory(months) {
+    const container = document.getElementById('objective-history');
+    const since = new Date(); since.setMonth(since.getMonth() - months);
+    const rows = window.ATX_OBJECTIVES.history.filter(row => new Date(row.date_objectif) >= since);
+    container.replaceChildren();
+    if (!rows.length) { container.textContent = 'Aucun objectif enregistré pour cette période.'; return; }
+    rows.forEach(row => {
+      const item = document.createElement('p');
+      item.textContent = new Date(row.date_objectif + 'T12:00:00').toLocaleDateString('fr-FR') + ' · ' + row.objectif;
+      container.append(item);
+    });
+  }
+  const period = document.getElementById('objective-period');
+  period.addEventListener('change', () => renderObjectiveHistory(Number(period.value)));
+  renderObjectiveHistory(Number(period.value));
   const chart = document.getElementById('chart');
   const data = window.ATX_PERF;
   if (!chart || !data) return;

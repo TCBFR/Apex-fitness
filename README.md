@@ -30,7 +30,8 @@ les fonctions fléchées), MySQL 5.7 / MariaDB 10.4 ou supérieur.
 ### Liste d’attente et rappels adhérent
 
 Pour une base déjà installée, appliquer une fois la migration
-`sql/migrations/20261014_adherent_waitlist_reminders.sql`. Les nouvelles
+`sql/migrations/20261014_adherent_waitlist_reminders.sql` ainsi que
+`sql/migrations/20261020_adherent_daily_objectives.sql`. Les nouvelles
 installations récupèrent ces tables depuis `sql/apex_fitness.sql`.
 
 Les rappels sont affichés dans « Mes réservations » 24 heures avant le cours.

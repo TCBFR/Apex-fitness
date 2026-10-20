@@ -1,8 +1,12 @@
 <?php
 require_once dirname(__DIR__) . '/controller/NotificationController.php';
+require_once dirname(__DIR__) . '/controller/AdherentController.php';
 
 $topbarUser = function_exists('utilisateur') ? (utilisateur() ?? []) : [];
 $topbarNotifications = true;
+$topbarMessageHref = url('adherent/view/messagerie.php');
+$topbarMessageCount = (new AdherentController())->messagesNonLus((int) $topbarUser['NumUsers']);
+$topbarMessageCountEndpoint = url('adherent/api.php?action=unread_messages');
 $topbarNotificationCount = (new NotificationController())->nombreNonLues((int)$topbarUser['NumUsers']);
 $topbarNotificationApi = url('adherent/notification_api.php');
 $topbarNotificationCsrf = csrf();
@@ -28,4 +32,27 @@ window.ADH_API = async function (action, data = {}) {
     if (!response.ok) throw new Error(result.error || 'La demande a échoué.');
     return result;
 };
+(() => {
+    const link = document.querySelector('[data-message-unread-link]');
+    const badge = document.querySelector('[data-message-unread-count]');
+    if (!link || !badge) return;
+
+    const refreshUnreadMessages = async () => {
+        try {
+            const response = await fetch(link.dataset.countEndpoint, {headers: {'Accept': 'application/json'}});
+            if (!response.ok) return;
+            const result = await response.json();
+            const count = Math.max(0, Number(result.unread_count) || 0);
+            badge.textContent = count > 99 ? '99+' : String(count);
+            badge.hidden = count === 0;
+            link.setAttribute('aria-label', count ? `Messages, ${count} non lu${count > 1 ? 's' : ''}` : 'Messages');
+        } catch (_) {}
+    };
+
+    refreshUnreadMessages();
+    window.setInterval(refreshUnreadMessages, 30000);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') refreshUnreadMessages();
+    });
+})();
 </script>

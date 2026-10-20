@@ -5,8 +5,8 @@ $adherentNavigation = [
     ['reservations', 'Mes réservations', 'bag', 'view/reservations.php'],
     ['performance', 'Performance', 'chart', 'view/performance.php'],
     ['abonnement', 'Mon abonnement', 'card', 'view/abonnement.php'],
-    ['messages', 'Messages', 'message', 'view/messagerie.php'],
     ['profil', 'Mon profil', 'user', 'view/profil.php'],
+    ['avis', 'Mon avis', 'star', 'view/avis.php'],
 ];
 
 $sidebarItems = [];

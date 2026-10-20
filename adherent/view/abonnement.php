@@ -106,12 +106,6 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                         <div class="progress"><div class="progress-fill" style="width: <?= $pct; ?>%"></div></div>
                     </div>
 
-                    <!-- Renouvellement -->
-                    <div class="renew-note">
-                        <i class="fa-regular fa-calendar"></i>
-                        <span>Votre abonnement se renouvelle automatiquement<br>à la date d'échéance.</span>
-                        <a href="<?= e(url('adherent/view/offres.php')) ?>" class="green-link">Voir les conditions <i class="fa-solid fa-chevron-right"></i></a>
-                    </div>
                 </section>
 
                 <!-- Historique -->
@@ -121,21 +115,31 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                         <h3>Historique de facturation</h3>
                     </header>
 
+                    <label class="invoice-filter">Filtrer par année
+                        <select id="invoice-year"><option value="all">Toutes les années</option>
+                            <?php foreach (array_unique(array_map(static fn($item) => substr($item['raw_date'], 0, 4), $abonnement['historique'])) as $year): ?>
+                                <option value="<?= e($year) ?>"><?= e($year) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+
                     <table class="history">
                         <thead>
-                            <tr><th>Date</th><th>Prestation</th><th>Montant</th><th>Statut</th></tr>
+                            <tr><th>Date</th><th>Prestation</th><th>Montant</th><th>Statut</th><th>Facture</th></tr>
                         </thead>
                         <tbody>
                             <?php foreach ($abonnement['historique'] as $h): ?>
-                                <tr>
+                                <tr data-payment-year="<?= e(substr($h['raw_date'], 0, 4)) ?>">
                                     <td><?= htmlspecialchars($h['date']); ?></td>
                                     <td><?= htmlspecialchars($h['prestation']); ?></td>
                                     <td><?= htmlspecialchars($h['montant']); ?></td>
                                     <td><span class="badge badge-green small"><?= htmlspecialchars($h['statut']); ?></span></td>
+                                    <td><a class="green-link" href="<?= e(url('adherent/facture.php?id=' . $h['id'])) ?>" data-testid="invoice-download-<?= (int)$h['id'] ?>">Télécharger PDF</a></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    <?php if (!$abonnement['historique']): ?><p class="muted">Aucun paiement enregistré.</p><?php endif; ?>
 
                 </section>
             </div>
@@ -163,29 +167,6 @@ require dirname(__DIR__) . '/includes/profil/data.php';
                     </a>
                 </section>
 
-                <section class="card">
-                    <header class="card-head">
-                        <div class="head-icon"><i class="fa-regular fa-star"></i></div>
-                        <h3>Avantages inclus</h3>
-                    </header>
-                    <ul class="advantages">
-                        <?php foreach ($abonnement['avantages'] as $av): ?>
-                            <li><i class="fa-solid fa-check"></i> <?= htmlspecialchars($av); ?></li>
-                        <?php endforeach; ?>
-                    </ul>
-                    <a href="<?= e(url('adherent/view/offres.php')) ?>" class="green-link">Voir tous les avantages <i class="fa-solid fa-chevron-right"></i></a>
-                </section>
-
-                <section class="card">
-                    <header class="card-head">
-                        <div class="head-icon"><i class="fa-solid fa-headset"></i></div>
-                        <h3>Une question ?</h3>
-                    </header>
-                    <p class="muted small">Notre équipe est disponible pour répondre à toutes vos questions concernant votre abonnement.</p>
-                    <a class="btn btn-outline btn-block" href="<?= e(url('adherent/view/messagerie.php')) ?>">
-                        Contacter l'accueil <i class="fa-solid fa-chevron-right right"></i>
-                    </a>
-                </section>
             </aside>
         </div>
     </main>
@@ -193,6 +174,13 @@ require dirname(__DIR__) . '/includes/profil/data.php';
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+
+    const yearFilter = document.getElementById('invoice-year');
+    yearFilter?.addEventListener('change', () => {
+        document.querySelectorAll('[data-payment-year]').forEach(row => {
+            row.hidden = yearFilter.value !== 'all' && row.dataset.paymentYear !== yearFilter.value;
+        });
+    });
 
     // Animation de la barre de progression au chargement
     const fill = document.querySelector('.progress-fill');
@@ -362,18 +350,12 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .progress{height:8px;background:#1a2328;border-radius:40px;overflow:hidden}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--green-2),var(--green));border-radius:40px;box-shadow:0 0 12px var(--green-glow);transition:width 1s ease}
 
-/* ===== Note renouvellement ===== */
-.renew-note{
-    margin-top:22px;background:#0a1115;border:1px solid var(--border);
-    border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px;font-size:13px;color:var(--muted);
-}
-.renew-note > i{color:var(--green);font-size:16px}
-.renew-note span{flex:1;line-height:1.5}
 .green-link{color:var(--green);font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px}
 .green-link:hover{text-decoration:underline}
 
 /* ===== Historique ===== */
 .history{width:100%;border-collapse:collapse;margin-top:4px}
+.invoice-filter{margin:0 0 14px auto;max-width:220px}
 .history th{text-align:left;font-size:12px;font-weight:500;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)}
 .history td{padding:14px 10px;font-size:13px;border-bottom:1px solid var(--border)}
 .history tr:last-child td{border-bottom:none}
@@ -384,11 +366,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .status-row{display:flex;align-items:flex-start;gap:12px;margin-bottom:18px}
 .status-dot{width:36px;height:36px;border-radius:50%;background:rgba(182,255,46,.1);border:1px solid rgba(182,255,46,.3);color:var(--green);display:grid;place-items:center;flex-shrink:0}
 .status-row strong{font-size:17px;display:block;margin-bottom:4px}
-
-/* ===== Avantages ===== */
-.advantages{list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
-.advantages li{display:flex;align-items:center;gap:10px;font-size:13px}
-.advantages i{color:var(--green);font-size:12px;width:16px;height:16px;border-radius:50%;background:rgba(182,255,46,.1);display:grid;place-items:center}
 
 /* ===== Responsive ===== */
 @media(max-width:1280px){

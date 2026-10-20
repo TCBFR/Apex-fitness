@@ -34,6 +34,13 @@ $topbarInitial = $topbarName !== '' ? mb_strtoupper(mb_substr($topbarName, 0, 1)
         </section>
       </div>
     <?php endif; ?>
+    <?php if (!empty($topbarMessageHref)): ?>
+      <a class="tb-message" href="<?= e($topbarMessageHref) ?>" aria-label="Messages<?= (int)($topbarMessageCount ?? 0) > 0 ? ', ' . (int)$topbarMessageCount . ' non lu(s)' : '' ?>" title="Messages"
+         data-message-unread-link data-count-endpoint="<?= e($topbarMessageCountEndpoint ?? '') ?>">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l-2 2v-7.5a7.5 7.5 0 1 1 17  -2Z"/><path d="M8 11h8M8 14h5"/></svg>
+        <span class="tb-message-badge" data-message-unread-count<?= (int)($topbarMessageCount ?? 0) > 0 ? '' : ' hidden' ?>><?= (int)($topbarMessageCount ?? 0) > 99 ? '99+' : (int)($topbarMessageCount ?? 0) ?></span>
+      </a>
+    <?php endif; ?>
     <div class="tb-user">
       <button type="button" class="tb-avatar-btn" id="tbAvatarBtn" data-testid="user-menu-btn" aria-haspopup="true" aria-expanded="false">
         <span class="tb-user-name"><?= e($topbarName !== '' ? $topbarName : 'Mon compte') ?></span>
@@ -90,6 +97,10 @@ $topbarInitial = $topbarName !== '' ? mb_strtoupper(mb_substr($topbarName, 0, 1)
 #topbar .tb-right{display:flex;align-items:center;gap:18px;position:relative;margin-left:auto}
 #topbar .tb-bell{position:relative;display:grid;place-items:center;width:38px;height:38px;padding:7px;color:#d5d9d6;border:1px solid transparent;border-radius:10px}
 #topbar .tb-bell:hover,#topbar .tb-bell[aria-expanded="true"]{background:#171c18;border-color:#29312b}
+#topbar .tb-message{position:relative;display:grid;place-items:center;width:38px;height:38px;color:#d5d9d6;border:1px solid transparent;border-radius:10px}
+#topbar .tb-message:hover,#topbar .tb-message:focus-visible{background:#171c18;border-color:#29312b;color:#c6f432}
+#topbar .tb-message-badge{position:absolute;top:-3px;right:-4px;min-width:18px;height:18px;padding:0 5px;display:grid;place-items:center;border:2px solid #0b0d0c;border-radius:999px;background:#c6f432;color:#10140b;font-size:10px;font-weight:800;line-height:1}
+#topbar .tb-message-badge[hidden]{display:none}
 #topbar .tb-badge{position:absolute;top:-3px;right:-4px;min-width:18px;height:18px;padding:0 5px;display:grid;place-items:center;border:2px solid #0b0d0c;border-radius:999px;background:#c6f432;color:#10140b;font-size:10px;font-weight:800;line-height:1}
 #topbar .tb-badge[hidden]{display:none}
 #topbar .tb-notification-popover{position:fixed;top:84px;left:16px;width:min(420px,calc(100vw - 32px));max-height:min(520px,calc(100vh - 100px));overflow:hidden;border:1px solid #2a332d;border-radius:14px;background:#111512;box-shadow:0 20px 60px rgba(0,0,0,.55);z-index:100}

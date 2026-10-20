@@ -4,7 +4,6 @@ exige_role('ADHERENT');
 require_once dirname(__DIR__) . '/includes/messagerie/data/conversations.php';
 require_once dirname(__DIR__) . '/includes/messagerie/icons.php';
 $activeId = $conversations[0]['id'];
-$tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' => 'Administration'];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -24,28 +23,28 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
     <main class="main">
         <?php include dirname(__DIR__) . '/includes/topbar.php'; ?>
         <div class="page-title">
+            <span class="page-eyebrow">SERVICE ADHÉRENTS</span>
             <h1 class="topbar__title">Messages</h1>
-            <p class="topbar__sub">Échangez avec vos coachs et l'équipe Athletix</p>
+            <p class="topbar__sub">Une question ? Écrivez directement à l’équipe d’accueil ATHLETIX.</p>
         </div>
 
         <section class="messenger" id="messenger" data-testid="messenger">
             <div class="list-pane">
+                <div class="list-heading">
+                    <div><span>VOTRE ESPACE</span><h2>Conversations</h2></div>
+                    <span class="support-chip"><i></i> Accueil</span>
+                </div>
                 <label class="search">
                     <?= icon('search') ?>
-                    <input type="search" id="search" placeholder="Rechercher une conversation…" autocomplete="off" data-testid="conversation-search-input">
+                    <input type="search" id="search" placeholder="Rechercher…" autocomplete="off" aria-label="Rechercher une conversation" data-testid="conversation-search-input">
                 </label>
-                <div class="tabs" role="tablist">
-                    <?php foreach ($tabs as $key => $label): ?>
-                        <button class="tab<?= $key === 'all' ? ' is-active' : '' ?>" data-filter="<?= $key ?>" role="tab" data-testid="tab-<?= $key ?>"><?= $label ?></button>
-                    <?php endforeach; ?>
-                </div>
                 <ul class="conv-list" id="conv-list" data-testid="conversation-list">
                     <?php foreach ($conversations as $conv): $isActive = $conv['id'] === $activeId; include dirname(__DIR__) . '/includes/messagerie/conversation-item.php'; endforeach; ?>
                 </ul>
                 <div class="empty" id="empty" hidden data-testid="empty-state">
                     <?= icon('inbox') ?>
-                    <strong>Aucune conversation</strong>
-                    <span>Essayez un autre filtre ou une autre recherche.</span>
+                    <strong>Aucun résultat</strong>
+                    <span>Essayez avec un autre nom de conversation.</span>
                 </div>
             </div>
 
@@ -54,14 +53,20 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
                     <div class="chat" data-thread="<?= e($conv['id']) ?>" <?= $conv['id'] === $activeId ? '' : 'hidden' ?> data-testid="chat-<?= e($conv['id']) ?>">
                         <header class="chat__head">
                             <button class="icon-btn chat__back" data-testid="chat-back-btn-<?= e($conv['id']) ?>" aria-label="Retour"><?= icon('back') ?></button>
-                            <span class="avatar" style="--c: <?= $conv['color'] ?>"><?= e($conv['initials']) ?><?php if ($conv['online']): ?><i class="avatar__online"></i><?php endif; ?></span>
+                            <span class="avatar" style="--c: <?= $conv['color'] ?>"><?= e($conv['initials']) ?></span>
                             <div class="chat__who">
                                 <strong data-testid="chat-name"><?= e($conv['name']) ?></strong>
-                                <small class="<?= $conv['online'] ? 'is-online' : '' ?>"><?= $conv['online'] ? 'En ligne' : 'Hors ligne' ?> · <?= e($conv['roleLabel']) ?></small>
+                                <small>Service adhérents · <?= e($conv['roleLabel']) ?></small>
                             </div>
-                            <button class="icon-btn" aria-label="Options" data-testid="chat-options-btn-<?= e($conv['id']) ?>"><?= icon('more') ?></button>
                         </header>
                         <div class="chat__thread" data-testid="chat-thread-<?= e($conv['id']) ?>">
+                            <?php if (!$conv['messages']): ?>
+                                <div class="thread-welcome">
+                                    <span class="thread-welcome-icon"><?= icon('inbox') ?></span>
+                                    <strong>Bienvenue dans votre conversation</strong>
+                                    <p>Écrivez à l’équipe d’accueil. Votre échange restera disponible ici.</p>
+                                </div>
+                            <?php endif; ?>
                             <?php foreach ($conv['messages'] as $msg): ?>
                                 <?php if (isset($msg['date'])): ?>
                                     <div class="date-sep"><span><?= e($msg['date']) ?></span></div>
@@ -80,7 +85,10 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
 
                 <form class="composer" id="composer" data-testid="composer-form" autocomplete="off">
                     <button type="button" class="icon-btn" aria-label="Emoji" data-testid="emoji-btn"><?= icon('smile') ?></button>
-                    <textarea id="composer-input" rows="1" placeholder="Écrire un message…" data-testid="composer-input"></textarea>
+                    <div class="composer-field">
+                        <textarea id="composer-input" rows="1" placeholder="Écrire à l’accueil…" aria-label="Votre message à l’accueil" data-testid="composer-input"></textarea>
+                        <small>Entrée pour envoyer · Maj + Entrée pour aller à la ligne</small>
+                    </div>
                     <button type="submit" class="send-btn" aria-label="Envoyer" data-testid="composer-send-btn"><?= icon('send') ?></button>
                 </form>
             </div>
@@ -98,7 +106,6 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
     const search = $('#search');
     const messenger = $('#messenger');
     const input = $('#composer-input');
-    let filter = 'all';
     let activeId = $('.conv.is-active')?.dataset.id;
 
     const activeThread = () => $(`.chat[data-thread="${activeId}"] .chat__thread`);
@@ -118,7 +125,7 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
         const q = search.value.trim().toLowerCase();
         let visible = 0;
         $$('.conv').forEach(c => {
-            const ok = (filter === 'all' || c.dataset.role === filter) && c.dataset.name.includes(q);
+            const ok = c.dataset.name.includes(q);
             c.hidden = !ok;
             if (ok) visible++;
         });
@@ -134,11 +141,6 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
         if (item && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openConversation(item.dataset.id); }
     });
 
-    $$('.tab').forEach(tab => tab.addEventListener('click', () => {
-        $$('.tab').forEach(t => t.classList.toggle('is-active', t === tab));
-        filter = tab.dataset.filter;
-        applyFilters();
-    }));
     search.addEventListener('input', applyFilters);
 
     $$('.chat__back').forEach(b => b.addEventListener('click', () => messenger.classList.remove('show-chat')));
@@ -221,7 +223,6 @@ $tabs = ['all' => 'Tous', 'coach' => 'Coach', 'accueil' => 'Accueil', 'admin' =>
     --lime-soft: rgba(198, 242, 78, 0.12);
     --lime-line: rgba(198, 242, 78, 0.35);
     --bubble-in: #1f241f;
-    --online: #3ddc6b;
     --radius: 18px;
     --sidebar-w: 250px;
     --ease: cubic-bezier(.2, .8, .2, 1);
@@ -269,11 +270,6 @@ a { color: inherit; text-decoration: none; }
     border: 1px solid color-mix(in srgb, var(--c) 35%, transparent);
 }
 .avatar--sm { width: 36px; height: 36px; font-size: 12px; }
-.avatar__online {
-    position: absolute; right: 0; bottom: 0;
-    width: 12px; height: 12px; border-radius: 50%;
-    background: var(--online); border: 2px solid var(--surface);
-}
 
 /* Main */
 .main { flex: 1; min-width: 0; margin-left: var(--sidebar-w); display: flex; flex-direction: column; padding: 0 0 28px; gap: 0; }
@@ -304,17 +300,6 @@ a { color: inherit; text-decoration: none; }
 .search input::placeholder { color: var(--muted); }
 .search input::-webkit-search-cancel-button { filter: invert(1) opacity(.5); }
 
-.tabs { display: flex; gap: 6px; margin: 16px 6px 12px; overflow-x: auto; scrollbar-width: none; }
-.tabs::-webkit-scrollbar { display: none; }
-.tab {
-    padding: 8px 14px; border-radius: 999px; white-space: nowrap;
-    color: var(--muted); font-weight: 600; font-size: 13px;
-    background: var(--surface-2); border: 1px solid var(--border);
-    transition: background-color .2s, color .2s, border-color .2s;
-}
-.tab:hover { color: var(--text); }
-.tab.is-active { background: var(--lime); color: #0a0d0a; border-color: var(--lime); }
-
 .conv-list { list-style: none; overflow-y: auto; flex: 1; padding: 0 0 16px; }
 .conv {
     display: flex; align-items: center; gap: 12px;
@@ -327,7 +312,6 @@ a { color: inherit; text-decoration: none; }
 .conv:focus-visible { outline: 2px solid var(--lime-line); outline-offset: -2px; }
 .conv.is-active { background: var(--lime-soft); border-color: var(--lime-line); }
 .conv.is-active .conv__name { color: var(--lime); }
-.conv .avatar__online { border-color: var(--surface); }
 .conv__body { flex: 1; min-width: 0; }
 .conv__top, .conv__bottom { display: flex; align-items: center; gap: 8px; }
 .conv__bottom { margin-top: 4px; }
@@ -352,12 +336,10 @@ a { color: inherit; text-decoration: none; }
     display: flex; align-items: center; gap: 12px;
     padding: 16px 22px; border-bottom: 1px solid var(--border); background: var(--surface);
 }
-.chat__head .avatar__online { border-color: var(--surface); }
 .chat__back { display: none; }
 .chat__who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .chat__who strong { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat__who small { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat__who small.is-online { color: var(--online); }
 
 .chat__thread { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 10px; }
 .chat:not([hidden]) .chat__thread > * { animation: fadeUp .3s var(--ease) both; }
@@ -434,6 +416,68 @@ a { color: inherit; text-decoration: none; }
     .chat__thread { padding: 18px 14px; }
     .bubble { max-width: 82%; }
     .composer { padding: 10px 12px; }
+}
+
+/* Finition de l’espace de messagerie */
+.main > .page-title { margin-top: 20px; }
+.page-eyebrow { display:block; margin-bottom:6px; color:#a8c96a; font-size:10px; font-weight:700; letter-spacing:.16em; }
+.topbar__title { font-size:28px; letter-spacing:-.035em; }
+.topbar__sub { color:#a1aaa4; font-size:13px; }
+.main > .messenger { margin-top:18px; border-color:#28322b; border-radius:18px; background:#101511; box-shadow:0 18px 46px rgba(0,0,0,.22); }
+.list-pane { padding:21px 14px 10px; background:#0e120f; }
+.list-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 6px 18px; }
+.list-heading > div > span { color:#7e8a80; font-size:9px; font-weight:700; letter-spacing:.16em; }
+.list-heading h2 { margin-top:4px; color:#f2f5f0; font-size:17px; font-weight:700; letter-spacing:-.02em; }
+.support-chip { display:inline-flex; align-items:center; gap:7px; padding:7px 10px; border:1px solid rgba(198,242,78,.18); border-radius:999px; background:rgba(198,242,78,.06); color:#c5d3bf; font-size:10px; font-weight:600; white-space:nowrap; }
+.support-chip i { width:6px; height:6px; border-radius:50%; background:#b6ff2e; box-shadow:0 0 9px rgba(182,255,46,.5); }
+.search { margin:0 5px 12px; border-radius:11px; background:#151a16; }
+.search input { height:42px; font-size:12px; }
+.conv-list { padding:0 2px 14px; }
+.conv { padding:11px 10px; border-radius:11px; }
+.conv.is-active { background:rgba(182,255,46,.075); border-color:rgba(182,255,46,.2); }
+.conv.is-active .conv__name { color:#d8f59a; }
+.conv__name { font-size:12px; }
+.conv__preview { font-size:11px; }
+.chat-pane { background:#0b0f0c; }
+.chat__head { min-height:76px; padding:14px 24px; background:#101511; border-color:#252d27; }
+.chat__head .avatar { width:42px; height:42px; font-size:12px; }
+.chat__who { gap:4px; }
+.chat__who strong { font-size:14px; }
+.chat__who small { color:#849087; font-size:11px; }
+.chat__thread { padding:28px clamp(20px, 4vw, 58px); background:radial-gradient(ellipse at 50% 0%, rgba(182,255,46,.025), transparent 48%), #0b0f0c; }
+.date-sep { font-size:10px; letter-spacing:.02em; }
+.date-sep span { padding:5px 11px; background:#111612; border-color:#252d27; }
+.bubble { max-width:min(70%, 560px); padding:12px 15px 9px; border-radius:16px; font-size:13px; }
+.msg--them .bubble { background:#1a211b; border:1px solid #28322a; border-bottom-left-radius:5px; }
+.msg--me .bubble { background:#c6f24e; border-bottom-right-radius:5px; }
+.bubble__meta { font-size:10px; }
+.thread-welcome { width:min(100%, 390px); margin:auto; padding:30px 24px; border:1px solid #26312a; border-radius:16px; background:rgba(17,22,18,.8); text-align:center; }
+.thread-welcome-icon { display:grid; place-items:center; width:46px; height:46px; margin:0 auto 15px; border:1px solid rgba(198,242,78,.2); border-radius:14px; background:rgba(198,242,78,.08); color:#c6f24e; }
+.thread-welcome-icon .icon { width:21px; height:21px; }
+.thread-welcome strong { display:block; color:#eef3ed; font-size:14px; }
+.thread-welcome p { margin-top:7px; color:#929e94; font-size:12px; line-height:1.65; }
+.composer { align-items:center; gap:11px; padding:13px 20px; background:#101511; border-color:#252d27; }
+.composer-field { flex:1; min-width:0; padding:0 12px 6px; border:1px solid #2b352d; border-radius:12px; background:#151a16; }
+.composer-field:focus-within { border-color:rgba(198,242,78,.55); box-shadow:0 0 0 3px rgba(198,242,78,.06); }
+.composer textarea { display:block; width:100%; padding:10px 0 5px; border:0; border-radius:0; background:transparent; font-size:12px; }
+.composer textarea:focus { border-color:transparent; }
+.composer-field small { display:block; padding:0 0 2px; color:#758077; font-size:9px; }
+.composer .icon-btn { width:36px; height:36px; }
+.send-btn { width:42px; height:42px; border-radius:12px; box-shadow:0 5px 16px rgba(182,255,46,.12); }
+.send-btn .icon { width:18px; height:18px; }
+.empty { font-size:12px; }
+
+@media (max-width:860px) {
+    .main > .page-title { margin-top:16px; }
+    .topbar__title { font-size:24px; }
+    .main > .messenger { margin-top:14px; }
+    .list-pane { padding-top:17px; }
+    .chat__thread { padding:18px 14px; }
+    .chat__head { min-height:66px; }
+    .composer { gap:7px; padding:9px; }
+    .composer-field { padding-inline:10px; }
+    .composer-field small { font-size:8px; }
+    .thread-welcome { padding:24px 18px; }
 }
 
 </style>

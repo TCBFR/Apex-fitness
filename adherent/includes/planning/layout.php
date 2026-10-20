@@ -36,6 +36,7 @@ const ICONS = [
     'flame'     => '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
     'activity'  => '<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
     'target'    => '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    'star'      => '<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3Z"/>',
     'menu'      => '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>',
 ];
 
@@ -99,7 +100,6 @@ function page_head(string $active, string $title): void
   window.ATX.cap = value => value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
   window.ATX.hm = value => String(value).slice(11, 16);
   window.ATX.frDate = (value, options = {}) => new Date(value).toLocaleDateString('fr-FR', options);
-  window.ATX.syncFilter = (filter, value) => document.querySelectorAll('[data-filter="' + filter + '"]').forEach(button => button.classList.toggle('is-active', button.dataset.value === value));
   window.ATX.bookAction = async (action, id) => {
     try { const result = await window.ATX.api(action, {id}, 'POST'); return result.session || null; }
     catch (error) { alert(error.message); return null; }
@@ -134,17 +134,6 @@ function hero(string $ic, string $title, string $subtitle, string $testid): void
         </div>
         <div class="hero-motto"><span>Plus</span><span>fort</span><span>chaque</span><span>jour</span></div>
         <span class="hero-slash"></span>
-      </section>
-<?php
-}
-
-function help_banner(): void
-{
-    ?>
-      <section class="panel help" data-testid="help-banner">
-        <span class="help-icon"><?= icon('headset', 26) ?></span>
-        <div><strong>Besoin d’un conseil ?</strong><p>Notre équipe est là pour vous aider à choisir les séances adaptées à vos objectifs.</p></div>
-        <a class="btn btn-outline" href="<?= e(url('adherent/view/messagerie.php')) ?>" data-testid="help-contact-button">Contacter l’accueil <?= icon('right', 16) ?></a>
       </section>
 <?php
 }

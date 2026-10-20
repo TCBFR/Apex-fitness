@@ -95,6 +95,7 @@ CREATE TABLE adherent (
   ville               VARCHAR(100),
   code_postal         CHAR(5),
   adresse_postale     VARCHAR(255),
+  photo_profil        VARCHAR(255),
   FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -233,6 +234,16 @@ CREATE TABLE reservation (
   UNIQUE KEY uk_adh_activite (NumUsers, Numactivite),
   FOREIGN KEY (NumUsers)    REFERENCES adherent(NumUsers)    ON DELETE CASCADE,
   FOREIGN KEY (Numactivite) REFERENCES activite(Numactivite) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE objectif_quotidien (
+  NumUsers INT NOT NULL,
+  date_objectif DATE NOT NULL,
+  objectif VARCHAR(80) NOT NULL,
+  atteint TINYINT(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (NumUsers, date_objectif, objectif),
+  CONSTRAINT fk_objectif_quotidien_adherent
+    FOREIGN KEY (NumUsers) REFERENCES adherent(NumUsers) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE liste_attente (

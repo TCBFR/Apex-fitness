@@ -38,12 +38,12 @@ function atx_find(string $id): ?array
     return isset($all[$id]) ? atx_view($all[$id]) : null;
 }
 
-/** Prochaine séance réservée (ou, à défaut, prochaine séance disponible). */
+/** Prochaine séance réservée par l’adhérent. */
 function atx_next_session(): ?array
 {
-    $upcoming = atx_sessions_view(fn($s) => $s['start'] > date('Y-m-d\TH:i:s'));
-    foreach ($upcoming as $s) if ($s['is_booked']) return $s;
-    foreach ($upcoming as $s) if ($s['remaining'] > 0) return $s;
+    foreach (atx_sessions_view(fn($s) => $s['start'] > date('Y-m-d\TH:i:s')) as $session) {
+        if ($session['is_booked']) return $session;
+    }
     return null;
 }
 

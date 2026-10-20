@@ -12,8 +12,6 @@ const CATEGORIES = [
     'boxe'=>['label'=>'Boxe','color'=>'#FF9F1C','icon'=>'flame'],
     'danse'=>['label'=>'Danse','color'=>'#D45BFF','icon'=>'activity'],
 ];
-const MAIN_FILTERS = ['musculation','cardio','yoga','cross'];
-const LEVELS = ['Débutant','Intermédiaire','Avancé'];
 const CAT_IMAGES = [
     'musculation'=>'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=600&q=70',
     'cardio'=>'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=600&q=70',
@@ -25,13 +23,6 @@ const CAT_IMAGES = [
     'danse'=>'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=600&q=70',
 ];
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=1400&q=70';
-
-function atx_coaches(): array
-{
-    $coaches = db()->query("SELECT DISTINCT u.prenomUsers, u.nomUsers FROM activite a JOIN utilisateur u ON u.NumUsers=a.NumUsers ORDER BY u.prenomUsers,u.nomUsers")
-        ->fetchAll(PDO::FETCH_KEY_PAIR);
-    return $coaches ?: ['Lucas'=>'Lucas Moreau','Sophie'=>'Sophie Lambert','Emma'=>'Emma Girard','Thomas'=>'Thomas Martin'];
-}
 
 function atx_all_sessions(): array
 {
@@ -116,23 +107,17 @@ function atx_performance_data(): array
             ['icon'=>'timer','label'=>'Durée moyenne','value'=>'62','unit'=>'min','trend'=>'+18%'],
         ],
         'goal'=>['done'=>3,'target'=>4],
+        'objectives'=>[
+            ['icon'=>'dumbbell','label'=>'Séances réalisées','text'=>'3 / 4','pct'=>75,'color'=>'#CCFF00'],
+            ['icon'=>'flame','label'=>'Calories brûlées','text'=>'4 320 / 5 000','pct'=>86,'color'=>'#FF9F1C'],
+            ['icon'=>'timer','label'=>'Temps actif','text'=>'6 h 12 / 8 h','pct'=>78,'color'=>'#4F7DFF'],
+        ],
         'series'=>$series,
         'body'=>[
             ['icon'=>'scale','label'=>'Poids','value'=>'78','unit'=>'kg','delta'=>'-2 kg'],
             ['icon'=>'droplet','label'=>'Masse grasse','value'=>'12','unit'=>'%','delta'=>'-1,5 %'],
             ['icon'=>'dumbbell','label'=>'Muscle','value'=>'36','unit'=>'kg','delta'=>'+1,8 kg'],
             ['icon'=>'heart','label'=>'Fréquence cardiaque (repos)','value'=>'58','unit'=>'bpm','delta'=>'-6 bpm'],
-        ],
-        'objectives'=>[
-            ['icon'=>'calendar','label'=>'Séances','text'=>'3 / 4','pct'=>75,'color'=>'#CCFF00'],
-            ['icon'=>'droplet','label'=>'Hydratation','text'=>'2,5 L / 3 L','pct'=>83,'color'=>'#22D3EE'],
-            ['icon'=>'moon','label'=>'Sommeil','text'=>'7 h / 8 h','pct'=>87,'color'=>'#7C5CFF'],
-        ],
-        'history'=>[
-            ['title'=>'Dos / Biceps','meta'=>'-2 days','duration'=>'1h05','cat'=>'musculation'],
-            ['title'=>'HIIT','meta'=>'-4 days','duration'=>'45 min','cat'=>'cardio'],
-            ['title'=>'Jambes','meta'=>'-6 days','duration'=>'1h10','cat'=>'cross'],
-            ['title'=>'Full Body','meta'=>'-8 days','duration'=>'1h00','cat'=>'abdos'],
         ],
     ];
 }

@@ -39,7 +39,7 @@ $commune = [
                 <div class="hero-icon"><i class="fa-regular fa-circle-user"></i></div>
                 <div>
                     <h1>Mon profil</h1>
-                    <p>Gérez vos informations personnelles, votre abonnement<br>et vos préférences depuis votre espace membre.</p>
+                    <p>Gérez vos informations personnelles et retrouvez les détails de votre abonnement.</p>
                 </div>
             </div>
             <div class="hero-visual" aria-hidden="true">
@@ -60,7 +60,15 @@ $commune = [
                 <section class="card identity-card">
                     <div class="identity-left">
                         <div class="avatar-ring">
-                            <div class="avatar-fallback"><i class="fa-solid fa-user"></i></div>
+                            <div class="avatar-fallback">
+                                <img id="profileAvatar" src="<?= $user['avatar'] ? e(url($user['avatar'])) : '' ?>" alt="Photo de profil" <?= $user['avatar'] ? '' : 'hidden' ?>>
+                                <i id="profileAvatarFallback" class="fa-solid fa-user" <?= $user['avatar'] ? 'hidden' : '' ?>></i>
+                            </div>
+                            <form id="photoForm" class="photo-form" enctype="multipart/form-data">
+                                <?= champ_csrf() ?>
+                                <input type="file" name="photo" id="photoUpload" accept="image/jpeg,image/png,image/webp" hidden>
+                                <label for="photoUpload" class="photo-edit" title="Modifier la photo de profil" aria-label="Modifier la photo de profil"><i class="fa-solid fa-camera"></i></label>
+                            </form>
                         </div>
                     </div>
 
@@ -96,7 +104,7 @@ $commune = [
                             <?php foreach (['nom'=>'Nom','prenom'=>'Prénom','telephone'=>'Téléphone','email'=>'Email'] as $key=>$label): ?>
             <label class="field">
                                 <span class="field-label"><?= e($label) ?></span>
-                                <input class="field-value" type="<?= $key === 'email' ? 'email' : ($key === 'telephone' ? 'tel' : 'text') ?>" name="<?= e($key) ?>" value="<?= e($user[$key]) ?>" <?= $key !== 'telephone' ? 'required' : '' ?>>
+                                <input class="field-value" type="<?= $key === 'email' ? 'email' : ($key === 'telephone' ? 'tel' : 'text') ?>" name="<?= e($key) ?>" value="<?= e($user[$key]) ?>" <?= $key !== 'telephone' ? 'required' : '' ?><?php if ($key === 'telephone'): ?> inputmode="numeric" autocomplete="tel-national" maxlength="14" placeholder="06 12 34 56 78" aria-describedby="phoneHelp"<?php endif; ?>>
                             </label>
                             <?php endforeach; ?>
                             <?php include dirname(__DIR__, 2) . '/commune/view/champ.php'; ?>
@@ -109,39 +117,6 @@ $commune = [
                     </form>
                 </section>
 
-                <!-- Préférences de notification -->
-                <section class="card">
-                    <header class="card-head">
-                        <div class="head-icon"><i class="fa-regular fa-bell"></i></div>
-                        <div>
-                            <h3>Préférences de notification</h3>
-                            <p class="muted small">Choisissez comment vous souhaitez être informé</p>
-                        </div>
-                    </header>
-
-                    <div class="prefs-grid">
-                        <?php
-                        $prefs = [
-                            ['icon'=>'fa-regular fa-comment-dots','titre'=>'Messages','sub'=>'Coach, accueil, administration','on'=>true],
-                            ['icon'=>'fa-regular fa-calendar','titre'=>'Rappels de réservation','sub'=>'Heure de vos séances','on'=>true],
-                            ['icon'=>'fa-regular fa-newspaper','titre'=>'Actualités','sub'=>'Événements et nouveautés','on'=>true],
-                            ['icon'=>'fa-solid fa-tag','titre'=>'Promotions','sub'=>'Offres et avantages','on'=>true],
-                        ];
-                        foreach ($prefs as $i=>$p): ?>
-                            <div class="pref">
-                                <i class="<?= $p['icon']; ?>"></i>
-                                <div class="pref-text">
-                                    <strong><?= $p['titre']; ?></strong>
-                                    <span><?= $p['sub']; ?></span>
-                                </div>
-                                <label class="switch">
-                                    <input type="checkbox" <?= $p['on']?'checked':''; ?> data-pref="<?= $i; ?>">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </section>
             </div>
 
             <!-- ===== Colonne latérale ===== -->
@@ -203,18 +178,6 @@ $commune = [
                     </a>
                 </section>
 
-                <!-- Besoin d'aide -->
-                <section class="card">
-                    <header class="card-head">
-                        <div class="head-icon"><i class="fa-solid fa-headset"></i></div>
-                        <h3>Besoin d'aide ?</h3>
-                    </header>
-                    <p class="muted small">Une question sur votre compte, votre abonnement ou vos réservations.</p>
-                    <a href="<?= e(url('adherent/view/messagerie.php')) ?>" class="btn btn-outline btn-block">
-                        Contacter l'accueil <i class="fa-solid fa-chevron-right right"></i>
-                    </a>
-                </section>
-
             </aside>
         </div>
     </main>
@@ -223,14 +186,49 @@ $commune = [
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 
-    // Switch de préférences (persistance localStorage simple)
-    document.querySelectorAll('.switch input[data-pref]').forEach(input => {
-        const key = 'athletix-pref-' + input.dataset.pref;
-        const saved = localStorage.getItem(key);
-        if (saved !== null) input.checked = saved === '1';
-        input.addEventListener('change', () => {
-            localStorage.setItem(key, input.checked ? '1' : '0');
+    const phoneInput = document.querySelector('#profileForm [name="telephone"]');
+    if (phoneInput) {
+        const digitsOnly = value => value.replace(/\D/g, '').slice(0, 10);
+        const formatPhone = value => digitsOnly(value).match(/.{1,2}/g)?.join(' ') || '';
+        const initialDigits = phoneInput.value.replace(/\D/g, '');
+        if (initialDigits.length <= 10) phoneInput.value = formatPhone(initialDigits);
+        phoneInput.addEventListener('input', () => {
+            const digitsBeforeCaret = phoneInput.value.slice(0, phoneInput.selectionStart ?? phoneInput.value.length).replace(/\D/g, '').length;
+            const digits = digitsOnly(phoneInput.value);
+            phoneInput.value = formatPhone(digits);
+            let caret = 0;
+            let countedDigits = 0;
+            while (caret < phoneInput.value.length && countedDigits < digitsBeforeCaret) {
+                if (/\d/.test(phoneInput.value[caret])) countedDigits++;
+                caret++;
+            }
+            phoneInput.setSelectionRange(caret, caret);
         });
+    }
+
+    document.getElementById('photoUpload')?.addEventListener('change', async event => {
+        const file = event.currentTarget.files?.[0];
+        if (!file) return;
+        const form = document.getElementById('photoForm');
+        const message = document.getElementById('profileMessage');
+        const formData = new FormData(form);
+        formData.set('photo', file);
+        message.textContent = 'Enregistrement de la photo…';
+        try {
+            const endpoint = <?= json_encode(url('adherent/api.php?action=profile_photo'), JSON_UNESCAPED_SLASHES) ?>;
+            const response = await fetch(endpoint, {method: 'POST', body: formData});
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'La photo n’a pas pu être enregistrée.');
+            const avatar = document.getElementById('profileAvatar');
+            avatar.src = result.photo_url + '?v=' + Date.now();
+            avatar.hidden = false;
+            document.getElementById('profileAvatarFallback').hidden = true;
+            message.textContent = 'Photo de profil enregistrée.';
+        } catch (error) {
+            message.textContent = error.message;
+        } finally {
+            event.currentTarget.value = '';
+        }
     });
 
     document.getElementById('profileForm')?.addEventListener('submit', async event => {
@@ -355,6 +353,11 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     width:100%;height:100%;border-radius:50%;object-fit:cover;background:#1a2328;display:grid;place-items:center;color:var(--muted);font-size:52px;
 }
 .avatar-fallback{display:grid}
+.avatar-fallback img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+#profileAvatar[hidden],#profileAvatarFallback[hidden]{display:none}
+.photo-form{position:absolute;right:2px;bottom:2px;z-index:2}
+.photo-edit{width:36px;height:36px;display:grid;place-items:center;border:2px solid var(--bg);border-radius:50%;background:var(--green);color:#07100a;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.photo-edit:hover{background:var(--green-2);transform:scale(1.05)}
 .identity-name{display:flex;align-items:center;gap:10px}
 .identity-name h2{font-size:26px;font-weight:700}
 .verified{color:var(--green);font-size:20px}
@@ -392,22 +395,6 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 .field-value{font-size:14px;font-weight:500;line-height:1.4}
 .field-wide{grid-column:1 / -1}
 
-/* ===== Preferences ===== */
-.prefs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-.pref{display:flex;align-items:flex-start;gap:12px;background:#0a1115;border:1px solid var(--border);border-radius:12px;padding:14px}
-.pref > i{color:var(--green);font-size:16px;margin-top:2px}
-.pref-text{flex:1;display:flex;flex-direction:column;gap:2px}
-.pref-text strong{font-size:13px;font-weight:600}
-.pref-text span{font-size:11px;color:var(--muted);line-height:1.3}
-
-/* ===== Switch ===== */
-.switch{position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0}
-.switch input{opacity:0;width:0;height:0}
-.slider{position:absolute;cursor:pointer;inset:0;background:#2a3842;border-radius:40px;transition:.3s}
-.slider::before{content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.3s}
-.switch input:checked + .slider{background:var(--green)}
-.switch input:checked + .slider::before{transform:translateX(18px);background:#0a0a0a}
-
 /* ===== Member card ===== */
 .member-card{
     background:
@@ -443,7 +430,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
 /* ===== Responsive ===== */
 @media(max-width:1280px){
     .grid-2{grid-template-columns:1fr}
-    .form-grid,.prefs-grid{grid-template-columns:1fr 1fr}
+    .form-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:860px){
     .main-content{width:100%;margin-left:0;padding:0 0 18px}
@@ -451,7 +438,7 @@ button{font-family:inherit;cursor:pointer;border:none;background:none;color:inhe
     .identity-card{grid-template-columns:1fr;text-align:center}
     .avatar-ring{margin:0 auto}
     .hero-visual{display:none}
-    .form-grid,.prefs-grid,.sub-grid{grid-template-columns:1fr}
+    .form-grid,.sub-grid{grid-template-columns:1fr}
 }
 
 </style>

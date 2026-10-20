@@ -37,6 +37,9 @@ final class Avis extends InteractionAdherent
         if (mb_strlen(trim($this->commentaire)) < 10) {
             throw new InvalidArgumentException('Votre avis doit contenir au moins 10 caractères.');
         }
+        if (mb_strlen(trim($this->commentaire)) > 100) {
+            throw new InvalidArgumentException('Votre avis ne peut pas dépasser 100 caractères.');
+        }
 
         $pdo->beginTransaction();
         try {
@@ -160,6 +163,20 @@ final class Avis extends InteractionAdherent
              WHERE i.type_interaction = 'AVIS'
              ORDER BY i.date_interaction DESC"
         )->fetchAll();
+    }
+
+    public function avisDeAdherent(int $numUtilisateur): ?array
+    {
+        $this->assureColonneReponse();
+        $requete = $this->pdo->prepare(
+            "SELECT i.NumInteraction, i.date_interaction, a.noteavis, a.commentaire, a.reponse
+             FROM interaction_adherent i
+             JOIN avis a ON a.NumInteraction = i.NumInteraction
+             WHERE i.NumUsers = ? AND i.type_interaction = 'AVIS'
+             ORDER BY i.date_interaction DESC LIMIT 1"
+        );
+        $requete->execute([$numUtilisateur]);
+        return $requete->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
     public function creer(int $numUtilisateur, int $note, string $commentaire): int

@@ -12,6 +12,7 @@ foreach ($messages as $message) {
         : $message['NumUsers_emetteur']);
     $firstName = $sentByMember ? $message['recipient_first'] : $message['emitter_first'];
     $lastName = $sentByMember ? $message['recipient_last'] : $message['emitter_last'];
+    $otherRole = $sentByMember ? ($message['recipient_role'] ?? '') : ($message['emitter_role'] ?? '');
     $name = trim($firstName . ' ' . $lastName);
     $sentAt = strtotime($message['date_envoi']);
     $day = date('Y-m-d', $sentAt);
@@ -21,11 +22,10 @@ foreach ($messages as $message) {
             'id' => (string) $otherUserId,
             'recipient' => $otherUserId,
             'name' => $name,
-            'role' => 'coach',
-            'roleLabel' => 'Équipe ATHLETIX',
+            'role' => $otherRole === 'Accueil' ? 'accueil' : 'coach',
+            'roleLabel' => $otherRole === 'Accueil' ? 'Accueil' : ($otherRole !== '' ? $otherRole : 'Équipe ATHLETIX'),
             'initials' => mb_strtoupper(mb_substr($name, 0, 1)),
             'color' => '#4f7cff',
-            'online' => false,
             'unread' => 0,
             'time' => '',
             'messages' => [],
@@ -60,11 +60,8 @@ foreach ($groups as &$conversation) {
 }
 unset($conversation);
 
-usort($groups, static fn(array $first, array $second): int => strcmp($second['time'], $first['time']));
-$conversations = array_values($groups);
-
-if ($conversations === []) {
-    $conversations[] = [
+if (!array_filter($groups, static fn(array $conversation): bool => $conversation['role'] === 'accueil')) {
+    $groups['new'] = [
         'id' => 'new',
         'recipient' => 0,
         'name' => 'Accueil ATHLETIX',
@@ -72,12 +69,18 @@ if ($conversations === []) {
         'roleLabel' => 'Accueil',
         'initials' => 'A',
         'color' => '#c6f24e',
-        'online' => false,
         'unread' => 0,
         'time' => '',
         'messages' => [],
     ];
 }
+
+usort($groups, static function (array $first, array $second): int {
+    if ($first['id'] === 'new') return -1;
+    if ($second['id'] === 'new') return 1;
+    return strcmp($second['time'], $first['time']);
+});
+$conversations = array_values($groups);
 
 function lastMessage(array $conversation): array
 {

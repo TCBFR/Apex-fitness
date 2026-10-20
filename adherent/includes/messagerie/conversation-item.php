@@ -2,10 +2,9 @@
 /** @var array $conv @var bool $isActive */
 $last = lastMessage($conv);
 ?>
-<li class="conv<?= $isActive ? ' is-active' : '' ?>" data-id="<?= e($conv['id']) ?>" data-recipient="<?= (int)$conv['recipient'] ?>" data-role="<?= e($conv['role']) ?>" data-name="<?= e(mb_strtolower($conv['name'])) ?>" data-testid="conversation-item-<?= e($conv['id']) ?>" tabindex="0" role="button">
+<li class="conv<?= $isActive ? ' is-active' : '' ?>" data-id="<?= e($conv['id']) ?>" data-recipient="<?= (int)$conv['recipient'] ?>" data-name="<?= e(mb_strtolower($conv['name'])) ?>" data-testid="conversation-item-<?= e($conv['id']) ?>" tabindex="0" role="button">
     <span class="avatar" style="--c: <?= $conv['color'] ?>">
         <?= e($conv['initials']) ?>
-        <?php if ($conv['online']): ?><i class="avatar__online"></i><?php endif; ?>
     </span>
     <div class="conv__body">
         <div class="conv__top">

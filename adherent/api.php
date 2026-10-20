@@ -5,12 +5,14 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/function.php';
 exige_role('ADHERENT');
 require_once __DIR__ . '/model/AdherentEspace.php';
+require_once __DIR__ . '/controller/AdherentController.php';
 require_once __DIR__ . '/includes/planning/data.php';
 require_once __DIR__ . '/../planning/controller/planning.php';
 
 header('Content-Type: application/json; charset=utf-8');
 $id = (int) utilisateur()['NumUsers'];
 $space = new AdherentEspace();
+$adherentController = new AdherentController($space);
 $planning = new PlanningController();
 $input = json_decode(file_get_contents('php://input') ?: '[]', true);
 if (!is_array($input)) $input = [];
@@ -116,6 +118,14 @@ try {
         case 'my':
             apiReply(array_map('apiSession', $space->reservations($id)));
 
+        case 'reservation_history':
+            apiReply($adherentController->historiqueReservations($id));
+
+        case 'objectives':
+            if ($_SERVER['REQUEST_METHOD'] === 'GET') apiReply($adherentController->objectifs($id, (int)($_GET['months'] ?? 12)));
+            $adherentController->marquerObjectif($id, $input);
+            apiReply($adherentController->objectifs($id, 12));
+
         case 'waitlist_join':
             $activityId = (int)($input['id'] ?? 0);
             $q = db()->prepare('SELECT capacite_max, date_heure_debut FROM activite WHERE Numactivite=?');
@@ -139,22 +149,7 @@ try {
         case 'next':
             $items = $space->reservations($id);
             if (isset($items[0])) apiReply(['session'=>apiSession($items[0])]);
-            $available = array_values(array_filter(atx_all_sessions(), static fn($session) => $session['start'] > date('Y-m-d\TH:i:s')));
-            if ($available) {
-                $session = $available[0];
-                $session['booked'] = $session['base_booked'];
-                $session['remaining'] = max(0, $session['capacity'] - $session['base_booked']);
-                $session['is_past'] = false;
-                $session['is_demo'] = false;
-                $session['color'] = CATEGORIES[$session['category']]['color'];
-                $session['image'] = CAT_IMAGES[$session['category']];
-                apiReply(['session'=>$session]);
-            }
-            $demo = atx_demo_sessions(date('Y-m-d'), date('Y-m-d', strtotime('+14 days')));
-            $upcoming = array_values(array_filter($demo, static fn($event) => $event['start'] > date('Y-m-d\TH:i:s')));
-            $session = $upcoming[0]['extendedProps'] ?? null;
-            if ($session) $session['title'] = $upcoming[0]['title'];
-            apiReply(['session'=>$session]);
+            apiReply(['session'=>null]);
 
         case 'book':
             $activityId = (int)($input['id'] ?? 0);
@@ -184,10 +179,20 @@ try {
             $space->updateProfile($id, $input);
             apiReply(['profile'=>$space->profil($id)]);
 
+        case 'profile_photo':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') apiReply(['error'=>'Méthode non autorisée.'], 405);
+            $photoPath = $adherentController->changerPhotoProfil($id, $_FILES['photo'] ?? []);
+            journalise('MODIFICATION_PHOTO_PROFIL');
+            apiReply(['photo_url'=>url($photoPath)]);
+
         case 'messages':
             if ($_SERVER['REQUEST_METHOD'] === 'GET') apiReply($space->messages($id));
             $space->envoyerMessage($id, (string)($input['message'] ?? ''), isset($input['recipient']) ? (int)$input['recipient'] : null);
             apiReply(['message'=>'Message envoyé.']);
+
+        case 'unread_messages':
+            if ($_SERVER['REQUEST_METHOD'] !== 'GET') apiReply(['error'=>'Méthode non autorisée.'], 405);
+            apiReply(['unread_count'=>$space->messagesNonLus($id)]);
 
         default:
             apiReply(['error'=>'Action inconnue.'], 404);

@@ -18,6 +18,11 @@ final class AvisController
         return $this->avis->publies();
     }
 
+    public function avisDeAdherent(int $numUtilisateur): ?array
+    {
+        return $this->avis->avisDeAdherent($numUtilisateur);
+    }
+
     public function creer(int $numUtilisateur, int $note, string $commentaire): int
     {
         return $this->avis->creer($numUtilisateur, $note, trim($commentaire));

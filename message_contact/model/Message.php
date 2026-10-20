@@ -11,6 +11,7 @@ final class Message {
     public function getAllFor(int $userId): array
     {
         $this->assureTable();
+        if (!$this->isAccueil($userId)) return [];
         $query = $this->pdo->prepare(
             'SELECT m.*, u.prenomUsers, u.nomUsers
              FROM message_adherent m
@@ -48,11 +49,11 @@ final class Message {
         $query = $this->pdo->query(
             "SELECT e.NumUsers FROM employe e
              JOIN fonction f ON f.Numfonc = e.Numfonc
-             WHERE f.libellefonc <> 'Technicien maintenance'
+             WHERE f.libellefonc = 'Accueil'
              ORDER BY e.NumUsers LIMIT 1"
         );
         $recipient = $query->fetchColumn();
-        if (!$recipient) throw new RuntimeException('Aucun employé disponible.');
+        if (!$recipient) throw new RuntimeException('Aucun employé d’accueil n’est disponible.');
         $insert = $this->pdo->prepare(
             'INSERT INTO message_adherent (NumUsers_emetteur, NumUsers_destinataire, message)
              VALUES (?, ?, ?)'
@@ -73,7 +74,7 @@ final class Message {
         $query = $this->pdo->prepare(
             "SELECT COUNT(*) FROM adherent a JOIN employe e ON e.NumUsers = ?
              JOIN fonction f ON f.Numfonc = e.Numfonc
-             WHERE a.NumUsers = ? AND f.libellefonc <> 'Technicien maintenance'"
+             WHERE a.NumUsers = ? AND f.libellefonc = 'Accueil'"
         );
         $query->execute([$first, $second]);
         if ((int) $query->fetchColumn() > 0) return true;
@@ -83,6 +84,15 @@ final class Message {
     private function isAdherent(int $userId): bool
     {
         $query = $this->pdo->prepare('SELECT 1 FROM adherent WHERE NumUsers = ?');
+        $query->execute([$userId]);
+        return (bool) $query->fetchColumn();
+    }
+    private function isAccueil(int $userId): bool
+    {
+        $query = $this->pdo->prepare(
+            "SELECT 1 FROM employe e JOIN fonction f ON f.Numfonc=e.Numfonc
+             WHERE e.NumUsers=? AND f.libellefonc='Accueil'"
+        );
         $query->execute([$userId]);
         return (bool) $query->fetchColumn();
     }
@@ -170,7 +180,7 @@ final class MessageSuppression
         $query = $this->pdo->prepare(
             "SELECT 1 FROM employe e
              JOIN fonction f ON f.Numfonc = e.Numfonc
-             WHERE e.NumUsers = ? AND f.libellefonc <> 'Technicien maintenance'"
+             WHERE e.NumUsers = ? AND f.libellefonc = 'Accueil'"
         );
         $query->execute([$userId]);
         return (bool) $query->fetchColumn();
