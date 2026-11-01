@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../config/function.php';
+require_once __DIR__ . '/../../abonnement/model/ContratAbonnement.php';
 require_once __DIR__ . '/../../qr_code/model/qr_code.php';
 
 final class Paiement
@@ -144,20 +145,35 @@ final class Paiement
     public function offres(): array
     {
         return $this->pdo->query(
-            'SELECT ab.Numabo, ab.libelle_abo, ab.type_abo,
-                    f.prix_mensuel_reduit, b.prix_annuel, p.prix_mensuel_plus
+            'SELECT ab.Numabo, ab.libelle_abo, ab.description_abo,
+                    o.type_offre AS type_abo, f.prix_mensuel_reduit,
+                    f.taux_reduction, f.justificatif_requis, f.nb_reservations_max_mois,
+                    b.prix_annuel, b.duree_engagement_mois, b.reconduction_tacite,
+                    p.prix_mensuel_plus, p.seances_coach_incluses, p.acces_illimite
              FROM abonnement ab
-             LEFT JOIN freemium f ON f.Numabo = ab.Numabo
-             LEFT JOIN basic b ON b.Numabo = ab.Numabo
-             LEFT JOIN abonnement_plus p ON p.Numabo = ab.Numabo
+             JOIN offre o ON o.Numoffre = ab.Numoffre
+             LEFT JOIN freemium f ON f.Numoffre = ab.Numoffre
+             LEFT JOIN basic b ON b.Numoffre = ab.Numoffre
+             LEFT JOIN abonnement_plus p ON p.Numoffre = ab.Numoffre
              WHERE ab.actif_abo = 1 ORDER BY ab.Numabo'
         )->fetchAll();
     }
 
-    public function payer(int $numUtilisateur, int $numAbonnement, string $moyen, bool $changement = false): float
-    {
+    public function payer(
+        int $numUtilisateur,
+        int $numAbonnement,
+        string $moyen,
+        bool $changement,
+        string $versionContrat,
+        string $contenuContrat,
+        string $empreinteContrat,
+        int $dateAcceptation
+    ): float {
         if (!in_array($moyen, ['CB', 'Virement', 'Especes', 'Prelevement'], true)) {
             throw new InvalidArgumentException('Moyen de paiement invalide.');
+        }
+        if ($dateAcceptation > time() || $dateAcceptation < time() - 1800) {
+            throw new InvalidArgumentException('Votre acceptation a expiré. Veuillez relire et valider le contrat.');
         }
 
         $this->assureAdherent($numUtilisateur);
@@ -167,6 +183,15 @@ final class Paiement
             $offre = $this->offre($numAbonnement);
             if (!$offre) {
                 throw new RuntimeException('Cette formule n’existe pas.');
+            }
+            $contratAttendu = ContratAbonnement::contenu($offre, $changement);
+            $empreinteAttendue = hash('sha256', $contratAttendu);
+            if (
+                $versionContrat !== ContratAbonnement::VERSION
+                || !hash_equals($empreinteAttendue, $empreinteContrat)
+                || !hash_equals($contratAttendu, $contenuContrat)
+            ) {
+                throw new RuntimeException('Le contrat a été modifié. Veuillez le relire et l’accepter à nouveau.');
             }
 
             $montant = $this->montant($offre);
@@ -197,13 +222,23 @@ final class Paiement
             $this->pdo->prepare(
                 'INSERT INTO paiement (montant, moyen_paiement, NumUsers, Numabo) VALUES (?, ?, ?, ?)'
             )->execute([$montant, $moyen, $numUtilisateur, $numAbonnement]);
-
-            $actif = $this->pdo->query(
-                "SELECT Numstatut FROM statut WHERE type_statut = 'ADHERENT' AND libelle_statut = 'Actif'"
-            )->fetchColumn();
+            $paymentId = (int) $this->pdo->lastInsertId();
             $this->pdo->prepare(
-                'UPDATE adherent SET Numstatut = ?, Date_finadh = ? WHERE NumUsers = ?'
-            )->execute([(int) $actif, $dateFin, $numUtilisateur]);
+                'INSERT INTO acceptation_contrat_abonnement
+                    (NumUsers, Numabo, Numpaiement, version_contrat, contenu_contrat, date_acceptation)
+                 VALUES (?, ?, ?, ?, ?, ?)'
+            )->execute([
+                $numUtilisateur,
+                $numAbonnement,
+                $paymentId,
+                $versionContrat,
+                $contenuContrat,
+                date('Y-m-d H:i:s', $dateAcceptation),
+            ]);
+
+            $this->pdo->prepare(
+                'UPDATE adherent SET Date_finadh = ? WHERE NumUsers = ?'
+            )->execute([$dateFin, $numUtilisateur]);
 
             $this->pdo->commit();
             return $montant;
@@ -228,19 +263,11 @@ final class Paiement
             return;
         }
 
-        $actif = (int) $this->pdo->query(
-            "SELECT Numstatut FROM statut WHERE type_statut = 'ADHERENT' AND libelle_statut = 'Actif'"
-        )->fetchColumn();
-
         $matricule = 'ADH-' . str_pad((string) $numUtilisateur, 4, '0', STR_PAD_LEFT);
         $this->pdo->prepare(
-            'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh, Numstatut)
-             VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 MONTH), ?)'
-        )->execute([
-            $numUtilisateur,
-            $matricule,
-            $actif,
-        ]);
+            'INSERT INTO adherent (NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh)
+             VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 MONTH))'
+        )->execute([$numUtilisateur, $matricule]);
         (new GenerateurQrCode())->assurerPourAdherent($this->pdo, $numUtilisateur, $matricule);
     }
 
@@ -266,7 +293,8 @@ final class Paiement
 
         $dt = new DateTimeImmutable($dateDebut);
         if ($offre['type_abo'] === 'BASIC') {
-            return $dt->modify('+12 months')->format('Y-m-d');
+            $months = max(1, (int) ($offre['duree_engagement_mois'] ?? 12));
+            return $dt->modify('+' . $months . ' months')->format('Y-m-d');
         }
 
         return $dt->modify('+1 month')->format('Y-m-d');
@@ -275,12 +303,16 @@ final class Paiement
     private function offre(int $numAbonnement): ?array
     {
         $requete = $this->pdo->prepare(
-            'SELECT ab.Numabo, ab.libelle_abo, ab.type_abo,
-                    f.prix_mensuel_reduit, b.prix_annuel, p.prix_mensuel_plus
+            'SELECT ab.Numabo, ab.libelle_abo, ab.description_abo,
+                    o.type_offre AS type_abo, f.prix_mensuel_reduit,
+                    f.taux_reduction, f.justificatif_requis, f.nb_reservations_max_mois,
+                    b.prix_annuel, b.duree_engagement_mois, b.reconduction_tacite,
+                    p.prix_mensuel_plus, p.seances_coach_incluses, p.acces_illimite
              FROM abonnement ab
-             LEFT JOIN freemium f ON f.Numabo = ab.Numabo
-             LEFT JOIN basic b ON b.Numabo = ab.Numabo
-             LEFT JOIN abonnement_plus p ON p.Numabo = ab.Numabo
+             JOIN offre o ON o.Numoffre = ab.Numoffre
+             LEFT JOIN freemium f ON f.Numoffre = ab.Numoffre
+             LEFT JOIN basic b ON b.Numoffre = ab.Numoffre
+             LEFT JOIN abonnement_plus p ON p.Numoffre = ab.Numoffre
              WHERE ab.Numabo = ? AND ab.actif_abo = 1'
         );
         $requete->execute([$numAbonnement]);

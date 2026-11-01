@@ -18,9 +18,26 @@ final class PaiementController
         return $this->paiement->offres();
     }
 
-    public function payer(int $numUtilisateur, int $numAbonnement, string $moyen, bool $changement = false): float
-    {
-        return $this->paiement->payer($numUtilisateur, $numAbonnement, $moyen, $changement);
+    public function payer(
+        int $numUtilisateur,
+        int $numAbonnement,
+        string $moyen,
+        bool $changement,
+        string $versionContrat,
+        string $contenuContrat,
+        string $empreinteContrat,
+        int $dateAcceptation
+    ): float {
+        return $this->paiement->payer(
+            $numUtilisateur,
+            $numAbonnement,
+            $moyen,
+            $changement,
+            $versionContrat,
+            $contenuContrat,
+            $empreinteContrat,
+            $dateAcceptation
+        );
     }
 
     public function traiterCrud(): array

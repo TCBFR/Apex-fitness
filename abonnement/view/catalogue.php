@@ -29,24 +29,72 @@ require_once __DIR__ . '/../../public/includes/public_icons.php';
 
 <?php if (!empty($catalogueDansEspaceAdherent)): ?>
 <div class="account-subscriptions">
-    <nav class="subscription-steps" aria-label="Étapes de gestion de l’abonnement">
-        <div class="subscription-step is-active" aria-current="step"><span>1</span><strong>Choix de la formule</strong></div>
-        <div class="subscription-step"><span>2</span><strong>Informations</strong></div>
+    <nav class="subscription-steps<?= !empty($isInformationStep) ? ' progress-step-2' : ' progress-step-1' ?>" aria-label="Étapes de gestion de l’abonnement">
+        <div class="subscription-step<?= !empty($isInformationStep) ? ' is-complete' : ' is-active' ?>"<?= empty($isInformationStep) ? ' aria-current="step"' : '' ?>><span>1</span><strong>Choix de la formule</strong></div>
+        <div class="subscription-step<?= !empty($isInformationStep) ? ' is-active' : '' ?>"<?= !empty($isInformationStep) ? ' aria-current="step"' : '' ?>><span>2</span><strong>Informations</strong></div>
         <div class="subscription-step"><span>3</span><strong>Paiement</strong></div>
         <div class="subscription-step"><span>4</span><strong>Confirmation</strong></div>
     </nav>
 <?php endif; ?>
 
+<?php if (!empty($catalogueDansEspaceAdherent) && !empty($isInformationStep)): ?>
+<section class="account-information-hero">
+    <div>
+        <p class="eyebrow">Étape 2 sur 4</p>
+        <h1>Vos informations et votre contrat</h1>
+        <p>Vérifiez vos coordonnées, prenez connaissance des règles du club et validez votre contrat.</p>
+    </div>
+    <span class="account-information-secure"><?= publicIcon('lock', 'icon') ?> Validation sécurisée</span>
+</section>
+<section class="account-information-content">
+    <?php if (!empty($subscriptionError)): ?><p class="account-contract-error" role="alert"><?= e($subscriptionError) ?></p><?php endif; ?>
+    <div class="account-information-layout account-information-layout--contract">
+        <div class="account-information-main">
+            <section class="account-information-card account-information-card--profile">
+                <h2><span class="account-section-number">01</span><?= publicIcon('user', 'icon') ?> Vos informations</h2>
+                <p class="account-information-description">Coordonnées associées à votre compte.</p>
+                <dl class="account-member-details">
+                    <div><dt>Nom</dt><dd><?= e(trim(($memberProfile['prenom'] ?? '') . ' ' . ($memberProfile['nom'] ?? ''))) ?></dd></div>
+                    <div><dt>E-mail</dt><dd><?= e($memberProfile['email'] ?? '') ?></dd></div>
+                    <div><dt>Téléphone</dt><dd><?= e($memberProfile['telephone'] ?? 'Non renseigné') ?></dd></div>
+                </dl>
+            </section>
+            <section class="account-information-card account-information-card--rules">
+                <h2><span class="account-section-number">02</span><?= publicIcon('shield-check', 'icon') ?> Règlement de la salle</h2>
+                <p class="account-information-description">Quelques règles pour une pratique sûre et respectueuse.</p>
+                <ul class="account-house-rules">
+                    <?php foreach (ContratAbonnement::reglementSalle() as $rule): ?>
+                        <li><?= publicIcon('check', 'icon') ?> <?= e($rule) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </section>
+            <section class="account-information-card account-information-card--contract">
+                <h2><span class="account-section-number">03</span><?= publicIcon('info', 'icon') ?> Contrat d’adhésion</h2>
+                <p class="account-information-description">Lisez les conditions liées à votre formule avant de les accepter.</p>
+                <pre class="account-contract-text"><?= e($selectedContract) ?></pre>
+            </section>
+            <form method="post" class="account-contract-form account-contract-form--confirmation">
+                <?= champ_csrf() ?>
+                <input type="hidden" name="action" value="accept_contract">
+                <input type="hidden" name="plan" value="<?= (int) $selectedOffer['Numabo'] ?>">
+                <label class="account-contract-consent">
+                    <input type="checkbox" name="accept_contract" value="1" required>
+                    <span><strong>Je confirme mon accord</strong><small>J’ai lu et j’accepte le règlement intérieur et le contrat d’adhésion ci-dessus.</small></span>
+                </label>
+                <div class="account-information-actions">
+                    <button class="btn btn-primary" type="submit">Continuer vers le paiement <?= publicIcon('arrow-right', 'icon') ?></button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+<?php else: ?>
 <section class="hero" style="--hero-img:url('https://images.unsplash.com/photo-1521805103424-d8f8430e8933?auto=format&fit=crop&w=1600&q=70')">
-    <div class="container hero-content reveal"><p class="eyebrow">Nos formules</p><h1 class="hero-title">Choisis <span class="accent">ton rythme.</span></h1><p class="hero-lead">Des abonnements adaptés à tes objectifs, avec des conditions et des tarifs clairement présentés.</p></div>
+    <div class="container hero-content reveal"><?php if (empty($catalogueDansEspaceAdherent)): ?><p class="eyebrow">Nos formules</p><?php endif; ?><h1 class="hero-title">Choisis <span class="accent">ton rythme.</span></h1><p class="hero-lead">Des abonnements adaptés à tes objectifs, avec des conditions et des tarifs clairement présentés.</p></div>
 </section>
 
 <section class="section section-tight"><div class="container">
     <?php if (!$offres): ?><div class="empty-state"><h2>Aucune formule n’est disponible</h2><p>Revenez consulter le catalogue prochainement.</p></div><?php else: ?>
-        <?php if (!empty($catalogueDansEspaceAdherent)): ?>
-            <div class="account-subscriptions-layout">
-                <div class="account-subscriptions-main">
-        <?php endif; ?>
         <div class="grid grid-3 plans">
             <?php foreach ($offres as $index => $offre):
                 $courant = $aboCourant !== null && $aboCourant === (int) $offre['Numabo'];
@@ -73,47 +121,29 @@ require_once __DIR__ . '/../../public/includes/public_icons.php';
                     <p class="eyebrow"><?= e($detail) ?></p><h2 class="plan-name"><?= e($offre['libelle_abo']) ?></h2><p class="muted"><?= e($offre['description_abo']) ?></p>
                     <p class="plan-price"><strong><?= $prix ?></strong><span><?= e($periode) ?></span></p>
                     <ul class="check-list"><?php foreach ($points as $point): ?><li><?= publicIcon('check', 'icon') ?> <?= e($point) ?></li><?php endforeach; ?></ul>
-                    <ul class="plan-meta"><li><?= publicIcon('clock', 'icon') ?> <?= e($detail) ?></li><li><?= publicIcon('shield-check', 'icon') ?> Conditions transparentes</li></ul>
-                    <?php if ($courant): ?><p class="plan-current"><?= publicIcon('check', 'icon') ?> Votre formule actuelle</p><?php endif; ?>
+                    <ul class="plan-meta">
+                        <li><?= publicIcon('clock', 'icon') ?> <?= e($detail) ?></li>
+                        <?php if (empty($catalogueDansEspaceAdherent)): ?><li><?= publicIcon('shield-check', 'icon') ?> Conditions transparentes</li><?php endif; ?>
+                    </ul>
+                    <?php if (!empty($catalogueDansEspaceAdherent)): ?>
+                        <?php if ($courant): ?>
+                            <p class="plan-current"><?= publicIcon('check', 'icon') ?> Votre formule actuelle</p>
+                        <?php else: ?>
+                            <a class="btn <?= $featured ? 'btn-primary' : 'btn-outline' ?> account-plan-select" href="<?= e(url('adherent/view/offres.php?step=information&plan=' . (int) $offre['Numabo'])) ?>">
+                                Choisir cette formule <?= publicIcon('arrow-right', 'icon') ?>
+                            </a>
+                        <?php endif; ?>
+                    <?php elseif ($courant): ?>
+                        <p class="plan-current"><?= publicIcon('check', 'icon') ?> Votre formule actuelle</p>
+                    <?php endif; ?>
                 </article>
             <?php endforeach; ?>
         </div>
-        <?php if (!empty($catalogueDansEspaceAdherent)): ?>
-                </div>
-                <aside class="account-subscription-summary">
-                    <h2><?= publicIcon('info', 'icon') ?> Récapitulatif</h2>
-                    <div class="account-member-summary">
-                        <span class="account-member-avatar" aria-hidden="true"><?= e(mb_strtoupper(mb_substr((string) ($memberProfile['prenom'] ?? ''), 0, 1))) ?></span>
-                        <div>
-                            <strong><?= e(trim(($memberProfile['prenom'] ?? '') . ' ' . ($memberProfile['nom'] ?? ''))) ?></strong>
-                            <span>Membre depuis le : <?= e(dateFr($memberProfile['inscrit_le'] ?? $memberProfile['cree_le'] ?? null)) ?></span>
-                        </div>
-                    </div>
-                    <div class="account-summary-row">
-                        <span><?= publicIcon('star', 'icon') ?> Formule actuelle</span>
-                        <strong>
-                            <?= e($activeSubscription['libelle_abo'] ?? 'Aucune formule active') ?>
-                            <?php if ($activeSubscription && $currentPrice !== null): ?><small><?= e($currentPrice) ?></small><?php endif; ?>
-                        </strong>
-                    </div>
-                    <div class="account-summary-row">
-                        <span><?= publicIcon('clock', 'icon') ?> Début de l’abonnement</span>
-                        <strong><?= e(isset($activeSubscription['date_debut']) ? dateFr($activeSubscription['date_debut']) : '—') ?></strong>
-                    </div>
-                    <p class="account-subscription-note">
-                        <?= publicIcon('info', 'icon') ?>
-                        <?= $activeSubscription
-                            ? 'Votre abonnement est actif selon les informations enregistrées.'
-                            : 'Aucun abonnement actif n’est actuellement enregistré sur votre compte.' ?>
-                    </p>
-                </aside>
-            </div>
-        <?php endif; ?>
     <?php endif; ?>
 
-    <?php if ($offres): ?>
+    <?php if ($offres && empty($catalogueDansEspaceAdherent)): ?>
         <div class="card banner reveal"><span class="icon-circle"><?= publicIcon('shield-check', 'icon') ?></span><div><p class="banner-title">Des prix transparents, sans frais cachés.</p><p class="muted small">Tu sais exactement ce que tu paies, avec les services inclus dans chaque formule.</p></div></div>
-        <?php if (empty($catalogueDansEspaceAdherent) && (!connecte() || a_role('ADHERENT'))): ?>
+        <?php if (!connecte() || a_role('ADHERENT')): ?>
             <div class="plans-cta">
                 <?php if (a_role('ADHERENT')): ?>
                     <a class="btn btn-primary btn-lg" href="<?= e(url('adherent/espace.php?onglet=abonnement')) ?>">Gérer mon abonnement <?= publicIcon('arrow-right', 'icon') ?></a>
@@ -124,6 +154,7 @@ require_once __DIR__ . '/../../public/includes/public_icons.php';
         <?php endif; ?>
     <?php endif; ?>
 </div></section>
+<?php endif; ?>
 
 <?php if (!empty($catalogueDansEspaceAdherent)): ?></div><?php endif; ?>
 
