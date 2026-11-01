@@ -30,7 +30,7 @@ $cleAboSelectionne = $abonnementSelectionne ? $abonnementSelectionne['NumUsers']
     <div class="subscription-date-range"><span aria-hidden="true">▦</span><input id="filtre-date-debut" type="date" aria-label="Date de début minimale"><span>→</span><input id="filtre-date-fin" type="date" aria-label="Date de début maximale"></div>
   </div>
 
-  <div class="subscription-layout">
+  <div class="subscription-layout <?= $vueAbonnements === 'liste' ? 'without-detail' : '' ?>">
     <section class="subscription-list-panel">
       <header class="subscription-list-heading"><div><h3>Liste des abonnements</h3><p><?= count($abonnementsAdmin) ?> abonnement<?= count($abonnementsAdmin) === 1 ? '' : 's' ?></p></div><button type="button" aria-label="Options de la liste" title="Options de la liste">⋮</button></header>
       <div class="table-scroll"><table class="tableau subscription-table subscription-table-wide"><thead><tr><th><input type="checkbox" id="abonnements-selectionner" aria-label="Sélectionner tous les abonnements visibles"></th><th>Adhérent</th><th>Formule</th><th>Période</th><th>Statut</th><th>Prochain renouvellement</th><th>Dernier règlement</th><th>Actions</th></tr></thead>
@@ -61,9 +61,9 @@ $cleAboSelectionne = $abonnementSelectionne ? $abonnementSelectionne['NumUsers']
       <p class="subscription-empty" id="abonnements-vide" hidden>Aucun abonnement ne correspond à ces critères.</p>
     </section>
 
-    <?php if ($abonnementSelectionne): $a = $abonnementSelectionne; $urlBaseFicheSelection = 'admin/espace.php?onglet=abonnements&id=' . (int) $a['NumUsers'] . '&formule=' . (int) $a['Numabo'] . '&debut=' . rawurlencode($a['date_debut']); $postHidden = static function (array $abo): string { return '<input type="hidden" name="adherent" value="' . (int) $abo['NumUsers'] . '"><input type="hidden" name="formule_actuelle" value="' . (int) $abo['Numabo'] . '"><input type="hidden" name="date_debut_actuelle" value="' . e($abo['date_debut']) . '">'; }; ?>
+    <?php if ($vueAbonnements !== 'liste' && $abonnementSelectionne): $a = $abonnementSelectionne; $urlBaseFicheSelection = 'admin/espace.php?onglet=abonnements&id=' . (int) $a['NumUsers'] . '&formule=' . (int) $a['Numabo'] . '&debut=' . rawurlencode($a['date_debut']); $postHidden = static function (array $abo): string { return '<input type="hidden" name="adherent" value="' . (int) $abo['NumUsers'] . '"><input type="hidden" name="formule_actuelle" value="' . (int) $abo['Numabo'] . '"><input type="hidden" name="date_debut_actuelle" value="' . e($abo['date_debut']) . '">'; }; ?>
       <aside class="subscription-detail">
-        <header><button type="button" class="subscription-close" onclick="location.href='<?= e(url('admin/espace.php?onglet=abonnements')) ?>'" aria-label="Fermer">×</button><p class="admin-eyebrow">DÉTAILS DE L’ABONNEMENT</p><div class="subscription-detail-member"><span class="subscription-avatar large"><?= e(mb_strtoupper(mb_substr($a['prenomUsers'], 0, 1) . mb_substr($a['nomUsers'], 0, 1))) ?></span><div><h3><?= e($a['prenomUsers'] . ' ' . $a['nomUsers']) ?></h3><small><?= e($a['mailUsers']) ?></small></div><span class="subscription-status status-<?= e(str_replace(' ', '-', mb_strtolower($a['statut_affiche']))) ?>"><i></i><?= e($a['statut_affiche']) ?></span></div></header>
+        <header><button type="button" class="subscription-close" onclick="location.href='<?= e(url('admin/espace.php?onglet=abonnements&vue=liste')) ?>'" aria-label="Retour à la liste">×</button><p class="admin-eyebrow">DÉTAILS DE L’ABONNEMENT</p><div class="subscription-detail-member"><span class="subscription-avatar large"><?= e(mb_strtoupper(mb_substr($a['prenomUsers'], 0, 1) . mb_substr($a['nomUsers'], 0, 1))) ?></span><div><h3><?= e($a['prenomUsers'] . ' ' . $a['nomUsers']) ?></h3><small><?= e($a['mailUsers']) ?></small></div><span class="subscription-status status-<?= e(str_replace(' ', '-', mb_strtolower($a['statut_affiche']))) ?>"><i></i><?= e($a['statut_affiche']) ?></span></div></header>
         <section class="subscription-detail-card subscription-detail-formula"><div><span>Formule</span><strong class="subscription-plan plan-<?= e(mb_strtolower($a['type_offre'])) ?>"><?= e($a['libelle_abo']) ?></strong></div><b><?= e($formatMontantAbo($a['dernier_montant'] ?? $a['tarif'])) ?> <small>/ période</small></b></section>
         <section class="subscription-detail-card subscription-duration"><div><strong>Période d’abonnement</strong><b><?= $a['date_fin'] ? e(dateFr($a['date_fin'])) : 'Sans échéance' ?></b></div><div class="subscription-progress"><i style="width:<?= $a['date_fin'] ? (strtotime($a['date_fin']) < time() ? '100' : max(5, min(100, (int) round(100 * (1 - (strtotime($a['date_fin']) - time()) / (365 * 86400)))))) : 100 ?>%"></i></div><small><?= e(dateFr($a['date_debut'])) ?><span><?= e($a['date_fin'] ? dateFr($a['date_fin']) : 'En cours') ?></span></small></section>
         <?php if ($modifierAboAdmin): ?>
@@ -78,7 +78,7 @@ $cleAboSelectionne = $abonnementSelectionne ? $abonnementSelectionne['NumUsers']
           <a class="subscription-full-details" href="<?= e(url($urlBaseFicheSelection . '&modifier=1')) ?>">✎ Modifier l’échéance</a>
         <?php endif; ?>
       </aside>
-    <?php else: ?><aside class="subscription-detail subscription-detail-empty"><span>↗</span><h3>Aucun abonnement enregistré</h3><p>Les abonnements existants apparaîtront ici.</p></aside><?php endif; ?>
+    <?php elseif ($vueAbonnements !== 'liste'): ?><aside class="subscription-detail subscription-detail-empty"><span>↗</span><h3>Aucun abonnement enregistré</h3><p>Les abonnements existants apparaîtront ici.</p></aside><?php endif; ?>
   </div>
 </section>
 <script>

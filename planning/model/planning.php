@@ -86,7 +86,7 @@ final class Planning
     public function creneauxSurPeriode(string $debut, string $fin): array
     {
         $st = $this->pdo->prepare(
-            "SELECT a.Numactivite, a.titre, a.type_activite, a.date_heure_debut, a.date_heure_fin,
+            "SELECT a.Numactivite, a.titre, a.type_activite, a.description, a.date_heure_debut, a.date_heure_fin,
                     a.capacite_max, a.id_serie, a.Numsalle, a.NumUsers,
                     s.nomsalle, u.prenomUsers, u.nomUsers,
                     (SELECT COUNT(*) FROM reservation r

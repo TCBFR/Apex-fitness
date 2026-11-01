@@ -28,7 +28,7 @@ $formatMontantPaiement = static fn($montant): string => number_format((float) $m
     <label><small>Période</small><select id="filtre-paiement-periode"><option value="">Toutes les dates</option><option value="30">30 derniers jours</option><option value="90">90 derniers jours</option><option value="365">12 derniers mois</option></select></label>
   </div>
 
-  <div class="admin-payment-layout">
+  <div class="admin-payment-layout<?= $vuePaiements === 'liste' ? ' is-list-only' : '' ?>">
     <section class="admin-payment-list">
       <header><div><h3>Liste des paiements</h3><p><?= count($historiquePaiements) ?> paiement<?= count($historiquePaiements) === 1 ? '' : 's' ?></p></div><button type="button" id="selectionner-paiements" aria-label="Sélectionner les paiements visibles">⋮</button></header>
       <?php if (!$historiquePaiements): ?><div class="admin-payment-empty">Aucun paiement enregistré.</div><?php else: ?>
@@ -59,9 +59,9 @@ $formatMontantPaiement = static fn($montant): string => number_format((float) $m
       <p class="admin-payment-filter-empty" id="paiements-vide" hidden>Aucun paiement ne correspond à ces filtres.</p>
     </section>
 
-    <?php if ($paiementCourant): $reference = $referencePaiement($paiementCourant); $nomMembreCourant = trim($paiementCourant['prenomUsers'] . ' ' . $paiementCourant['nomUsers']); ?>
+    <?php if ($paiementCourant && $vuePaiements !== 'liste'): $reference = $referencePaiement($paiementCourant); $nomMembreCourant = trim($paiementCourant['prenomUsers'] . ' ' . $paiementCourant['nomUsers']); ?>
       <aside class="admin-payment-detail">
-        <header><div><h3>Détails du paiement</h3><a href="<?= e(url('admin/espace.php?onglet=paiements')) ?>">← Retour à la liste</a></div></header>
+        <header><div><h3>Détails du paiement</h3><a href="<?= e(url('admin/espace.php?onglet=paiements&vue=liste')) ?>">← Retour à la liste</a></div></header>
         <section class="payment-detail-total"><div class="payment-success-icon">✓</div><strong>Paiement réussi</strong><b><?= e($formatMontantPaiement($paiementCourant['montant'])) ?></b><span>Référence : <?= e($reference) ?></span></section>
         <section class="payment-detail-info"><span class="payment-detail-icon">♙</span><div><small>Adhérent</small><strong><?= e($nomMembreCourant) ?></strong><span><?= e($paiementCourant['mailUsers']) ?></span></div></section>
         <section class="payment-detail-info"><span class="payment-detail-icon">▦</span><div><small>Formule / abonnement</small><strong><?= e($paiementCourant['libelle_abo']) ?></strong><span><?= $paiementCourant['date_debut_abo'] ? 'Du ' . e(dateFr($paiementCourant['date_debut_abo'])) . ($paiementCourant['date_fin_abo'] ? ' au ' . e(dateFr($paiementCourant['date_fin_abo'])) : '') : 'Période non renseignée' ?></span></div></section>
@@ -71,7 +71,7 @@ $formatMontantPaiement = static fn($montant): string => number_format((float) $m
         <section class="payment-invoice-card"><span>▧</span><div><strong>Facture disponible</strong><small>Facture_<?= e(str_replace('#', '', $reference)) ?>.pdf</small></div><a href="<?= e(url('admin/facture.php?id=' . (int) $paiementCourant['Numpaiement'])) ?>">⇩ Télécharger</a></section>
         <a class="payment-member-link" href="<?= e(url('admin/espace.php?onglet=adherents&id=' . (int) $paiementCourant['NumUsers'] . '&vue=voir')) ?>">♙ Voir la fiche adhérent</a>
       </aside>
-    <?php else: ?><aside class="admin-payment-detail payment-detail-empty"><h3>Aucun paiement sélectionné</h3><p>Les nouveaux règlements apparaîtront ici.</p></aside><?php endif; ?>
+    <?php elseif ($vuePaiements !== 'liste'): ?><aside class="admin-payment-detail payment-detail-empty"><h3>Aucun paiement sélectionné</h3><p>Les nouveaux règlements apparaîtront ici.</p></aside><?php endif; ?>
   </div>
 </section>
 <script>

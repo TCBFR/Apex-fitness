@@ -22,6 +22,14 @@ if (!is_string($onglet) || !in_array($onglet, $ongletsAutorises, true)) {
 
 $vueCompte = $_GET['compte'] ?? 'liste';
 $vueMaintenance = $_GET['maintenance'] ?? 'liste';
+$vuePlanning = $_GET['vue'] ?? (isset($_GET['modifier']) ? 'modifier' : 'calendrier');
+if (!is_string($vuePlanning) || !in_array($vuePlanning, ['calendrier', 'ajouter', 'modifier'], true)) {
+    $vuePlanning = 'calendrier';
+}
+$vueSalleAdmin = $_GET['vue'] ?? 'liste';
+if (!is_string($vueSalleAdmin) || !in_array($vueSalleAdmin, ['liste', 'creer', 'modifier'], true)) {
+    $vueSalleAdmin = 'liste';
+}
 $pdo    = db();
 if ($onglet === 'equipements') EquipmentInventorySchema::ensure($pdo);
 $gestionPlanning = new PlanningController();
@@ -310,7 +318,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($action === 'modifier_salle') $retourSalles .= '&vue=modifier&id=' . (int) ($_POST['salle'] ?? 0);
             elseif ($action === 'creer_salle') $retourSalles .= '&vue=creer';
         }
-        redirige($retourSalles . '#salle-formulaire');
+        redirige($retourSalles);
     }
 
     if ($onglet === 'activites' && in_array($action, ['creer_activite_catalogue', 'modifier_activite_catalogue', 'supprimer_activite_catalogue'], true)) {
@@ -862,6 +870,10 @@ $abonnementsAdmin = [];
 $formulesAdmin = [];
 $abonnementSelectionne = null;
 $paiementsAbonnement = [];
+$vueAbonnements = $_GET['vue'] ?? 'detail';
+if (!is_string($vueAbonnements) || !in_array($vueAbonnements, ['detail', 'liste'], true)) {
+    $vueAbonnements = 'detail';
+}
 if ($onglet === 'abonnements') {
     $abonnementsAdmin = $pdo->query(
         "SELECT s.NumUsers, s.Numabo, s.date_debut, s.date_fin, s.statut_souscription,
@@ -889,19 +901,21 @@ if ($onglet === 'abonnements') {
     }
     unset($abonnementRow);
     $formulesAdmin = $pdo->query('SELECT Numabo, libelle_abo FROM abonnement WHERE actif_abo=1 ORDER BY libelle_abo')->fetchAll(PDO::FETCH_ASSOC);
-    $selectionId = (int) ($_GET['id'] ?? 0);
-    $selectionFormule = (int) ($_GET['formule'] ?? 0);
-    $selectionDate = (string) ($_GET['debut'] ?? '');
-    foreach ($abonnementsAdmin as $aboRow) {
-        if ((int) $aboRow['NumUsers'] === $selectionId
-            && (!$selectionFormule || (int) $aboRow['Numabo'] === $selectionFormule)
-            && ($selectionDate === '' || $aboRow['date_debut'] === $selectionDate)) {
-            $abonnementSelectionne = $aboRow;
-            break;
+    if ($vueAbonnements !== 'liste') {
+        $selectionId = (int) ($_GET['id'] ?? 0);
+        $selectionFormule = (int) ($_GET['formule'] ?? 0);
+        $selectionDate = (string) ($_GET['debut'] ?? '');
+        foreach ($abonnementsAdmin as $aboRow) {
+            if ((int) $aboRow['NumUsers'] === $selectionId
+                && (!$selectionFormule || (int) $aboRow['Numabo'] === $selectionFormule)
+                && ($selectionDate === '' || $aboRow['date_debut'] === $selectionDate)) {
+                $abonnementSelectionne = $aboRow;
+                break;
+            }
         }
-    }
-    if (!$abonnementSelectionne && !$selectionId && $abonnementsAdmin) {
-        $abonnementSelectionne = $abonnementsAdmin[0];
+        if (!$abonnementSelectionne && !$selectionId && $abonnementsAdmin) {
+            $abonnementSelectionne = $abonnementsAdmin[0];
+        }
     }
     if ($abonnementSelectionne) {
         $queryPaiementsAbo = $pdo->prepare('SELECT Numpaiement, date_paiement, montant, moyen_paiement FROM paiement WHERE NumUsers=? AND Numabo=? ORDER BY date_paiement DESC, Numpaiement DESC');
@@ -918,8 +932,12 @@ if ($onglet === 'planning') {
     }
     $planningDonneesAdmin = $gestionPlanning->donneesAdmin($semaineDemandee);
     $idCreneauEdition = (int) ($_GET['modifier'] ?? 0);
-    if ($idCreneauEdition > 0) {
+    if ($vuePlanning === 'modifier' && $idCreneauEdition > 0) {
         $creneauAModifier = (new Planning())->detailsCreneau($idCreneauEdition);
+    }
+    if ($vuePlanning === 'modifier' && !$creneauAModifier) {
+        flash('erreur', 'Le cours à modifier est introuvable.');
+        $vuePlanning = 'calendrier';
     }
 }
 $reservationsAdmin = [];
@@ -1068,6 +1086,7 @@ $recettes = $pdo->query(
 
 $historiquePaiements = [];
 $paiementSelectionneAdmin = null;
+$vuePaiements = $_GET['vue'] ?? 'detail';
 if ($onglet === 'paiements') {
     $historiquePaiements = $pdo->query(
         'SELECT p.Numpaiement, p.date_paiement, p.montant, p.moyen_paiement,
@@ -1085,7 +1104,9 @@ if ($onglet === 'paiements') {
     foreach ($historiquePaiements as $paiementAdmin) {
         if ((int) $paiementAdmin['Numpaiement'] === $idPaiementSelectionne) { $paiementSelectionneAdmin = $paiementAdmin; break; }
     }
-    if (!$paiementSelectionneAdmin && !$idPaiementSelectionne && $historiquePaiements) $paiementSelectionneAdmin = $historiquePaiements[0];
+    if (!$paiementSelectionneAdmin && !$idPaiementSelectionne && $vuePaiements !== 'liste' && $historiquePaiements) {
+        $paiementSelectionneAdmin = $historiquePaiements[0];
+    }
 }
 
 $parEtat = $pdo->query(
@@ -1095,7 +1116,6 @@ $parEtat = $pdo->query(
 
 $sallesAdmin = [];
 $salleSelectionneeAdmin = null;
-$vueSalleAdmin = (string) ($_GET['vue'] ?? 'liste');
 if ($onglet === 'salles') {
     $sallesAdmin = $pdo->query('SELECT Numsalle,nomsalle,capacitesalle,localisationsalle,superficiesalle,etatsalle,description_salle,image_salle FROM salle ORDER BY nomsalle')->fetchAll(PDO::FETCH_ASSOC);
     $idSalleSelectionnee = (int) ($_GET['id'] ?? 0);
@@ -1103,6 +1123,10 @@ if ($onglet === 'salles') {
         foreach ($sallesAdmin as $salleAdmin) {
             if ((int) $salleAdmin['Numsalle'] === $idSalleSelectionnee) { $salleSelectionneeAdmin = $salleAdmin; break; }
         }
+    }
+    if ($vueSalleAdmin === 'modifier' && !$salleSelectionneeAdmin) {
+        flash('erreur', 'La salle à modifier est introuvable.');
+        $vueSalleAdmin = 'liste';
     }
 }
 
@@ -1220,7 +1244,7 @@ $topbarLinks = [
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Administration - <?= e(APP_NOM) ?></title>
   <link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
-  <link rel="stylesheet" href="<?= e(url('assets/css/pages/admin.css')) ?>">
+  <link rel="stylesheet" href="<?= e(url('assets/css/pages/admin.css?v=20261101-salles-1')) ?>">
   <?php if ($onglet === 'planning'): ?><link rel="stylesheet" href="<?= e(url('assets/css/pages/planning.css')) ?>"><?php endif; ?>
   <?php if (in_array($onglet, ['coachs', 'utilisateurs'], true)): ?>
     <link rel="stylesheet" href="<?= e(url('assets/css/commune/commune.css')) ?>">
@@ -1296,7 +1320,7 @@ $topbarLinks = [
   <?php require __DIR__ . '/view/abonnements.php'; ?>
 
 <?php elseif ($onglet === 'planning'): ?>
-  <?php require __DIR__ . '/view/planning.php'; ?>
+  <?php require __DIR__ . ($vuePlanning === 'ajouter' || $vuePlanning === 'modifier' ? '/view/planning-form.php' : '/view/planning.php'); ?>
 
 <?php elseif ($onglet === 'reservations'): ?>
   <?php require __DIR__ . '/view/reservations.php'; ?>
@@ -1308,7 +1332,7 @@ $topbarLinks = [
   <?php require __DIR__ . '/view/equipements.php'; ?>
 
 <?php elseif ($onglet === 'salles'): ?>
-  <?php require __DIR__ . '/view/salles.php'; ?>
+  <?php require __DIR__ . ($vueSalleAdmin === 'creer' || $vueSalleAdmin === 'modifier' ? '/view/salles-form.php' : '/view/salles.php'); ?>
 
 <?php elseif ($onglet === 'maintenance'): ?>
   <?php if ($vueMaintenance === 'creer'): ?>

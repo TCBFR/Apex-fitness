@@ -48,9 +48,9 @@ $limiteImageUploadMo = number_format($limiteImageUpload / 1048576, 1, ',', ' ');
           <td><strong><?= e($activite['titre']) ?></strong></td>
           <td><?= e(ActiviteCatalogue::TYPES[$activite['type_activite']] ?? $activite['type_activite']) ?></td>
           <td class="admin-activity-excerpt"><?= e($activite['description']) ?></td>
-          <td class="admin-activity-actions"><a class="btn btn-sm btn-ghost" href="<?= e(url($urlBase . '&vue=voir')) ?>">Lire</a><a class="btn btn-sm btn-ghost" href="<?= e(url($urlBase . '&vue=modifier')) ?>">Modifier</a>
+          <td><div class="admin-activity-actions"><a class="btn btn-sm btn-ghost" href="<?= e(url($urlBase . '&vue=voir')) ?>">Lire</a><a class="btn btn-sm btn-ghost" href="<?= e(url($urlBase . '&vue=modifier')) ?>">Modifier</a>
             <form method="post" style="margin:0"><?= champ_csrf() ?><input type="hidden" name="action" value="supprimer_activite_catalogue"><input type="hidden" name="activite" value="<?= (int) $activite['Numcatalogue'] ?>"><button class="btn btn-sm btn-danger" type="submit" data-confirme="Supprimer cette activité de la page publique ?">Supprimer</button></form>
-          </td>
+          </div></td>
         </tr>
         <?php endforeach; ?>
       </tbody></table></div>
