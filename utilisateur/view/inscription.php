@@ -1,6 +1,6 @@
 <?php
 $donnees = $donnees ?? [
-    'nom' => '', 'prenom' => '', 'date_naissance' => '',
+    'nom' => '', 'prenom' => '', 'date_naissance' => '', 'sexe' => '',
     'mail' => '', 'adresse_postale' => '',
 ];
 $commune = $commune ?? ['id_commune' => '', 'nom_commune' => '', 'code_postal' => ''];
@@ -51,6 +51,17 @@ $erreur = $erreur ?? null;
         </div>
         <div class="field">
           <div class="input-wrap"><input type="text" name="date_naissance" id="date_naissance" value="<?= e($donnees['date_naissance']) ?>" placeholder="JJ-MM-AAAA" aria-label="Date de naissance (jour-mois-année)" autocomplete="bday" inputmode="numeric" pattern="[0-9]{2}-[0-9]{2}-[0-9]{4}" maxlength="10" required></div>
+          <p class="field-msg"></p>
+        </div>
+        <div class="field">
+          <div class="input-wrap">
+            <select name="sexe" id="sexe" aria-label="Sexe" required>
+              <option value="" disabled <?= empty($donnees['sexe']) ? 'selected' : '' ?>>Sexe</option>
+              <?php foreach (['Femme', 'Homme', 'Autre', 'Préfère ne pas répondre'] as $sexe): ?>
+                <option value="<?= e($sexe) ?>" <?= ($donnees['sexe'] ?? '') === $sexe ? 'selected' : '' ?>><?= e($sexe) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
           <p class="field-msg"></p>
         </div>
         <div class="field commune-recherche">

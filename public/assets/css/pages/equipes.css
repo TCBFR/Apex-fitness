@@ -1,0 +1,37 @@
+.page-equipes{--team-lime:#d7f84a;background:#070a08 url('../../img/header.png') center top/cover fixed no-repeat;color:#f2f5f1}
+.team-wrap{width:min(1570px,calc(100% - 48px));margin-inline:auto}
+.team-hero{position:relative;isolation:isolate;min-height:490px;overflow:hidden;background:#070a08}
+.team-hero-photo{position:absolute;z-index:-1;inset:0 0 -2px 0;overflow:hidden}
+.team-hero-photo img{width:100%;height:100%;object-fit:cover;object-position:center 34%;filter:brightness(.72) saturate(.78)}
+.team-hero-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#070a08 0%,rgba(7,10,8,.96) 23%,rgba(7,10,8,.72) 43%,rgba(7,10,8,.14) 78%),linear-gradient(0deg,#070a08 0%,transparent 34%)}
+.team-hero-content{position:relative;padding-top:48px;padding-bottom:70px}
+.team-eyebrow{display:flex;align-items:center;gap:18px;margin:0 0 12px;color:#dce4dd;font-size:12px;font-weight:600;letter-spacing:.34em;text-transform:uppercase}
+.team-eyebrow span{display:block;width:54px;height:3px;background:var(--team-lime)}
+.team-hero h1{margin:0;color:#fff;font-size:clamp(54px,7vw,88px);font-weight:800;line-height:.98;letter-spacing:-.045em}
+.team-hero h1 em{color:var(--team-lime);font-style:normal}
+.team-lead{margin:16px 0 30px;color:#e1e6e2;font-size:18px;line-height:1.55}
+.team-values{display:grid;grid-template-columns:repeat(4,minmax(112px,1fr));max-width:660px;margin:0;padding:0;list-style:none}
+.team-values li{display:flex;min-height:76px;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:0 14px;color:#e7ece8;text-align:center;font-size:12px;line-height:1.35}
+.team-values li+li{border-left:1px solid rgba(215,248,74,.48)}
+.team-values svg{width:35px;height:35px;fill:none;stroke:var(--team-lime);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.team-directory{position:relative;margin-top:-34px;padding-bottom:64px}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px}
+.coach-card{min-width:0;overflow:hidden;border:1px solid rgba(218,239,222,.14);background:linear-gradient(160deg,rgba(7,11,9,.91),rgba(4,7,6,.96));box-shadow:0 18px 38px rgba(0,0,0,.34)}
+.coach-photo{height:190px;overflow:hidden;background:#121713}
+.coach-photo img{width:100%;height:100%;object-fit:cover;object-position:center 32%;filter:grayscale(.86) brightness(.88) contrast(1.05);transition:transform .5s ease,filter .5s ease}
+.coach-card:hover .coach-photo img{transform:scale(1.04);filter:grayscale(.48) brightness(.98) contrast(1.03)}
+.coach-info{position:relative;display:flex;min-height:112px;flex-direction:column;padding:16px 18px 14px}
+.coach-info::before{content:"";position:absolute;top:0;left:0;width:38px;height:3px;background:var(--team-lime)}
+.coach-info h2{margin:0 0 4px;color:#fff;font-size:20px;font-weight:700;letter-spacing:-.025em}
+.coach-role{margin:0;color:var(--team-lime);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.coach-photo-placeholder{display:grid;width:100%;height:100%;place-items:center;color:#e7ece8;font-size:48px;font-weight:700;letter-spacing:.08em}
+.team-empty{grid-column:1/-1;padding:32px;border:1px solid rgba(218,239,222,.14);color:#e1e8e2;text-align:center}
+.coach-bio{margin:12px 0 16px;color:#d5dcd7;font-size:13px;line-height:1.48}
+.coach-tags{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:auto 0 0;padding:12px 0 0;border-top:1px solid rgba(218,239,222,.16);list-style:none}
+.coach-tags li{display:flex;align-items:center;gap:7px;color:#e1e8e2;font-size:11px;white-space:nowrap}
+.coach-tags span{color:var(--team-lime);font-size:19px;line-height:1}
+.page-equipes .site-footer{background:#070a08}
+@media(max-width:1250px){.coach-photo{height:220px}}
+@media(max-width:760px){.team-wrap{width:calc(100% - 32px)}.team-hero{min-height:0}.team-hero-photo img{object-position:58% center}.team-hero-photo::after{background:linear-gradient(90deg,rgba(7,10,8,.94),rgba(7,10,8,.66) 70%,rgba(7,10,8,.4)),linear-gradient(0deg,#070a08,transparent 50%)}.team-hero-content{padding-top:46px;padding-bottom:76px}.team-hero h1{font-size:clamp(50px,12vw,72px)}.team-lead{font-size:16px}.team-directory{margin-top:-34px;padding-bottom:42px}.team-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.coach-photo{height:190px}.coach-info{min-height:112px;padding:14px}.coach-info h2{font-size:18px}}
+@media(max-width:480px){.team-grid{grid-template-columns:1fr}.coach-photo{height:250px}.coach-info{min-height:0}}
+@media(prefers-reduced-motion:reduce){.coach-photo img{transition:none}}

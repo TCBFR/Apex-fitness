@@ -82,6 +82,25 @@ final class Planning
         )->fetchAll();
     }
 
+    /** Créneaux chevauchant une semaine, pour la grille d'administration. */
+    public function creneauxSurPeriode(string $debut, string $fin): array
+    {
+        $st = $this->pdo->prepare(
+            "SELECT a.Numactivite, a.titre, a.type_activite, a.date_heure_debut, a.date_heure_fin,
+                    a.capacite_max, a.id_serie, a.Numsalle, a.NumUsers,
+                    s.nomsalle, u.prenomUsers, u.nomUsers,
+                    (SELECT COUNT(*) FROM reservation r
+                      WHERE r.Numactivite = a.Numactivite AND r.statut_reservation <> 'Annulee') AS places_prises
+             FROM activite a
+             JOIN salle s ON s.Numsalle = a.Numsalle
+             JOIN utilisateur u ON u.NumUsers = a.NumUsers
+             WHERE a.date_heure_debut < ? AND a.date_heure_fin > ?
+             ORDER BY a.date_heure_debut"
+        );
+        $st->execute([$fin, $debut]);
+        return $st->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function titresExistants(): array
     {
         return $this->pdo->query('SELECT DISTINCT titre FROM activite ORDER BY titre')
@@ -90,10 +109,16 @@ final class Planning
 
     public function salles(): array
     {
-        return $this->pdo->query('SELECT * FROM salle ORDER BY nomsalle')->fetchAll();
+        return $this->pdo->query("SELECT * FROM salle WHERE etatsalle = 'Ouverte' ORDER BY nomsalle")->fetchAll();
     }
 
-    /** Employes pouvant animer un cours (tous sauf le technicien de maintenance). */
+    /** Toutes les salles sont visibles en administration pour conserver les affectations existantes. */
+    public function toutesLesSalles(): array
+    {
+        return $this->pdo->query('SELECT * FROM salle ORDER BY nomsalle')->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /** Employés enregistrés comme coachs, hors accueil et maintenance. */
     public function coachs(): array
     {
         return $this->pdo->query(
@@ -101,7 +126,7 @@ final class Planning
              FROM employe e
              JOIN utilisateur u ON u.NumUsers = e.NumUsers
              JOIN fonction f    ON f.Numfonc  = e.Numfonc
-             WHERE f.libellefonc <> 'Technicien maintenance'
+             WHERE f.libellefonc NOT IN ('Technicien maintenance', 'Accueil')
              ORDER BY u.nomUsers, u.prenomUsers"
         )->fetchAll();
     }
@@ -122,9 +147,13 @@ final class Planning
              FROM adherent ad
              LEFT JOIN souscrire su ON su.NumUsers = ad.NumUsers
                                    AND su.statut_souscription = 'En cours'
+                                   AND su.date_debut <= CURRENT_DATE
+                                   AND (su.date_fin IS NULL OR su.date_fin >= CURRENT_DATE)
                                    AND su.date_debut = (SELECT MAX(s2.date_debut) FROM souscrire s2
                                                          WHERE s2.NumUsers = ad.NumUsers
-                                                           AND s2.statut_souscription = 'En cours')
+                                                           AND s2.statut_souscription = 'En cours'
+                                                           AND s2.date_debut <= CURRENT_DATE
+                                                           AND (s2.date_fin IS NULL OR s2.date_fin >= CURRENT_DATE))
              LEFT JOIN abonnement ab ON ab.Numabo   = su.Numabo
              LEFT JOIN offre o       ON o.Numoffre  = ab.Numoffre
              LEFT JOIN freemium fr   ON fr.Numoffre = o.Numoffre
@@ -246,14 +275,31 @@ final class Planning
     }
 
     /** Vrai si la salle OU le coach est deja pris sur [debut, fin[. */
-    public function conflit(int $numSalle, int $numCoach, string $debut, string $fin): bool
+    public function conflit(int $numSalle, int $numCoach, string $debut, string $fin, ?int $exclure = null): bool
     {
         $st = $this->pdo->prepare(
             'SELECT COUNT(*) FROM activite
-             WHERE (Numsalle = ? OR NumUsers = ?) AND date_heure_debut < ? AND date_heure_fin > ?'
+             WHERE (Numsalle = ? OR NumUsers = ?) AND date_heure_debut < ? AND date_heure_fin > ?
+               AND (? IS NULL OR Numactivite <> ?)'
         );
-        $st->execute([$numSalle, $numCoach, $fin, $debut]);
+        $st->execute([$numSalle, $numCoach, $fin, $debut, $exclure, $exclure]);
         return (int) $st->fetchColumn() > 0;
+    }
+
+    public function detailsCreneau(int $id): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM activite WHERE Numactivite = ?');
+        $st->execute([$id]);
+        return $st->fetch() ?: null;
+    }
+
+    public function modifierCreneau(int $id, string $titre, string $type, string $debut, string $fin,
+                                    int $capacite, int $salle, int $coach): void
+    {
+        $this->pdo->prepare(
+            'UPDATE activite SET titre=?, type_activite=?, date_heure_debut=?, date_heure_fin=?,
+                                 capacite_max=?, Numsalle=?, NumUsers=? WHERE Numactivite=?'
+        )->execute([$titre, $type, $debut, $fin, $capacite, $salle, $coach, $id]);
     }
 
     public function insererCreneau(string $titre, string $type, string $debut, string $fin,

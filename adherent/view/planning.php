@@ -22,7 +22,6 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
           </section>
 
           <section class="panel cal-wrap">
-            <p class="demo-note" id="planning-demo-note" hidden>Planning fictif de démonstration : ces séances ne sont pas enregistrées et ne peuvent pas être réservées.</p>
             <div id="calendar" data-testid="planning-calendar"></div>
             <div class="event-tooltip" id="event-tooltip" role="tooltip" hidden></div>
             <p class="cal-empty" id="cal-empty" hidden data-testid="calendar-empty-state">Aucune séance n’est programmée sur cette période.</p>
@@ -92,9 +91,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
       session.room,
       session.remaining + ' place' + (session.remaining > 1 ? 's' : '') + ' restante' + (session.remaining > 1 ? 's' : ''),
     ];
-    const status = session.is_demo
-      ? 'Séance de démonstration'
-      : session.is_booked ? 'Déjà réservée' : session.is_past ? 'Séance terminée'
+    const status = session.is_booked ? 'Déjà réservée' : session.is_past ? 'Séance terminée'
       : session.remaining <= 0 ? 'Séance complète' : 'Cliquez pour réserver';
     const heading = document.createElement('strong');
     heading.textContent = event.title;
@@ -139,8 +136,6 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
     events: (info, success, failure) => {
       ATX.api('events', { start: info.startStr, end: info.endStr })
         .then((list) => {
-          const isDemo = list.some((event) => event.extendedProps?.is_demo);
-          $('planning-demo-note').hidden = !isDemo;
           $('cal-empty').hidden = list.length > 0;
           success(list);
         })
@@ -162,7 +157,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
     },
     eventContent: (arg) => {
       const p = arg.event.extendedProps;
-      const c = ATX.categories[p.category];
+      const c = ATX.categories[p.category] || { svg: ATX.icons.calendar, label: p.category };
       const t = ATX.esc(arg.event.title);
       if (arg.view.type === 'dayGridMonth') {
         return { html: '<div class="ev-m"><i></i><b>' + ATX.hm(p.start) + '</b><span>' + t + '</span></div>' };
@@ -205,7 +200,6 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
   let current = null;
 
   function actionState(s) {
-    if (s.is_demo) return { label: 'Séance fictive', cls: 'btn-muted', action: null };
     if (s.is_past) return { label: 'Séance terminée', cls: 'btn-muted', action: null };
     if (s.is_booked) return s.can_cancel ? { label: 'Annuler ma réservation', cls: 'btn-danger', action: 'cancel' } : { label: 'Annulation close (moins de 2 h)', cls: 'btn-muted', action: null };
     if (s.is_waitlisted) return { label: 'Quitter la liste d’attente', cls: 'btn-outline', action: 'waitlist_leave' };
@@ -215,7 +209,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
 
   function fillModal(s) {
     current = s;
-    const c = ATX.categories[s.category];
+    const c = ATX.categories[s.category] || { svg: ATX.icons.calendar, label: s.category };
     modal.style.setProperty('--c', s.color);
     $('modal-img').style.backgroundImage = "url('" + s.image + "')";
     $('modal-cat').innerHTML = c.svg + ATX.esc(c.label);
@@ -279,8 +273,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
         nextBox.innerHTML = '<p class="muted">Aucune réservation à venir. Choisissez une séance dans le calendrier.</p>';
         return;
       }
-      if (s.is_demo) $('planning-demo-note').hidden = false;
-      const c = ATX.categories[s.category];
+      const c = ATX.categories[s.category] || { svg: ATX.icons.calendar, label: s.category };
       nextBox.innerHTML =
         '<div class="next-big" style="--c:' + s.color + '">' +
         '<span class="next-img" style="background-image:url(\'' + s.image + '\')"></span>' +
@@ -291,9 +284,7 @@ hero('calweek', 'Planning', 'Découvrez et réservez vos séances en quelques cl
         '<p class="muted">' + ATX.icons.user + 'Coach ' + ATX.esc(s.coach) + '</p>' +
         '<p class="muted">' + ATX.icons.user + s.remaining + ' / ' + s.capacity + ' places restantes</p>' +
         '</div></div>' +
-        (s.is_demo
-          ? '<p class="demo-note">Séance fictive, réservation désactivée.</p>'
-          : s.is_booked
+        (s.is_booked
           ? '<div class="next-booked"><span class="tag tag-neon">' + ATX.icons.check + 'Réservée</span><a class="btn btn-outline btn-sm" href="' + ATX.reservationsUrl + '" data-testid="next-session-manage">Gérer ' + ATX.icons.right + '</a></div>'
           : '<button class="btn btn-primary btn-block" data-testid="next-session-book-button" data-id="' + s.id + '">Réserver ' + ATX.icons.right + '</button>');
       const bookBtn = nextBox.querySelector('[data-testid="next-session-book-button"]');

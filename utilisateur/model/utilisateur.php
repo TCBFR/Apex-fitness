@@ -259,10 +259,12 @@ class Utilisateur
                     (a.NumUsers IS NOT NULL) AS est_admin,
                     (e.NumUsers IS NOT NULL) AS est_employe,
                     (d.NumUsers IS NOT NULL) AS est_adherent,
-                    f.libellefonc, e.matriculeemp, e.Date_embaucheemp
+                    f.libellefonc, e.Numfonc, e.matriculeemp, e.Date_embaucheemp,
+                    e.id_commune, c.nom_commune, c.code_postal
              FROM utilisateur u
              LEFT JOIN admin a ON a.NumUsers = u.NumUsers
              LEFT JOIN employe e ON e.NumUsers = u.NumUsers
+             LEFT JOIN commune c ON c.id_commune = e.id_commune
              LEFT JOIN adherent d ON d.NumUsers = u.NumUsers
              LEFT JOIN fonction f ON f.Numfonc = e.Numfonc
              ORDER BY u.nomUsers'
@@ -325,12 +327,24 @@ class Utilisateur
 
     public static function inscrireAdherent(array $data): int
     {
+        self::assurerColonneSexe(db());
         $nom = trim((string) ($data['nom'] ?? ''));
         $prenom = trim((string) ($data['prenom'] ?? ''));
         $email = mb_strtolower(trim((string) ($data['mail'] ?? '')));
         $dateNaissance = trim((string) ($data['date_naissance'] ?? ''));
+        $sexe = trim((string) ($data['sexe'] ?? ''));
         $ville = trim((string) ($data['ville'] ?? ''));
         $codePostal = trim((string) ($data['code_postal'] ?? ''));
+        $idCommune = (int) ($data['id_commune'] ?? 0);
+        if ($idCommune > 0) {
+            require_once dirname(__DIR__, 2) . '/commune/model/commune.php';
+            $commune = CommuneModel::trouver($idCommune);
+        if ($commune === null) {
+        throw new InvalidArgumentException('Sélectionnez une commune dans la liste.');
+    }
+        $ville = (string) $commune['nom_commune'];
+        $codePostal = (string) $commune['code_postal'];
+}
         $adresse = trim((string) ($data['adresse_postale'] ?? ''));
         $password = (string) ($data['motdepasse'] ?? '');
 
@@ -348,6 +362,9 @@ class Utilisateur
             throw new InvalidArgumentException('Saisissez une date de naissance valide.');
         }
         $dateNaissance = $dateSaisie->format('Y-m-d');
+        if (!in_array($sexe, ['Femme', 'Homme', 'Autre', 'Préfère ne pas répondre'], true)) {
+            throw new InvalidArgumentException('Sélectionnez une option pour le sexe.');
+        }
         if ($ville === '' || strlen($ville) > 100) {
             throw new InvalidArgumentException('Saisissez une ville valide (100 caractères maximum).');
         }
@@ -370,12 +387,13 @@ class Utilisateur
             $pdo->prepare(
                 'INSERT INTO adherent (
                     NumUsers, matriculeadh, Date_inscriptionadh, Date_finadh,
-                    date_naissance, ville, code_postal, adresse_postale
-                 ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), ?, ?, ?, ?)'
+                    date_naissance, sexe, ville, code_postal, adresse_postale
+                 ) VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 YEAR), ?, ?, ?, ?, ?)'
             )->execute([
                 $id,
                 'ADH-' . str_pad((string) $id, 4, '0', STR_PAD_LEFT),
                 $dateNaissance,
+                $sexe,
                 $ville,
                 $codePostal,
                 $adresse,
@@ -397,6 +415,25 @@ class Utilisateur
         } catch (Throwable $exception) {
             $pdo->rollBack();
             throw $exception;
+        }
+    }
+
+    public static function assurerColonneSexe(PDO $pdo): void
+    {
+        $colonneSexe = $pdo->query("SHOW COLUMNS FROM adherent LIKE 'sexe'")->fetch(PDO::FETCH_ASSOC);
+        if (!$colonneSexe) {
+            $pdo->exec('ALTER TABLE adherent ADD COLUMN sexe VARCHAR(30) NULL');
+        }
+    }
+
+    public static function assurerColonneCommuneEmploye(PDO $pdo): void
+    {
+        $colonneCommune = $pdo->query("SHOW COLUMNS FROM employe LIKE 'id_commune'")->fetch(PDO::FETCH_ASSOC);
+        if (!$colonneCommune) {
+            $pdo->exec(
+                'ALTER TABLE employe ADD COLUMN id_commune INT NULL,
+                 ADD CONSTRAINT fk_employe_commune FOREIGN KEY (id_commune) REFERENCES commune (id_commune)'
+            );
         }
     }
 

@@ -65,8 +65,11 @@ CREATE TABLE employe (
   matriculeemp     VARCHAR(20) NOT NULL UNIQUE,
   Date_embaucheemp DATE NOT NULL,
   Numfonc          INT NOT NULL,
+  id_commune       INT NULL,
+  photo_profil     VARCHAR(255) NULL,
   FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE CASCADE,
-  FOREIGN KEY (Numfonc)  REFERENCES fonction(Numfonc)
+  FOREIGN KEY (Numfonc)  REFERENCES fonction(Numfonc),
+  FOREIGN KEY (id_commune) REFERENCES commune(id_commune)
 ) ENGINE=InnoDB;
 
 CREATE TABLE fournisseur (
@@ -92,6 +95,7 @@ CREATE TABLE adherent (
   Date_inscriptionadh DATE NOT NULL,
   Date_finadh         DATE,
   date_naissance      DATE,
+  sexe                VARCHAR(30),
   ville               VARCHAR(100),
   code_postal         CHAR(5),
   adresse_postale     VARCHAR(255),
@@ -178,7 +182,7 @@ CREATE TABLE souscrire (
   Numabo              INT NOT NULL,
   date_debut          DATE NOT NULL,
   date_fin            DATE,
-  statut_souscription ENUM('En cours','Terminee','Resiliee') NOT NULL DEFAULT 'En cours',
+  statut_souscription ENUM('En cours','Suspendue','Terminee','Resiliee') NOT NULL DEFAULT 'En cours',
   PRIMARY KEY (NumUsers, Numabo, date_debut),
   FOREIGN KEY (NumUsers) REFERENCES adherent(NumUsers) ON DELETE CASCADE,
   FOREIGN KEY (Numabo)   REFERENCES abonnement(Numabo)
@@ -202,6 +206,8 @@ CREATE TABLE salle (
   capacitesalle     INT NOT NULL,
   localisationsalle VARCHAR(80),
   superficiesalle   DECIMAL(6,2),
+  description_salle TEXT,
+  image_salle       VARCHAR(255),
   etatsalle         VARCHAR(20) NOT NULL DEFAULT 'Ouverte'
 ) ENGINE=InnoDB;
 
@@ -224,6 +230,16 @@ CREATE TABLE activite (
   FOREIGN KEY (Numsalle) REFERENCES salle(Numsalle),
   FOREIGN KEY (NumUsers) REFERENCES employe(NumUsers)
 ) ENGINE=InnoDB;
+
+CREATE TABLE activite_catalogue (
+  Numcatalogue   INT AUTO_INCREMENT PRIMARY KEY,
+  titre          VARCHAR(100) NOT NULL,
+  type_activite  VARCHAR(20) NOT NULL,
+  description    TEXT NOT NULL,
+  image_path     VARCHAR(255) NULL,
+  date_creation  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_catalogue_type (type_activite)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE reservation (
   Numres                 INT AUTO_INCREMENT PRIMARY KEY,
@@ -301,6 +317,9 @@ CREATE TABLE equipement (
   nomequip                  VARCHAR(80) NOT NULL,
   marque                    VARCHAR(60),
   modele                    VARCHAR(60),
+  image_equipement          VARCHAR(255),
+  stock_actuel              INT UNSIGNED NOT NULL DEFAULT 0,
+  seuil_alerte              INT UNSIGNED NOT NULL DEFAULT 5,
   date_achatequip           DATE,
   prix_achatequip           DECIMAL(9,2),
   date_derniere_maintenance DATE,
@@ -310,6 +329,36 @@ CREATE TABLE equipement (
   FOREIGN KEY (Numtypeequip)   REFERENCES type_equipement(Numtypeequip),
   FOREIGN KEY (NumUsers_fourn) REFERENCES fournisseur(NumUsers),
   FOREIGN KEY (Numstatut)      REFERENCES etat_equipement(Numstatut)
+) ENGINE=InnoDB;
+
+CREATE TABLE mouvement_stock (
+  Nummouvement      INT AUTO_INCREMENT PRIMARY KEY,
+  Numequip          INT NOT NULL,
+  NumUsers          INT NOT NULL,
+  type_mouvement    ENUM('ENTREE','SORTIE') NOT NULL,
+  quantite          INT UNSIGNED NOT NULL,
+  date_mouvement    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  commentaire       VARCHAR(255),
+  KEY idx_mouvement_equipement_date (Numequip, date_mouvement),
+  FOREIGN KEY (Numequip) REFERENCES equipement(Numequip),
+  FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers)
+) ENGINE=InnoDB;
+
+CREATE TABLE commande_materiel (
+  Numcommande      INT AUTO_INCREMENT PRIMARY KEY,
+  Numequip         INT NOT NULL,
+  NumUsers         INT NOT NULL,
+  quantite         INT UNSIGNED NOT NULL,
+  message          VARCHAR(500),
+  statut_commande  ENUM('En attente','Approuvée','Refusée','Reçue') NOT NULL DEFAULT 'En attente',
+  date_demande     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  date_decision    DATETIME,
+  date_reception   DATETIME,
+  NumUsers_admin   INT,
+  KEY idx_commande_statut_date (statut_commande, date_demande),
+  FOREIGN KEY (Numequip) REFERENCES equipement(Numequip),
+  FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers),
+  FOREIGN KEY (NumUsers_admin) REFERENCES utilisateur(NumUsers)
 ) ENGINE=InnoDB;
 
 CREATE TABLE demande_maintenance (
@@ -555,3 +604,11 @@ WHERE NOT EXISTS (
   WHERE existante.Numsalle = s.Numsalle
     AND existante.date_heure_debut = TIMESTAMP(DATE_ADD(CURRENT_DATE, INTERVAL cours.jour DAY), cours.debut)
 );
+
+INSERT INTO activite_catalogue (titre, type_activite, description) VALUES
+  ('Cross Training', 'cross', 'Le Cross Training enchaîne des exercices qui mobilisent les bras, les épaules, le dos, les abdominaux et les jambes. Ce travail complet développe la force, l’endurance et la coordination, tout en donnant de l’énergie.'),
+  ('Pilates', 'pilates', 'Le Pilates cible les abdominaux profonds, le dos et les muscles stabilisateurs. Les mouvements contrôlés améliorent la posture, la souplesse et la conscience du corps, tout en aidant à relâcher les tensions.'),
+  ('Abdos et gainage', 'abdos', 'Renforcement progressif du centre du corps pour améliorer la stabilité, la posture et le maintien, quel que soit votre niveau.'),
+  ('Boxe fitness', 'boxe', 'La boxe renforce les bras, les épaules et le dos tout en développant le cardio. Les frappes aident à évacuer le stress et les tensions.'),
+  ('Danse fitness', 'danse', 'La danse fitness fait travailler les jambes, les fessiers et les abdominaux tout en stimulant le cardio et la coordination.'),
+  ('Yoga', 'yoga', 'Le yoga associe respiration et postures pour améliorer la souplesse, renforcer le corps en douceur et relâcher les tensions.');

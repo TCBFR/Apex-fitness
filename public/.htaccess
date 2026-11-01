@@ -1,6 +1,16 @@
 Options -Indexes -MultiViews
 DirectoryIndex index.php
 
+<IfModule php_module>
+    php_value upload_max_filesize 500M
+    php_value post_max_size 510M
+</IfModule>
+
+<IfModule mod_php.c>
+    php_value upload_max_filesize 500M
+    php_value post_max_size 510M
+</IfModule>
+
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteCond %{REQUEST_FILENAME} -f [OR]

@@ -35,6 +35,8 @@ final class AbonnementController
         $query = db()->prepare(
             "SELECT Numabo FROM souscrire
              WHERE NumUsers = ? AND statut_souscription = 'En cours'
+               AND date_debut <= CURRENT_DATE
+               AND (date_fin IS NULL OR date_fin >= CURRENT_DATE)
              ORDER BY date_debut DESC LIMIT 1"
         );
         $query->execute([$userId]);

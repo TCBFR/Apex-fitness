@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 final class ProfilePhotoStorage
 {
-    private const MAX_SIZE = 5_242_880;
+    private const MAX_SIZE = 524_288_000;
     private const MIME_EXTENSIONS = [
         'image/jpeg' => 'jpg',
         'image/png' => 'png',
@@ -19,7 +19,7 @@ final class ProfilePhotoStorage
         $temporaryPath = (string) ($upload['tmp_name'] ?? '');
         $size = (int) ($upload['size'] ?? 0);
         if ($size < 1 || $size > self::MAX_SIZE) {
-            throw new InvalidArgumentException('La photo doit peser 5 Mo maximum.');
+            throw new InvalidArgumentException('La photo doit peser 500 Mo maximum.');
         }
         if (!is_uploaded_file($temporaryPath)) {
             throw new InvalidArgumentException('Le fichier transmis n’est pas une photo valide.');
@@ -61,7 +61,7 @@ final class ProfilePhotoStorage
     private function uploadError(int $error): string
     {
         return match ($error) {
-            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'La photo doit peser 5 Mo maximum.',
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'La photo dépasse la limite de taille configurée par le serveur.',
             UPLOAD_ERR_PARTIAL => 'Le téléversement de la photo est incomplet.',
             UPLOAD_ERR_NO_FILE => 'Choisissez une photo avant de continuer.',
             default => 'Le téléversement de la photo a échoué.',

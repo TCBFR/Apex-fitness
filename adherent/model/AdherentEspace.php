@@ -20,6 +20,8 @@ final class AdherentEspace
         $city = in_array('ville', $columns, true) ? 'a.ville' : "''";
         $communeId = in_array('id_commune', $columns, true) ? 'a.id_commune' : 'NULL';
         $profilePhoto = in_array('photo_profil', $columns, true) ? 'a.photo_profil' : "''";
+        $birthDate = in_array('date_naissance', $columns, true) ? 'a.date_naissance' : 'NULL';
+        $sex = in_array('sexe', $columns, true) ? 'a.sexe' : "''";
         $communeJoin = in_array('id_commune', $columns, true)
             ? 'LEFT JOIN commune c ON c.id_commune = a.id_commune'
             : '';
@@ -30,6 +32,7 @@ final class AdherentEspace
                     u.mailUsers AS email, u.telUsers AS telephone,
                     u.Date_CreationUsers AS cree_le, a.matriculeadh AS matricule,
                     a.Date_inscriptionadh AS inscrit_le, a.Date_finadh AS fin_adhesion,
+                    ' . $birthDate . ' AS date_naissance, ' . $sex . ' AS sexe,
                     ' . $address . ' AS adresse_postale, ' . $communeId . ' AS id_commune,
                     ' . $communeName . ' AS nom_commune, ' . $communeCode . ' AS code_postal,
                     ' . $profilePhoto . ' AS photo_profil

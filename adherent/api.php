@@ -29,7 +29,7 @@ function apiSession(array $row): array
 {
     $start = str_replace(' ', 'T', (string)$row['date_heure_debut']);
     $end = str_replace(' ', 'T', (string)$row['date_heure_fin']);
-    $category = isset(CATEGORIES[$row['type_activite']]) ? $row['type_activite'] : 'cardio';
+    $category = (string)$row['type_activite'];
     $capacity = (int)$row['capacite_max'];
     $taken = (int)$row['places_prises'];
     $booked = !empty($row['Numres']);
@@ -37,13 +37,13 @@ function apiSession(array $row): array
         'id'=>(string)$row['Numactivite'], 'activity_id'=>(int)$row['Numactivite'],
         'reservation_id'=>(int)($row['Numres'] ?? 0), 'title'=>$row['titre'],
         'category'=>$category, 'coach'=>$row['coach'], 'coach_full'=>$row['coach'],
-        'level'=>$row['niveau'] ?: 'Tous niveaux', 'room'=>$row['nomsalle'],
+        'level'=>(string)($row['niveau'] ?? ''), 'room'=>$row['nomsalle'],
         'date'=>substr($start,0,10), 'start'=>$start, 'end'=>$end,
         'capacity'=>$capacity, 'booked'=>$taken, 'remaining'=>max(0,$capacity-$taken),
         'is_booked'=>$booked, 'is_past'=>strtotime($start)<time(),
         'is_waitlisted'=>(bool)($row['en_attente'] ?? false),
         'can_cancel'=>strtotime($start)-time() >= 2*3600,
-        'color'=>CATEGORIES[$category]['color'], 'image'=>CAT_IMAGES[$category],
+        'color'=>CATEGORIES[$category]['color'] ?? '#4F7DFF', 'image'=>CAT_IMAGES[$category] ?? '',
     ];
 }
 
@@ -90,7 +90,6 @@ try {
             $end = (string)($_GET['end'] ?? '');
             if (!strtotime($start) || !strtotime($end)) apiReply(['error'=>'Période invalide.'], 400);
             $events = $planning->evenements(date('Y-m-d H:i:s', strtotime($start)), date('Y-m-d H:i:s', strtotime($end)), $id);
-            if (!$events) apiReply(atx_demo_sessions($start, $end));
             foreach ($events as &$event) {
                 $p = &$event['extendedProps'];
                 $p['category'] = $p['type'];

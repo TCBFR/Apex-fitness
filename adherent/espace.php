@@ -93,17 +93,19 @@ $navHref = fn(string $id): string => isset($pageFiles[$id])
                     <a href="<?= e($navHref('planning')) ?>" class="see-all" data-testid="discover-see-all">Voir tout <?= icon('chevron', 13) ?></a>
                 </div>
                 <div class="cards">
-                    <?php foreach ($discover as $i => $c): ?>
+                    <?php foreach ($discover as $i => $activity): ?>
                         <a href="<?= e($navHref('planning')) ?>" class="dcard" data-testid="discover-card-<?= $i ?>">
-                            <div class="dcard-img" style="background-image:url('<?= e($c['img']) ?>')"></div>
                             <div class="dcard-body">
-                                <span class="dcard-icon"><?= icon($c['icon'], 22) ?></span>
-                                <h3><?= e($c['title']) ?></h3>
-                                <p><?= e($c['text']) ?></p>
+                                <span class="dcard-icon"><?= icon($activityIcons[$activity['type_activite']] ?? 'calendar', 22) ?></span>
+                                <h3><?= e($activity['titre']) ?></h3>
+                                <p><?= e(dateFr($activity['date_heure_debut'], true)) ?> · <?= e($activity['nomsalle']) ?></p>
                                 <span class="dcard-arrow"><?= icon('arrow', 14) ?></span>
                             </div>
                         </a>
                     <?php endforeach; ?>
+                    <?php if (!$discover): ?>
+                        <p class="empty-sub">Aucune séance à venir n’est enregistrée.</p>
+                    <?php endif; ?>
                 </div>
             </div>
         </section>

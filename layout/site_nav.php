@@ -10,9 +10,9 @@ $navActive = $pageActive === 'accueil' ? 'accueil' : $pageActive;
     <nav class="main-nav" id="main-nav" aria-label="Navigation principale">
       <?php foreach ([
           'accueil' => ['Accueil', url('accueil/index.php')],
-          'activites' => ['Activités', url('accueil/index.php') . '#activites'],
           'abonnements' => ['Abonnements', url('abonnement/catalogue.php')],
           'avis' => ['Avis', url('avis/public.php')],
+          'equipes' => ['Nos équipes', url('equipe/public.php')],
           'faq' => ['FAQ', url('faq/public.php')],
           'contact' => ['Contact', url('message_contact/index.php')],
       ] as $key => [$label, $href]): ?>

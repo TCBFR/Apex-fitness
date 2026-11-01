@@ -14,6 +14,7 @@ $donnees = [
     'nom' => '',
     'prenom' => '',
     'date_naissance' => '',
+    'sexe' => '',
     'mail' => '',
     'adresse_postale' => '',
 ];

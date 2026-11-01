@@ -36,7 +36,8 @@ final class PlanningController
     /** Actions POST gerees par ce controller, selon l'espace. */
     private const ACTIONS = [
         'adherent' => ['reserver', 'annuler'],
-        'employe'  => ['creer_creneau', 'supprimer_creneau'],
+        'employe'  => ['creer_creneau', 'modifier_creneau', 'supprimer_creneau'],
+        'admin'    => ['creer_creneau', 'modifier_creneau', 'supprimer_creneau'],
     ];
 
     /** Bibliothèque FullCalendar à charger avant assets/js/planning.js. */
@@ -121,6 +122,25 @@ final class PlanningController
         ];
     }
 
+    /** Données enrichies pour le planning hebdomadaire d'administration. */
+    public function donneesAdmin(string $debutSemaine): array
+    {
+        $dateDebut = DateTimeImmutable::createFromFormat('!Y-m-d', $debutSemaine);
+        if (!$dateDebut || $dateDebut->format('Y-m-d') !== $debutSemaine) {
+            $dateDebut = new DateTimeImmutable('monday this week');
+        }
+        $dateFin = $dateDebut->modify('+7 days');
+        $donnees = $this->donneesEmploye(0);
+        $donnees['salles'] = $this->model->toutesLesSalles();
+        $donnees['debut_semaine'] = $dateDebut->format('Y-m-d');
+        $donnees['fin_semaine'] = $dateFin->format('Y-m-d');
+        $donnees['creneaux_semaine'] = $this->model->creneauxSurPeriode(
+            $dateDebut->format('Y-m-d 00:00:00'),
+            $dateFin->format('Y-m-d 00:00:00')
+        );
+        return $donnees;
+    }
+
     /* =====================================================================
        ACTIONS POST (le jeton CSRF est verifie par la page avant l'appel)
        ===================================================================== */
@@ -171,6 +191,12 @@ final class PlanningController
                     journalise('SUPPRESSION_CRENEAU', 'Numactivite=' . $num . ' (' . $n . ')');
                     flash('succes', $n > 1 ? "$n créneaux supprimés." : 'Créneau supprimé.');
                     break;
+
+                case 'modifier_creneau':
+                    $this->modifier($_POST);
+                    journalise('MODIFICATION_CRENEAU', 'Numactivite=' . (int) ($_POST['creneau'] ?? 0));
+                    flash('succes', 'Le créneau a été modifié.');
+                    break;
             }
         } catch (RuntimeException $ex) {
             flash('erreur', $ex->getMessage());
@@ -186,8 +212,8 @@ final class PlanningController
 
     /**
      * Reserve un creneau. Regles verifiees cote serveur, dans une transaction :
-     * 1 adherent actif, 2 creneau a venir, 3 pas complet, 4 pas deja reserve,
-     * 5 quota mensuel de l'offre Freemium.
+     * 1 adherent et abonnement actifs, 2 creneau a venir, 3 pas complet,
+     * 4 pas deja reserve, 5 quota mensuel de l'offre Freemium.
      * @return string titre de l'activite reservee
      * @throws RuntimeException message affichable a l'adherent
      */
@@ -198,6 +224,15 @@ final class PlanningController
             throw new RuntimeException(
                 'Votre compte est ' . mb_strtolower($fiche['libelle_statut'] ?? 'inconnu')
                 . '. Régularisez votre abonnement à l\'accueil avant de réserver.'
+            );
+        }
+        if (
+            $fiche['Numabo'] === null
+            || $fiche['statut_souscription'] !== 'En cours'
+            || $fiche['type_abo'] === null
+        ) {
+            throw new RuntimeException(
+                'Un abonnement actif est nécessaire pour réserver une séance. Choisissez ou renouvelez votre formule.'
             );
         }
 
@@ -297,6 +332,9 @@ final class PlanningController
         }
 
         $debutTexte = trim((string) ($d['debut'] ?? ''));
+        if ($debutTexte === '') {
+            $debutTexte = trim((string) ($d['date'] ?? '')) . 'T' . trim((string) ($d['heure'] ?? ''));
+        }
         try {
             if ($debutTexte === '') {
                 throw new Exception('vide');
@@ -405,5 +443,45 @@ final class PlanningController
             return $this->model->supprimerSerieAVenir((string) $creneau['id_serie']);
         }
         return $this->model->supprimerCreneau($numActivite);
+    }
+
+    /** Modifie les informations d'un créneau existant, sans toucher aux réservations. */
+    public function modifier(array $d): void
+    {
+        $id = (int) ($d['creneau'] ?? 0);
+        $actuel = $this->model->detailsCreneau($id);
+        if (!$actuel) throw new RuntimeException('Créneau introuvable.');
+        $titre = trim((string) ($d['titre'] ?? ''));
+        $type = (string) ($d['type'] ?? '');
+        $salle = (int) ($d['salle'] ?? 0);
+        $coach = (int) ($d['coach'] ?? 0);
+        $capacite = (int) ($d['capacite'] ?? 0);
+        $debutTexte = trim((string) ($d['debut'] ?? ''));
+        if ($debutTexte === '') {
+            $debutTexte = trim((string) ($d['date'] ?? '')) . 'T' . trim((string) ($d['heure'] ?? ''));
+        }
+        $duree = min(480, max(15, (int) ($d['duree'] ?? 60)));
+        if ($titre === '' || mb_strlen($titre) > 100) throw new RuntimeException('Le titre est obligatoire (100 caractères maximum).');
+        if (!isset(self::TYPES[$type])) throw new RuntimeException('Type d’activité invalide.');
+        if ($salle <= 0 || $coach <= 0 || $capacite <= 0) throw new RuntimeException('Vérifiez la salle, le coach et le nombre de places.');
+        try { $debut = new DateTimeImmutable($debutTexte); }
+        catch (Throwable $e) { throw new RuntimeException('Date de début invalide.'); }
+        if ($debut->getTimestamp() < time()) throw new RuntimeException('La date de début doit être dans le futur.');
+        $fin = $debut->modify("+$duree minutes");
+        try {
+            $this->model->begin();
+            $capSalle = $this->model->capaciteSalleVerrouillee($salle);
+            if ($capSalle === null || $capacite > $capSalle) throw new RuntimeException('La capacité indiquée dépasse celle de la salle.');
+            if (!$this->model->coachValide($coach)) throw new RuntimeException('Coach introuvable.');
+            if ($this->model->conflit($salle, $coach, $debut->format('Y-m-d H:i:s'), $fin->format('Y-m-d H:i:s'), $id)) {
+                throw new RuntimeException('La salle ou le coach est déjà pris sur ce créneau.');
+            }
+            $this->model->modifierCreneau($id, $titre, $type, $debut->format('Y-m-d H:i:s'), $fin->format('Y-m-d H:i:s'), $capacite, $salle, $coach);
+            $this->model->commit();
+        } catch (Throwable $e) {
+            $this->model->rollback();
+            if ($e instanceof RuntimeException) throw $e;
+            throw new RuntimeException('Modification impossible : créneau en conflit ou erreur interne.');
+        }
     }
 }

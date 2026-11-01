@@ -14,9 +14,22 @@ $stats = [
     ['label'=>'Séances ce mois', 'value'=>(string)$dashboard['sessions_month'], 'icon'=>'dumbbell', 'accent'=>false],
     ['label'=>'Membre depuis', 'value'=>date('m/Y', strtotime($profile['inscrit_le'] ?: $profile['cree_le'])), 'icon'=>'target', 'accent'=>true],
 ];
-$discover = [
-    ['title'=>'Musculation', 'text'=>'Bâtis ta force, un entraînement à la fois.', 'icon'=>'dumbbell', 'img'=>'https://images.unsplash.com/photo-1734630341082-0fec0e10126c?crop=entropy&cs=srgb&fm=jpg&q=80&w=800'],
-    ['title'=>'Cardio', 'text'=>'Énergie, endurance, performance.', 'icon'=>'heart', 'img'=>'https://images.unsplash.com/photo-1593079831268-3381b0db4a77?crop=entropy&cs=srgb&fm=jpg&q=80&w=800'],
-    ['title'=>'Yoga & bien-être', 'text'=>'Équilibre du corps et de l\'esprit.', 'icon'=>'lotus', 'img'=>'https://images.unsplash.com/photo-1767327863182-a5395c2db77d?crop=entropy&cs=srgb&fm=jpg&q=80&w=800'],
+$discover = db()->query(
+    "SELECT a.Numactivite, a.titre, a.type_activite, a.date_heure_debut, s.nomsalle
+       FROM activite a
+       JOIN salle s ON s.Numsalle = a.Numsalle
+      WHERE a.date_heure_debut >= NOW() AND s.etatsalle = 'Ouverte'
+      ORDER BY a.date_heure_debut
+      LIMIT 3"
+)->fetchAll(PDO::FETCH_ASSOC);
+$activityIcons = [
+    'musculation' => 'dumbbell',
+    'cardio' => 'heart',
+    'yoga' => 'lotus',
+    'cross' => 'flame',
+    'pilates' => 'activity',
+    'abdos' => 'target',
+    'boxe' => 'flame',
+    'danse' => 'activity',
 ];
 $heroImg = 'https://images.unsplash.com/photo-1590487988256-9ed24133863e?crop=entropy&cs=srgb&fm=jpg&q=80&w=1600';

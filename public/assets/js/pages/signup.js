@@ -40,7 +40,7 @@
     var valid = true;
 
     fields.forEach(function (field) {
-      var input = field.querySelector('input');
+      var input = field.querySelector('input, select');
       var message = field.querySelector('.field-msg');
       field.classList.remove('error');
       message.textContent = '';

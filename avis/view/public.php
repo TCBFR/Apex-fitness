@@ -7,8 +7,28 @@ $maxCompteur = $maxCompteur ?? 1;
 $avisAffiches = $avisAffiches ?? [];
 $erreur = $erreur ?? null;
 require_once __DIR__ . '/../../public/includes/public_icons.php';
-require __DIR__ . '/../../layout/header.php';
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= e($titrePage) ?> · ATHLETIX</title>
+<link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
+<link rel="stylesheet" href="<?= url('assets/css/pages/athletix_public.css') ?>">
+<link rel="stylesheet" href="<?= url('assets/css/site_nav.css?v=4') ?>">
+</head>
+<body class="page-avis">
+<a class="skip" href="#contenu">Aller au contenu</a>
+<?php require_once __DIR__ . '/../../layout/site_nav.php'; ?>
+<?php $fl = flashs(); if ($fl): ?>
+<div class="wrap flashs">
+<?php foreach ($fl as $f): ?>
+<p class="flash flash-<?= e($f['type']) ?>"><?= e($f['message']) ?></p>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+<main id="contenu">
 
 <section class="hero" style="--hero-img:url('https://images.unsplash.com/photo-1550345332-09e3ac987658?auto=format&fit=crop&w=1600&q=70')">
     <div class="container hero-content reveal">

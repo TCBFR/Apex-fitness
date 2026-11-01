@@ -5,6 +5,7 @@ $sidebarActive = $sidebarActive ?? '';
 $sidebarHome = $sidebarHome ?? url('accueil/index.php');
 $sidebarLabel = $sidebarLabel ?? 'Navigation';
 $sidebarSubtitle = $sidebarSubtitle ?? 'Espace membre';
+$sidebarBrand = $sidebarBrand ?? null;
 
 $sidebarIcons = [
     'home' => '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -29,12 +30,20 @@ $sidebarIcon = static function (string $name) use ($sidebarIcons): string {
 };
 ?>
 <aside class="sidebar" id="sidebar" data-testid="sidebar">
-  <a href="<?= e($sidebarHome) ?>" class="logo" data-testid="logo-link" aria-label="Accueil ATHLETIX">
-    <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
-      <path d="M20 3 37 37H28L20 20 12 37H3Z" fill="var(--sb-lime)"/>
-      <path d="M20 20 24.5 29H15.5Z" fill="var(--sb-bg)"/>
-    </svg>
-    <span>ATHLETI<b>X</b></span>
+  <a href="<?= e($sidebarHome) ?>" class="logo" data-testid="logo-link" aria-label="<?= e($sidebarBrand !== null ? $sidebarBrand . ', tableau de bord' : 'Accueil ATHLETIX') ?>">
+    <?php if ($sidebarBrand !== null): ?>
+      <svg width="34" height="34" viewBox="0 0 40 40" fill="none" stroke="var(--sb-lime)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M24 7a10 10 0 0 0-11 13L4 29l7 7 9-9A10 10 0 0 0 33 16l-7 7-7-7z"/>
+        <path d="m28 6 6-4M32 10l5-3"/>
+      </svg>
+      <span><?= e($sidebarBrand) ?></span>
+    <?php else: ?>
+      <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M20 3 37 37H28L20 20 12 37H3Z" fill="var(--sb-lime)"/>
+        <path d="M20 20 24.5 29H15.5Z" fill="var(--sb-bg)"/>
+      </svg>
+      <span>ATHLETI<b>X</b></span>
+    <?php endif; ?>
   </a>
   <nav class="nav" aria-label="<?= e($sidebarLabel) ?>">
     <?php foreach ($sidebarItems as $item): ?>

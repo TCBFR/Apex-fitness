@@ -149,7 +149,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
             <span class="date-label"><span id="pe-cal-title" data-testid="calendar-title"></span></span>
             <button type="button" class="icon-btn" data-pe-nav="next" data-testid="calendar-next-button" aria-label="Suivant">›</button>
           </div>
-          <button type="button" class="btn btn-primary btn-vert btn-sm" id="pe-create-btn" data-testid="create-session-button">+ Nouveau créneau</button>
+          <button type="button" class="btn btn-primary btn-vert btn-sm" id="pe-create-btn" data-testid="create-session-button"><?= !empty($accueil) ? '+ Ajouter un cours' : '+ Nouveau créneau' ?></button>
         </div>
       </section>
 
@@ -164,6 +164,17 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
     <aside class="col-side">
       <section class="panel side-card" data-testid="filters-panel">
         <h2 class="side-title">Filtres</h2>
+        <?php if (!empty($accueil)): ?>
+        <h3 class="label">Salle</h3>
+        <div class="select">
+          <select id="pe-filter-room" data-testid="filter-room-select">
+            <option value="all">Toutes les salles</option>
+            <?php foreach ($salles as $s): ?>
+              <option value="<?= e($s['nom']) ?>"><?= e($s['nom']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <?php endif; ?>
         <h3 class="label">Activité</h3>
         <div class="pills pills-sm" id="pe-type-pills">
           <button type="button" class="pill is-active" data-pe-type="all" data-testid="side-filter-cat-all">Tous</button>
@@ -376,7 +387,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
     const isLow = (s) => !s.passe && s.capacite > 0 && pct(s) < 30;
 
     /* ---------- Filtres ---------- */
-    const state = { type: 'all', coach: 'all', fill: 'all', hidePast: false };
+    const state = { type: 'all', room: 'all', coach: 'all', fill: 'all', hidePast: false };
     const fillOk = {
       all: () => true,
       free: (s) => s.restantes > 0 && !s.passe,
@@ -386,6 +397,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
     };
     const matches = (s) =>
       (state.type === 'all' || s.type === state.type) &&
+      (state.room === 'all' || s.salle === state.room) &&
       (state.coach === 'all' || s.coach === state.coach) &&
       (!state.hidePast || !s.passe) &&
       fillOk[state.fill](s);
@@ -637,7 +649,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
             b.className = 'pe-row';
             b.style.setProperty('--c', s.color);
             b.setAttribute('data-testid', 'today-session-' + s.id);
-            b.innerHTML = '<b>' + hm(s.start) + '</b><span><strong>' + esc(s.title) + '</strong><small>' + s.prises + ' / ' + s.capacite +
+            b.innerHTML = '<b>' + hm(s.start) + '</b><span><strong>' + esc(s.title) + '</strong><small>' + (s.salle ? 'Salle ' + esc(s.salle) + ' · ' : '') + s.prises + ' / ' + s.capacite +
               ' inscrits</small><i class="pe-mini"><u style="width:' + pct(s) + '%"></u></i></span>';
             b.addEventListener('click', () => openSession(s));
             box.append(b);
@@ -694,11 +706,12 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
         const s = arg.event.extendedProps.s;
         const count = s.prises + '/' + s.capacite;
         if (arg.view.type === 'dayGridMonth') {
-          return { html: '<div class="ev-m"><i></i><b>' + hm(s.start) + '</b><span>' + esc(s.title) + ' · ' + count + '</span></div>' };
+          return { html: '<div class="ev-m"><i></i><b>' + hm(s.start) + '</b><span>' + esc(s.title) + (s.salle ? ' · ' + esc(s.salle) : '') + ' · ' + count + '</span></div>' };
         }
         return {
           html: '<div class="ev"><strong>' + (s.serie ? '↻ ' : '') + esc(s.title) + '</strong><span>' + hm(s.start) + ' – ' + hm(s.end) + '</span>' +
             (s.coach ? '<span class="ev-coach">Coach ' + esc(s.coach) + '</span>' : '') +
+            (s.salle ? '<span class="ev-room">Salle ' + esc(s.salle) + '</span>' : '') +
             '<span class="pe-ev-count">' + count + ' inscrits</span></div>',
         };
       },
@@ -737,6 +750,8 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
       })
     );
     coachSel.addEventListener('change', (e) => { state.coach = e.target.value; calendar.refetchEvents(); });
+    const roomFilter = $('pe-filter-room');
+    if (roomFilter) roomFilter.addEventListener('change', (e) => { state.room = e.target.value; calendar.refetchEvents(); });
     $('pe-filter-fill').addEventListener('change', (e) => { state.fill = e.target.value; calendar.refetchEvents(); });
     $('pe-filter-past').addEventListener('change', (e) => { state.hidePast = e.target.checked; calendar.refetchEvents(); });
   }

@@ -13,7 +13,7 @@ $pageActive = 'accueil';
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="<?= e(url('assets/css/pages/home.css')) ?>">
-  <link rel="stylesheet" href="<?= e(url('assets/css/site_nav.css')) ?>">
+  <link rel="stylesheet" href="<?= e(url('assets/css/site_nav.css?v=4')) ?>">
 </head>
 <body>
 <?php require_once __DIR__ . '/../../layout/site_nav.php'; ?>
@@ -41,9 +41,9 @@ $pageActive = 'accueil';
       <span class="f-icon" aria-hidden="true">↗</span>
       <div><h3>Équipements modernes</h3><p>Tout le nécessaire pour t’entraîner efficacement.</p></div>
     </article>
-    <article class="feature" data-reveal>
+    <article class="feature" id="equipe" data-reveal>
       <span class="f-icon" aria-hidden="true">◎</span>
-      <div><h3>Coaches à l’écoute</h3><p>Des conseils adaptés à tes objectifs.</p></div>
+      <div><h3>Coachs à l’écoute</h3><p>Des conseils adaptés à tes objectifs.</p></div>
     </article>
     <article class="feature" data-reveal>
       <span class="f-icon" aria-hidden="true">◇</span>
@@ -61,32 +61,23 @@ $pageActive = 'accueil';
       <div class="cards">
         <?php foreach ($activites as $activite): ?>
           <?php
-          $titreActivite = mb_strtolower((string) ($activite['titre'] ?? ''));
-          $imageActivite = 'home-musculation.jpg';
-          $descriptionImage = 'Haltères dans une salle de sport';
-          if (str_contains($titreActivite, 'yoga')) {
-              $imageActivite = 'home-yoga.jpg';
-              $descriptionImage = 'Séance de yoga en studio';
-          } elseif (str_contains($titreActivite, 'cardio') || str_contains($titreActivite, 'hiit') || str_contains($titreActivite, 'cycling')) {
-              $imageActivite = 'home-cardio.jpg';
-              $descriptionImage = 'Séance de cardio en salle';
-          }
+          $typeActivite = (string) ($activite['type_activite'] ?? 'cross');
+          $imagesActivites = [
+              'cross' => 'cross.png', 'pilates' => 'pilate.png', 'abdos' => 'abdos.png',
+              'boxe' => 'boxe.png', 'danse' => 'danse.png', 'yoga' => 'yogas.png',
+              'cardio' => 'cross.png', 'musculation' => 'cross.png',
+          ];
+          $imageActivite = $activite['image_path'] ?: 'assets/img/' . ($imagesActivites[$typeActivite] ?? 'cross.png');
+          $descriptionImage = 'Séance de ' . (ActiviteCatalogue::TYPES[$typeActivite] ?? 'sport');
+          $descriptionActivite = (string) ($activite['description'] ?? '');
           ?>
           <article class="card-h" data-reveal>
             <div class="card-media">
-              <img src="<?= e(url('assets/img/' . $imageActivite)) ?>" alt="<?= e($descriptionImage) ?>" loading="lazy">
+              <img src="<?= e(url($imageActivite)) ?>" alt="<?= e($descriptionImage) ?>" loading="lazy">
             </div>
             <div class="card-body">
-            <p class="activity-label">
-              <?= e((new DateTimeImmutable((string) $activite['date_heure_debut']))->format('d/m à H\hi')) ?>
-            </p>
-            <h3><?= e($activite['titre'] ?? 'Activité') ?></h3>
-            <p class="activity-description"><?= e($activite['description'] ?? 'Séance encadrée dans notre salle.') ?></p>
-            <div class="activity-meta">
-              <span><?= (int) ($activite['duree_minutes'] ?? 0) ?> min</span>
-              <span><?= (int) ($activite['capacite_max'] ?? 0) ?> places</span>
-            </div>
-            <a href="<?= e(url('activite/index.php')) ?>" class="text-link">Voir les activités <span aria-hidden="true">→</span></a>
+              <h3><?= e($activite['titre'] ?? 'Activité') ?></h3>
+              <p class="activity-description"><?= e($descriptionActivite) ?></p>
             </div>
           </article>
         <?php endforeach; ?>
@@ -98,6 +89,46 @@ $pageActive = 'accueil';
         <a class="text-link" href="<?= e(url('activite/index.php')) ?>">Voir les activités <span aria-hidden="true">→</span></a>
       </div>
     <?php endif; ?>
+  </section>
+
+  <section class="testimonials section" id="temoignages" aria-labelledby="testimonials-title">
+    <div class="section-head" data-reveal>
+      <p class="eyebrow">Témoignages membres</p>
+      <h2 class="section-title" id="testimonials-title">Ils nous font <em>confiance</em></h2>
+      <p class="section-sub">Leurs objectifs, leurs progrès et leur expérience chez ATHLETIX.</p>
+    </div>
+    <div class="testimonial-carousel" data-testimonial-carousel aria-roledescription="carrousel" aria-label="Témoignages des membres">
+      <?php
+      $temoignages = [
+          ['Lara Smirnova', '4 ans', 'Le sport, c’est bien plus qu’un entraînement. C’est une façon de se sentir plus forte, de prendre sa place et de repousser ses limites. À chaque entraînement, je construis une base solide pour ma santé et ma confiance.', 'img2.png'],
+          ['Yanis Moreau', '3 ans', 'J’ai retrouvé le plaisir de bouger. Les séances me donnent l’énergie nécessaire pour me dépasser à mon rythme, et chaque progrès me motive à continuer.', 'img1.png'],
+          ['Inès Bernard', '1 an', 'L’équipe m’a aidée à trouver une pratique qui me ressemble. Je me sens plus sereine, plus souple et plus forte à chaque séance.', 'img4.png'],
+          ['Thomas Leroy', '2 ans', 'Une super ambiance et des coachs toujours à l’écoute. Je progresse tout en prenant vraiment plaisir à venir, semaine après semaine.', 'img3.png'],
+      ];
+      foreach ($temoignages as $index => [$nom, $activite, $citation, $imageTemoignage]):
+      ?>
+        <article class="testimonial-slide<?= $index === 0 ? ' is-active' : '' ?>" data-testimonial-slide aria-roledescription="diapositive" aria-label="<?= $index + 1 ?> sur <?= count($temoignages) ?>"<?= $index === 0 ? '' : ' hidden' ?>>
+          <div class="testimonial-copy">
+            <span class="testimonial-mark" aria-hidden="true">“</span>
+            <blockquote><?= e($citation) ?></blockquote>
+            <div class="testimonial-member">
+              <div><h3><?= e($nom) ?></h3><p>Membre ATHLETIX</p></div>
+              <span class="member-activity"><?= e($activite) ?> chez ATHLETIX</span>
+            </div>
+          </div>
+          <div class="testimonial-photo"><img src="<?= e(url('assets/img/' . $imageTemoignage)) ?>" alt="Portrait d’un membre ATHLETIX à l’entraînement" loading="lazy"></div>
+        </article>
+      <?php endforeach; ?>
+      <div class="testimonial-controls" aria-label="Commandes du carrousel">
+        <button class="testimonial-arrow" type="button" data-testimonial-prev aria-label="Témoignage précédent">←</button>
+        <div class="testimonial-dots" aria-label="Choisir un témoignage">
+          <?php foreach ($temoignages as $index => $temoignage): ?>
+            <button type="button" data-testimonial-dot="<?= $index ?>" aria-label="Afficher le témoignage <?= $index + 1 ?>"<?= $index === 0 ? ' aria-current="true"' : '' ?>></button>
+          <?php endforeach; ?>
+        </div>
+        <button class="testimonial-arrow" type="button" data-testimonial-next aria-label="Témoignage suivant">→</button>
+      </div>
+    </div>
   </section>
 
   <section class="cta" id="cta">

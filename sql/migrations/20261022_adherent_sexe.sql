@@ -1,0 +1,2 @@
+ALTER TABLE adherent
+  ADD COLUMN sexe VARCHAR(30) NULL;

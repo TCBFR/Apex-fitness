@@ -9,7 +9,11 @@ function atx_view(array $s): array
 {
     $isBooked = (bool)($s['is_booked'] ?? false);
     $count = (int)$s['base_booked'];
-    $cat = CATEGORIES[$s['category']];
+    $cat = CATEGORIES[$s['category']] ?? [
+        'color' => '#4F7DFF',
+        'label' => $s['category'],
+        'icon' => 'calendar',
+    ];
     return $s + [
         'booked'         => $count,
         'remaining'      => $s['capacity'] - $count,
@@ -19,7 +23,7 @@ function atx_view(array $s): array
         'can_cancel'     => strtotime($s['start']) - time() >= 2 * 3600,
         'color'          => $cat['color'],
         'category_label' => $cat['label'],
-        'image'          => CAT_IMAGES[$s['category']],
+        'image'          => CAT_IMAGES[$s['category']] ?? '',
     ];
 }
 

@@ -40,84 +40,12 @@ function atx_all_sessions(): array
     $q->execute([$userId, $userId]); $out=[];
     foreach($q->fetchAll() as $row){
         $start=str_replace(' ','T',$row['date_heure_debut']); $end=str_replace(' ','T',$row['date_heure_fin']);
-        $cat=isset(CATEGORIES[$row['type_activite']])?$row['type_activite']:'cardio';
+        $cat=(string)$row['type_activite'];
         $out[(string)$row['Numactivite']]=['id'=>(string)$row['Numactivite'],'title'=>$row['titre'],'category'=>$cat,
-            'coach'=>$row['coach'],'coach_full'=>$row['coach'],'level'=>$row['niveau']?:'Tous niveaux','room'=>$row['nomsalle'],
+            'coach'=>$row['coach'],'coach_full'=>$row['coach'],'level'=>(string)($row['niveau'] ?? ''),'room'=>$row['nomsalle'],
             'date'=>substr($start,0,10),'start'=>$start,'end'=>$end,'capacity'=>(int)$row['capacite_max'],
             'base_booked'=>(int)$row['places'],'is_booked'=>(bool)$row['mine'],'is_waitlisted'=>(bool)$row['waitlisted']];
     }
     uasort($out,static fn($a,$b)=>strcmp($a['start'],$b['start']));
     return $cache=$out;
-}
-
-/** Séances d'exemple affichées uniquement quand la période n'a aucune séance en base. */
-function atx_demo_sessions(string $start, string $end): array
-{
-    $template = [
-        ['09:00', '10:00', 'Musculation', 'musculation', 'Lucas', 'Lucas Moreau', 'Plateau muscu'],
-        ['12:30', '13:30', 'Cardio HIIT', 'cardio', 'Sophie', 'Sophie Lambert', 'Studio cardio'],
-        ['17:30', '18:30', 'Yoga', 'yoga', 'Emma', 'Emma Girard', 'Studio zen'],
-        ['18:00', '19:00', 'Cross Training', 'cross', 'Thomas', 'Thomas Martin', 'Zone cross'],
-    ];
-    $first = (new DateTimeImmutable($start))->setTime(0, 0);
-    $last = (new DateTimeImmutable($end))->setTime(0, 0);
-    $items = [];
-    for ($day = $first; $day < $last; $day = $day->modify('+1 day')) {
-        $weekday = (int)$day->format('N');
-        if (!in_array($weekday, [1, 2, 3, 4, 5, 6], true)) continue;
-        foreach ($template as $index => [$from, $to, $title, $category, $coach, $coachFull, $room]) {
-            if (($weekday + $index) % 3 === 0) continue;
-            $begin = $day->format('Y-m-d') . 'T' . $from . ':00';
-            $finish = $day->format('Y-m-d') . 'T' . $to . ':00';
-            $id = 'demo-' . $day->format('Ymd') . '-' . $index;
-            $items[] = [
-                'id' => $id, 'title' => $title, 'start' => $begin, 'end' => $finish,
-                'extendedProps' => [
-                    'id' => $id, 'category' => $category, 'coach' => $coach, 'coach_full' => $coachFull,
-                    'level' => 'Tous niveaux', 'room' => $room, 'date' => $day->format('Y-m-d'),
-                    'start' => $begin, 'end' => $finish, 'capacity' => 12, 'booked' => 5 + ($index % 4),
-                    'remaining' => 7 - ($index % 4), 'is_booked' => false, 'is_past' => strtotime($begin) < time(),
-                    'color' => CATEGORIES[$category]['color'], 'image' => CAT_IMAGES[$category], 'is_demo' => true,
-                ],
-            ];
-        }
-    }
-    return $items;
-}
-
-function atx_performance_data(): array
-{
-    $series=[];
-    foreach ([7,30,90] as $days) {
-        $labels=[];
-        $values=[];
-        for ($i=$days-1; $i>=0; $i--) {
-            $labels[]=(new DateTimeImmutable("-$i days"))->format('Y-m-d');
-            $progress=($days-1-$i)/max(1,$days-1);
-            $values[]=round(24+68*$progress+5*sin($i*.8)+2*cos($i*1.7),1);
-        }
-        $series[$days]=['labels'=>$labels,'values'=>$values];
-    }
-
-    return [
-        'demo'=>true,
-        'kpis'=>[
-            ['icon'=>'dumbbell','label'=>'Séances réalisées','value'=>'12','unit'=>'','trend'=>'+33%'],
-            ['icon'=>'flame','label'=>'Calories brûlées','value'=>'4 320','unit'=>'','trend'=>'+27%'],
-            ['icon'=>'timer','label'=>'Durée moyenne','value'=>'62','unit'=>'min','trend'=>'+18%'],
-        ],
-        'goal'=>['done'=>3,'target'=>4],
-        'objectives'=>[
-            ['icon'=>'dumbbell','label'=>'Séances réalisées','text'=>'3 / 4','pct'=>75,'color'=>'#CCFF00'],
-            ['icon'=>'flame','label'=>'Calories brûlées','text'=>'4 320 / 5 000','pct'=>86,'color'=>'#FF9F1C'],
-            ['icon'=>'timer','label'=>'Temps actif','text'=>'6 h 12 / 8 h','pct'=>78,'color'=>'#4F7DFF'],
-        ],
-        'series'=>$series,
-        'body'=>[
-            ['icon'=>'scale','label'=>'Poids','value'=>'78','unit'=>'kg','delta'=>'-2 kg'],
-            ['icon'=>'droplet','label'=>'Masse grasse','value'=>'12','unit'=>'%','delta'=>'-1,5 %'],
-            ['icon'=>'dumbbell','label'=>'Muscle','value'=>'36','unit'=>'kg','delta'=>'+1,8 kg'],
-            ['icon'=>'heart','label'=>'Fréquence cardiaque (repos)','value'=>'58','unit'=>'bpm','delta'=>'-6 bpm'],
-        ],
-    ];
 }

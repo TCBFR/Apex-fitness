@@ -133,7 +133,7 @@ body.loaded [data-reveal]{opacity:1;transform:translateY(0)}
   width:19px;height:19px;color:#74828c;pointer-events:none;
   transition:color .25s;
 }
-.field input{
+.field input, .field select{
   width:100%;height:53px;padding:0 48px 0 46px;
   font:400 14px var(--font-body);color:var(--text);
   background:rgba(255,255,255,.028);
@@ -142,7 +142,9 @@ body.loaded [data-reveal]{opacity:1;transform:translateY(0)}
   transition:border-color .25s var(--ease), box-shadow .25s var(--ease), background .25s var(--ease);
 }
 .field input::placeholder{color:#68747e}
-.field input:focus{
+.field select{padding:0 16px;cursor:pointer}
+.field select option{background:#111820;color:var(--text)}
+.field input:focus, .field select:focus{
   border-color:rgba(200,240,75,.6);
   background:var(--lime-dim);
   box-shadow:0 0 0 4px rgba(200,240,75,.1), 0 0 26px rgba(200,240,75,.1);
@@ -157,7 +159,7 @@ body.loaded [data-reveal]{opacity:1;transform:translateY(0)}
 .eye:hover{color:var(--lime);background:var(--lime-dim)}
 .eye svg{width:18px;height:18px}
 .field-msg{display:none;font-size:12px;color:var(--danger)}
-.field.error input{border-color:rgba(255,107,107,.65);box-shadow:0 0 0 4px rgba(255,107,107,.1)}
+.field.error input, .field.error select{border-color:rgba(255,107,107,.65);box-shadow:0 0 0 4px rgba(255,107,107,.1)}
 .field.error .field-msg{display:block}
 .field.error .input-wrap{animation:shake .4s var(--ease)}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}55%{transform:translateX(5px)}80%{transform:translateX(-3px)}}
@@ -253,7 +255,7 @@ body.loaded [data-reveal]{opacity:1;transform:translateY(0)}
 .login-message{margin-top:20px;padding:11px 13px;border:1px solid rgba(200,240,75,.3);border-radius:10px;background:var(--lime-dim);color:var(--text);font-size:13px}
 .login-error{border-color:rgba(255,107,107,.45);background:rgba(255,107,107,.08);color:#ffb1b1}
 .signup-page .form{gap:10px;margin-top:20px}
-.signup-page .field input{height:48px;padding-left:16px}
+.signup-page .field input, .signup-page .field select{height:48px;padding-left:16px}
 
 /* ---------- responsive ---------- */
 @media (max-width:1024px){

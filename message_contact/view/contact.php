@@ -2,7 +2,6 @@
 $donnees = $donnees ?? ['nom' => '', 'mail' => '', 'sujet' => '', 'message' => ''];
 $erreurs = $erreurs ?? [];
 require_once __DIR__ . '/../../public/includes/public_icons.php';
-require __DIR__ . '/../../layout/header.php';
 $infos = [
     ['map-pin', 'Adresse', ['12 Rue des Sports', '75000 Paris']],
     ['phone', 'Téléphone', ['+33 1 23 45 67 89', 'Lun - Ven : 8h - 20h']],
@@ -11,6 +10,27 @@ $infos = [
 ];
 $sujets = ['Abonnements', 'Activités & cours', 'Coaching personnalisé', 'Laisser un avis', 'Autre demande'];
 ?>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= e($titrePage) ?> · ATHLETIX</title>
+<link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
+<link rel="stylesheet" href="<?= url('assets/css/pages/athletix_public.css') ?>">
+<link rel="stylesheet" href="<?= url('assets/css/site_nav.css?v=4') ?>">
+</head>
+<body class="page-contact">
+<a class="skip" href="#contenu">Aller au contenu</a>
+<?php require_once __DIR__ . '/../../layout/site_nav.php'; ?>
+<?php $fl = flashs(); if ($fl): ?>
+<div class="wrap flashs">
+<?php foreach ($fl as $f): ?>
+<p class="flash flash-<?= e($f['type']) ?>"><?= e($f['message']) ?></p>
+<?php endforeach; ?>
+</div>
+<?php endif; ?>
+<main id="contenu">
 
 <section class="hero" style="--hero-img:url('https://images.unsplash.com/photo-1548690312-e3b507d8c110?auto=format&fit=crop&w=1600&q=70')">
     <div class="container hero-content reveal"><p class="eyebrow">Contact</p><h1 class="hero-title">Une question ?<br><span class="accent">On est là pour vous.</span></h1><p class="hero-lead">Notre équipe est disponible pour répondre à vos questions. Écrivez-nous, nous vous répondrons au plus vite.</p></div>

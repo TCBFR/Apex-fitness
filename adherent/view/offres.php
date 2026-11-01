@@ -2,10 +2,29 @@
 require_once __DIR__ . '/../../config/function.php';
 exige_role('ADHERENT');
 require_once __DIR__ . '/../../abonnement/controller/AbonnementController.php';
+require_once __DIR__ . '/../model/AdherentEspace.php';
 
 $controller = new AbonnementController();
 $offres = $controller->getAll();
-$aboCourant = $controller->get((int) utilisateur()['NumUsers']);
+$memberId = (int) utilisateur()['NumUsers'];
+$aboCourant = $controller->get($memberId);
+$memberProfile = (new AdherentEspace())->profil($memberId);
+$activeSubscription = (new AdherentEspace())->abonnement($memberId);
+$currentOffer = null;
+foreach ($offres as $offer) {
+    if ((int) $offer['Numabo'] === $aboCourant) {
+        $currentOffer = $offer;
+        break;
+    }
+}
+$currentPrice = null;
+if ($currentOffer !== null) {
+    $currentPrice = match ($currentOffer['type_abo']) {
+        'FREEMIUM' => euros($currentOffer['prix_mensuel_reduit']) . ' / mois',
+        'BASIC' => euros($currentOffer['prix_annuel']) . ' / an',
+        default => euros($currentOffer['prix_mensuel_plus']) . ' / mois',
+    };
+}
 $catalogueDansEspaceAdherent = true;
 $activeNav = 'abonnement';
 $offresRetour = url('adherent/view/abonnement.php');
@@ -18,6 +37,7 @@ $offresRetour = url('adherent/view/abonnement.php');
     <title>Gérer mon abonnement – ATHLETIX</title>
     <link rel="stylesheet" href="<?= e(url('assets/css/style.css')) ?>">
     <link rel="stylesheet" href="<?= e(url('assets/css/pages/athletix_public.css')) ?>">
+    <link rel="stylesheet" href="<?= e(url('assets/css/adherent/abonnement.css')) ?>">
     <style>
         .main-content {
             min-width: 0;
@@ -34,7 +54,7 @@ $offresRetour = url('adherent/view/abonnement.php');
         }
     </style>
 </head>
-<body>
+<body class="member-subscription">
 <div class="app-shell">
     <?php include dirname(__DIR__) . '/includes/sidebar.php'; ?>
     <main class="main-content">
