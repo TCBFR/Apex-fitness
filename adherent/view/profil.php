@@ -97,6 +97,9 @@ $commune = [
         $sidebarBrand = null;
         $sidebarLabel = 'Navigation maintenance';
         $sidebarSubtitle = 'Maintenance';
+        $sidebarMemberEnabled = true;
+        $sidebarMemberUnlocked = a_role('ADHERENT');
+        $sidebarMemberAction = url('employe/espace.php');
         require dirname(__DIR__, 2) . '/layout/sidebar.php';
         ?>
     <?php else: ?>

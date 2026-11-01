@@ -4,6 +4,7 @@ require_once __DIR__ . '/../faq/controller/FaqController.php';
 require_once __DIR__ . '/../message_contact/controller/MessageContactController.php';
 require_once __DIR__ . '/../planning/controller/planning.php';
 require_once __DIR__ . '/service/EquipmentInventorySchema.php';
+require_once __DIR__ . '/../utilisateur/model/utilisateur.php';
 exige_role('EMPLOYE');
 
 $moi    = utilisateur()['NumUsers'];
@@ -78,6 +79,31 @@ if (!$maintenance && !$accueil && $onglet === 'reservations') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifie_csrf();
     $action = $_POST['action'] ?? '';
+
+  if ($action === 'devenir_adherent') {
+    if (!$maintenance && !$accueil) {
+      http_response_code(403);
+      flash('erreur', 'Cette option est réservée aux employés d’accueil et de maintenance.');
+      redirige('employe/espace.php?onglet=tableau');
+    }
+
+    try {
+      $adherentQuery = $pdo->prepare('SELECT 1 FROM adherent WHERE NumUsers = ?');
+      $adherentQuery->execute([(int) $moi]);
+      if (!$adherentQuery->fetchColumn()) {
+        Utilisateur::ajouterAdherent((int) $moi);
+      }
+
+      $_SESSION['user']['roles'] = roles_de((int) $moi);
+      journalise('ACTIVATION_ESPACE_ADHERENT', 'Espace membre');
+      flash('succes', 'Votre espace membre est activé. Votre compte employé et ses accès sont conservés.');
+      redirige('adherent/espace.php');
+    } catch (Throwable $exception) {
+      error_log('[Activation espace adhérent] ' . $exception->getMessage());
+      flash('erreur', 'L’activation de votre espace membre a échoué. Réessayez dans quelques instants.');
+      redirige('employe/espace.php?onglet=tableau');
+    }
+  }
 
   $actionsTechnicien = [
     'avancer_maintenance', 'prendre_ticket', 'detacher_ticket', 'modifier_materiel',
@@ -1006,6 +1032,9 @@ $sidebarHome = url('employe/espace.php?onglet=tableau');
 $sidebarBrand = null;
 $sidebarLabel = $maintenance ? 'Navigation maintenance' : 'Navigation employé';
 $sidebarSubtitle = $maintenance ? 'Maintenance' : 'Espace employé';
+$sidebarMemberEnabled = $maintenance || $accueil;
+$sidebarMemberUnlocked = a_role('ADHERENT');
+$sidebarMemberAction = url('employe/espace.php');
 $topbarUser = utilisateur();
 $topbarTitle = $maintenance ? 'Maintenance' : 'Espace employé';
 $topbarContext = 'Espace sécurisé';

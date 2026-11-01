@@ -6,6 +6,9 @@ $sidebarHome = $sidebarHome ?? url('accueil/index.php');
 $sidebarLabel = $sidebarLabel ?? 'Navigation';
 $sidebarSubtitle = $sidebarSubtitle ?? 'Espace membre';
 $sidebarBrand = $sidebarBrand ?? null;
+$sidebarMemberEnabled = $sidebarMemberEnabled ?? false;
+$sidebarMemberUnlocked = $sidebarMemberUnlocked ?? a_role('ADHERENT');
+$sidebarMemberAction = $sidebarMemberAction ?? url('employe/espace.php');
 
 $sidebarIcons = [
     'home' => '<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
@@ -22,6 +25,7 @@ $sidebarIcons = [
     'plus' => '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
     'help' => '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 1 1 4.5 1.8c-1.2 1.2-2 1.5-2 3M12 17.5v.1"/>',
     'star' => '<path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+    'lock' => '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
 ];
 
 $sidebarIcon = static function (string $name) use ($sidebarIcons): string {
@@ -53,6 +57,23 @@ $sidebarIcon = static function (string $name) use ($sidebarIcons): string {
         <span><?= e($item['label']) ?></span>
       </a>
     <?php endforeach; ?>
+    <?php if ($sidebarMemberEnabled && !$sidebarMemberUnlocked): ?>
+      <details class="nav-dropdown" data-testid="nav-member-space-dropdown">
+        <summary class="nav-item">
+          <?= $sidebarIcon('lock') ?>
+          <span>Espace membre</span>
+          <small class="member-lock-label">Verrouillé</small>
+          <svg class="dropdown-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <div class="nav-dropdown-menu">
+          <form method="post" action="<?= e($sidebarMemberAction) ?>" onsubmit="return window.confirm('Confirmez-vous votre souhait de devenir membre ? Votre compte employé sera conservé et un espace adhérent sera ajouté.');">
+            <?= champ_csrf() ?>
+            <input type="hidden" name="action" value="devenir_adherent">
+            <button type="submit" data-testid="become-member-button">Devenir membre</button>
+          </form>
+        </div>
+      </details>
+    <?php endif; ?>
   </nav>
   <div class="sidebar-foot">
     <p class="tagline"><?= e($sidebarSubtitle) ?></p>
@@ -99,6 +120,16 @@ document.addEventListener('DOMContentLoaded', function () {
 #sidebar .nav-item:hover{background:#151917;color:#fff}
 #sidebar .nav-item.active{background:#1b1f1d;border-color:#262c29;color:#fff;box-shadow:inset 3px 0 0 var(--sb-lime)}
 #sidebar .nav-item.active .ico{color:var(--sb-lime)}
+#sidebar .nav-dropdown{flex:0 0 auto}
+#sidebar .nav-dropdown summary{list-style:none;cursor:pointer}
+#sidebar .nav-dropdown summary::-webkit-details-marker{display:none}
+#sidebar .nav-dropdown .dropdown-caret{width:16px;height:16px;margin-left:auto;transition:transform .2s ease}
+#sidebar .nav-dropdown[open] .dropdown-caret{transform:rotate(180deg)}
+#sidebar .nav-dropdown .member-lock-label{margin-left:auto;color:#a0aaa1;font-size:10px;white-space:nowrap}
+#sidebar .nav-dropdown[open] .member-lock-label{margin-left:0}
+#sidebar .nav-dropdown-menu{padding:4px 0 8px 50px}
+#sidebar .nav-dropdown-menu a,#sidebar .nav-dropdown-menu button{display:block;width:100%;padding:10px 12px;border:0;border-radius:6px;background:transparent;color:#d5d9d6;font:inherit;font-size:13px;text-align:left;cursor:pointer}
+#sidebar .nav-dropdown-menu a:hover,#sidebar .nav-dropdown-menu button:hover{background:#151917;color:var(--sb-lime)}
 #sidebar .sidebar-foot{margin-top:auto;position:relative;padding:0 12px 70px}
 #sidebar .tagline{font-style:italic;font-size:16px;line-height:1.35;color:#e6e9e6}
 #sidebar .tagline-bar{display:block;width:20px;height:2px;background:var(--sb-lime);margin-top:10px}

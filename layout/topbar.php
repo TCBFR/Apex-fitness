@@ -5,6 +5,38 @@ $topbarTitle = $topbarTitle ?? '';
 $topbarContext = $topbarContext ?? '';
 $topbarLinks = $topbarLinks ?? [];
 $topbarNotifications = $topbarNotifications ?? false;
+$topbarRoleLinks = [];
+if (function_exists('a_role')) {
+  if (a_role('ADHERENT')) {
+    $topbarRoleLinks[] = [
+      'label' => 'Espace membre',
+      'href' => url('adherent/espace.php'),
+    ];
+  }
+  if (a_role('ADMIN')) {
+    $topbarRoleLinks[] = [
+      'label' => 'Espace administration',
+      'href' => url('admin/espace.php?onglet=dashboard'),
+    ];
+  }
+  if (a_role('EMPLOYE')) {
+    $topbarRoleLinks[] = [
+      'label' => 'Espace employé',
+      'href' => url('employe/espace.php?onglet=tableau'),
+    ];
+  }
+}
+$topbarRoleHrefs = array_column($topbarRoleLinks, 'href');
+$topbarLinks = array_merge(
+  $topbarRoleLinks,
+  array_values(array_filter(
+    $topbarLinks,
+    static fn(array $link): bool =>
+      !in_array($link['href'] ?? '', $topbarRoleHrefs, true)
+      && !(function_exists('a_role') && a_role('EMPLOYE')
+        && in_array($link['label'] ?? '', ['Mon profil', 'Mon abonnement'], true))
+  ))
+);
 $topbarName = trim((string) ($topbarUser['prenomUsers'] ?? '') . ' ' . (string) ($topbarUser['nomUsers'] ?? ''));
 $topbarInitial = $topbarName !== '' ? mb_strtoupper(mb_substr($topbarName, 0, 1)) : '?';
 ?>
