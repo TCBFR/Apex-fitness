@@ -351,14 +351,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   if ($onglet === 'reservations' && $accueil && in_array($action, ['accueil_ajouter_reservation', 'accueil_annuler_reservation', 'accueil_modifier_reservation'], true)) {
     $retourReservations = 'employe/espace.php?onglet=reservations';
-    $dateRetour = (string) ($_POST['semaine'] ?? '');
-    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateRetour)) $retourReservations .= '&semaine=' . rawurlencode($dateRetour);
     try {
       if ($action === 'accueil_annuler_reservation') {
         $idReservation = (int) ($_POST['reservation'] ?? 0);
-        $annuler = $pdo->prepare("UPDATE reservation SET statut_reservation='Annulee' WHERE Numres=? AND statut_reservation <> 'Annulee'");
-        $annuler->execute([$idReservation]);
-        if (!$annuler->rowCount()) throw new RuntimeException('Cette réservation est introuvable ou déjà annulée.');
+        $pdo->beginTransaction();
+        $reservation = $pdo->prepare(
+          'SELECT r.statut_reservation, a.date_heure_debut
+             FROM reservation r
+             JOIN activite a ON a.Numactivite = r.Numactivite
+            WHERE r.Numres = ?
+            FOR UPDATE'
+        );
+        $reservation->execute([$idReservation]);
+        $reservationCourante = $reservation->fetch(PDO::FETCH_ASSOC);
+        if (!$reservationCourante || $reservationCourante['statut_reservation'] === 'Annulee') {
+          throw new RuntimeException('Cette réservation est introuvable ou déjà annulée.');
+        }
+        if (strtotime($reservationCourante['date_heure_debut']) < time()) {
+          throw new RuntimeException('Une réservation passée ne peut pas être annulée.');
+        }
+        $pdo->prepare("UPDATE reservation SET statut_reservation='Annulee' WHERE Numres=?")->execute([$idReservation]);
+        $pdo->commit();
         flash('succes', 'Réservation annulée.');
       } elseif ($action === 'accueil_ajouter_reservation') {
         $idAdherent = (int) ($_POST['adherent'] ?? 0);
@@ -385,10 +398,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $idReservation = (int) ($_POST['reservation'] ?? 0);
         $idActivite = (int) ($_POST['activite'] ?? 0);
         $pdo->beginTransaction();
-        $reservation = $pdo->prepare("SELECT NumUsers,statut_reservation FROM reservation WHERE Numres=? FOR UPDATE");
+        $reservation = $pdo->prepare(
+          'SELECT r.NumUsers, r.statut_reservation, a.date_heure_debut
+             FROM reservation r
+             JOIN activite a ON a.Numactivite = r.Numactivite
+            WHERE r.Numres = ?
+            FOR UPDATE'
+        );
         $reservation->execute([$idReservation]);
         $reservationCourante = $reservation->fetch(PDO::FETCH_ASSOC);
         if (!$reservationCourante || $reservationCourante['statut_reservation'] === 'Annulee') throw new RuntimeException('Cette réservation ne peut plus être modifiée.');
+        if (strtotime($reservationCourante['date_heure_debut']) < time()) throw new RuntimeException('Une réservation passée ne peut pas être modifiée.');
         $cours = $pdo->prepare("SELECT a.capacite_max,a.date_heure_debut,(SELECT COUNT(*) FROM reservation r WHERE r.Numactivite=a.Numactivite AND r.statut_reservation <> 'Annulee' AND r.Numres<>?) AS inscrits FROM activite a JOIN salle s ON s.Numsalle=a.Numsalle WHERE a.Numactivite=? AND s.etatsalle='Ouverte' FOR UPDATE");
         $cours->execute([$idReservation, $idActivite]);
         $detailsCours = $cours->fetch(PDO::FETCH_ASSOC);
@@ -832,17 +852,8 @@ if ($onglet === 'creneaux') {
 
 $reservationsAccueil = [];
 $activitesDisponiblesAccueil = [];
-$adherentsDisponiblesAccueil = [];
-$reservationSelectionneeAccueil = null;
-$semaineReservationsAccueil = '';
 if ($onglet === 'reservations' && $accueil) {
-  $dateSemaineAccueil = (string) ($_GET['semaine'] ?? '');
-  $debutSemaineAccueil = DateTimeImmutable::createFromFormat('!Y-m-d', $dateSemaineAccueil);
-  if (!$debutSemaineAccueil || $debutSemaineAccueil->format('Y-m-d') !== $dateSemaineAccueil) $debutSemaineAccueil = new DateTimeImmutable('monday this week');
-  else $debutSemaineAccueil = $debutSemaineAccueil->modify('monday this week');
-  $semaineReservationsAccueil = $debutSemaineAccueil->format('Y-m-d');
-  $finSemaineAccueil = $debutSemaineAccueil->modify('+7 days')->format('Y-m-d');
-  $stmtReservationsAccueil = $pdo->prepare(
+  $stmtReservationsAccueil = $pdo->query(
     "SELECT r.Numres AS id_ligne, r.statut_reservation, u.NumUsers, u.prenomUsers, u.nomUsers, u.mailUsers, u.telUsers,
             ad.matriculeadh, a.Numactivite, a.titre, a.type_activite, a.date_heure_debut, a.date_heure_fin,
             a.capacite_max, s.Numsalle, s.nomsalle, coach.prenomUsers AS coach_prenom, coach.nomUsers AS coach_nom,
@@ -852,22 +863,13 @@ if ($onglet === 'reservations' && $accueil) {
        FROM reservation r JOIN adherent ad ON ad.NumUsers=r.NumUsers JOIN utilisateur u ON u.NumUsers=ad.NumUsers
        JOIN activite a ON a.Numactivite=r.Numactivite JOIN salle s ON s.Numsalle=a.Numsalle
        JOIN utilisateur coach ON coach.NumUsers=a.NumUsers
-      WHERE a.date_heure_debut>=? AND a.date_heure_debut<? ORDER BY a.date_heure_debut, u.nomUsers, u.prenomUsers"
+      ORDER BY a.date_heure_debut DESC, u.nomUsers, u.prenomUsers"
   );
-  $stmtReservationsAccueil->execute([$semaineReservationsAccueil, $finSemaineAccueil]);
   $reservationsAccueil = $stmtReservationsAccueil->fetchAll(PDO::FETCH_ASSOC);
-  $idReservationSelectionnee = (int) ($_GET['reservation'] ?? 0);
-  foreach ($reservationsAccueil as $ligneReservationAccueil) {
-    if ((int) $ligneReservationAccueil['id_ligne'] === $idReservationSelectionnee) { $reservationSelectionneeAccueil = $ligneReservationAccueil; break; }
-  }
-  if (!$reservationSelectionneeAccueil && !$idReservationSelectionnee && $reservationsAccueil) $reservationSelectionneeAccueil = $reservationsAccueil[0];
   $activitesDisponiblesAccueil = $pdo->query(
     "SELECT a.Numactivite,a.titre,a.type_activite,a.date_heure_debut,a.date_heure_fin,a.capacite_max,s.nomsalle,
             (SELECT COUNT(*) FROM reservation rx WHERE rx.Numactivite=a.Numactivite AND rx.statut_reservation<>'Annulee') AS places_prises
        FROM activite a JOIN salle s ON s.Numsalle=a.Numsalle WHERE a.date_heure_debut>=NOW() AND s.etatsalle='Ouverte' ORDER BY a.date_heure_debut LIMIT 200"
-  )->fetchAll(PDO::FETCH_ASSOC);
-  $adherentsDisponiblesAccueil = $pdo->query(
-    'SELECT u.NumUsers,u.prenomUsers,u.nomUsers,u.mailUsers FROM adherent ad JOIN utilisateur u ON u.NumUsers=ad.NumUsers ORDER BY u.nomUsers,u.prenomUsers'
   )->fetchAll(PDO::FETCH_ASSOC);
 }
 
@@ -1009,7 +1011,7 @@ $employeeNavigation = $maintenance
       'adherents' => ['Adhérents', 'users'],
       'creer-ticket' => ['Créer un ticket', 'plus'],
       ...($accueil ? ['suivi-tickets' => ['Suivi des tickets', 'tool']] : []),
-      'materiel' => ['Matériel', 'tool'],
+      ...(!$accueil ? ['materiel' => ['Matériel', 'tool']] : []),
       'faq' => ['Questions', 'help'],
       'messages' => ['Messages reçus', 'message'],
     ];
@@ -1056,7 +1058,7 @@ $topbarLinks = [
     <link rel="stylesheet" href="<?= e(url('assets/css/pages/planning.css')) ?>">
   <?php endif; ?>
 </head>
-<body class="admin-page employee-page<?= $maintenance ? ' maintenance-page' : '' ?>">
+<body class="admin-page employee-page<?= $maintenance ? ' maintenance-page' : '' ?><?= $accueil && $onglet === 'reservations' ? ' admin-reservations-page' : '' ?>">
 <div class="admin-shell">
   <?php require __DIR__ . '/../layout/sidebar.php'; ?>
   <div class="admin-main">
@@ -1069,7 +1071,7 @@ $topbarLinks = [
       </div>
     <?php endif; ?>
     <main class="admin-content">
-      <?php if ((!$maintenance || $onglet !== 'tableau') && !($accueil && $onglet === 'suivi-tickets')): ?>
+      <?php if ((!$maintenance || !in_array($onglet, ['tableau', 'maintenance'], true)) && !($accueil && in_array($onglet, ['suivi-tickets', 'creneaux', 'reservations'], true))): ?>
       <div class="admin-heading">
         <div>
           <p class="admin-eyebrow"><?= $maintenance ? 'SUIVI DES INTERVENTIONS' : 'GESTION DE LA SALLE' ?></p>
@@ -1268,6 +1270,160 @@ $topbarLinks = [
     </table>
     <p class="vide" data-vide hidden>Aucun adhérent ne correspond à cette recherche.</p>
   </div>
+
+<?php elseif ($onglet === 'reservations' && $accueil): ?>
+
+  <section class="admin-reservations-page-content">
+    <header class="admin-reservations-heading">
+      <div class="admin-reservations-heading-copy">
+        <span aria-hidden="true">▦</span>
+        <div>
+          <h2>Réservations des adhérents</h2>
+          <p>Consultez toutes les réservations, puis modifiez ou annulez les séances à venir.</p>
+        </div>
+      </div>
+    </header>
+
+    <section class="admin-reservations-filters" aria-label="Filtres des réservations">
+      <select id="filtre-reservation-activite" aria-label="Filtrer par activité">
+        <option value="">Toutes les activités</option>
+        <?php foreach (PlanningController::TYPES as $typeReservation => $libelleReservation): ?>
+          <option value="<?= e($typeReservation) ?>"><?= e($libelleReservation) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <select id="filtre-reservation-statut" aria-label="Filtrer par statut">
+        <option value="">Tous les statuts</option>
+        <option value="Reservee">Confirmées</option>
+        <option value="En attente">En attente</option>
+        <option value="Annulee">Annulées</option>
+      </select>
+      <label class="admin-reservations-search">
+        <span aria-hidden="true">⌕</span>
+        <input type="search" id="recherche-reservation" placeholder="Rechercher un adhérent ou un cours…" autocomplete="off">
+      </label>
+    </section>
+
+    <section class="admin-reservations-list" id="liste-reservations">
+      <header>
+        <h3>Liste des réservations <span>(<?= count($reservationsAccueil) ?>)</span></h3>
+      </header>
+      <div class="admin-reservation-table-scroll">
+        <table class="admin-reservation-table">
+          <thead>
+            <tr><th>Date &amp; heure</th><th>Activité</th><th>Adhérent</th><th>Salle</th><th>Statut</th><th>Places</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+          <?php foreach ($reservationsAccueil as $reservation):
+            $dateCoursReservation = new DateTimeImmutable($reservation['date_heure_debut']);
+            $typeActiviteReservation = isset(PlanningController::TYPES[$reservation['type_activite']]) ? $reservation['type_activite'] : 'cardio';
+            $nomAdherentReservation = trim($reservation['prenomUsers'] . ' ' . $reservation['nomUsers']);
+            $nomCoachReservation = trim($reservation['coach_prenom'] . ' ' . $reservation['coach_nom']);
+            $statutReservation = $reservation['statut_reservation'];
+            $libelleStatutReservation = $statutReservation === 'Reservee' ? 'Confirmée' : ($statutReservation === 'Annulee' ? 'Annulée' : 'En attente');
+            $reservationFuture = strtotime($reservation['date_heure_debut']) >= time();
+            $motsRechercheReservation = mb_strtolower($nomAdherentReservation . ' ' . $reservation['mailUsers'] . ' ' . $reservation['titre'] . ' ' . $reservation['nomsalle'] . ' ' . $nomCoachReservation);
+          ?>
+            <tr data-reservation-row data-type="<?= e($typeActiviteReservation) ?>" data-status="<?= e($statutReservation) ?>" data-search="<?= e($motsRechercheReservation) ?>">
+              <td>
+                <strong><?= e($dateCoursReservation->format('d/m/Y')) ?></strong>
+                <span><?= e($dateCoursReservation->format('H:i')) ?> – <?= e((new DateTimeImmutable($reservation['date_heure_fin']))->format('H:i')) ?></span>
+              </td>
+              <td><div><strong><?= e($reservation['titre']) ?></strong><span>Coach : <?= e($nomCoachReservation) ?></span></div></td>
+              <td><div><strong><?= e($nomAdherentReservation) ?></strong><span><?= e($reservation['mailUsers']) ?></span></div></td>
+              <td><?= e($reservation['nomsalle']) ?></td>
+              <td><span class="admin-reservation-status status-<?= $statutReservation === 'Reservee' ? 'confirmed' : ($statutReservation === 'Annulee' ? 'cancelled' : 'waiting') ?>"><?= e($libelleStatutReservation) ?></span></td>
+              <td><?= (int) $reservation['places_prises'] ?>/<?= (int) $reservation['capacite_max'] ?></td>
+              <td>
+                <div class="admin-reservation-actions">
+                  <?php if ($statutReservation !== 'Annulee' && $reservationFuture): ?>
+                    <button type="button" data-reservation-edit data-id="<?= (int) $reservation['id_ligne'] ?>" data-current-course="<?= (int) $reservation['Numactivite'] ?>" aria-label="Modifier la réservation de <?= e($nomAdherentReservation) ?>">Modifier</button>
+                    <form method="post" class="admin-reservation-action-form">
+                      <?= champ_csrf() ?>
+                      <input type="hidden" name="action" value="accueil_annuler_reservation">
+                      <input type="hidden" name="reservation" value="<?= (int) $reservation['id_ligne'] ?>">
+                      <button type="submit" class="is-danger" data-confirme="Annuler la réservation de <?= e($nomAdherentReservation) ?> ?" aria-label="Annuler la réservation">Annuler</button>
+                    </form>
+                  <?php else: ?>
+                    <span class="admin-reservation-no-action"><?= $statutReservation === 'Annulee' ? 'Aucune action' : 'Séance passée' ?></span>
+                  <?php endif; ?>
+                </div>
+              </td>
+            </tr>
+          <?php endforeach; ?>
+          <?php if (!$reservationsAccueil): ?>
+            <tr><td colspan="7" class="admin-reservation-no-data">Aucune réservation enregistrée.</td></tr>
+          <?php endif; ?>
+          </tbody>
+        </table>
+      </div>
+      <p class="admin-reservation-filter-empty" id="reservations-filtre-vide" hidden>Aucune réservation ne correspond aux filtres.</p>
+    </section>
+  </section>
+
+  <dialog class="admin-reservation-dialog" id="reservation-dialogue">
+    <button type="button" class="reservation-dialog-close" aria-label="Fermer">×</button>
+    <form method="post" id="modifier-reservation-form">
+      <?= champ_csrf() ?>
+      <input type="hidden" name="action" value="accueil_modifier_reservation">
+      <input type="hidden" name="reservation" id="dialog-reservation-id">
+      <h3>Modifier la réservation</h3>
+      <label for="dialog-reservation-course">Choisir un autre cours</label>
+      <select name="activite" id="dialog-reservation-course" required>
+        <option value="">Sélectionner un cours</option>
+        <?php foreach ($activitesDisponiblesAccueil as $activiteOption):
+          $coursComplet = (int) $activiteOption['places_prises'] >= (int) $activiteOption['capacite_max'];
+        ?>
+          <option value="<?= (int) $activiteOption['Numactivite'] ?>" data-complet="<?= $coursComplet ? '1' : '0' ?>" <?= $coursComplet ? 'disabled' : '' ?>>
+            <?= e($activiteOption['titre']) ?> · <?= e(date('d/m/Y H:i', strtotime($activiteOption['date_heure_debut']))) ?> · <?= e($activiteOption['nomsalle']) ?> (<?= (int) $activiteOption['places_prises'] ?>/<?= (int) $activiteOption['capacite_max'] ?>)
+          </option>
+        <?php endforeach; ?>
+      </select>
+      <button type="submit">Enregistrer le changement</button>
+    </form>
+  </dialog>
+  <script>
+    (() => {
+      const rows = [...document.querySelectorAll('[data-reservation-row]')];
+      const activityFilter = document.getElementById('filtre-reservation-activite');
+      const statusFilter = document.getElementById('filtre-reservation-statut');
+      const search = document.getElementById('recherche-reservation');
+      const empty = document.getElementById('reservations-filtre-vide');
+      const filterRows = () => {
+        const activity = activityFilter.value;
+        const status = statusFilter.value;
+        const query = search.value.trim().toLocaleLowerCase('fr');
+        let visibleCount = 0;
+        rows.forEach(row => {
+          const visible = (!activity || row.dataset.type === activity)
+            && (!status || row.dataset.status === status)
+            && row.dataset.search.includes(query);
+          row.hidden = !visible;
+          if (visible) visibleCount++;
+        });
+        empty.hidden = visibleCount > 0;
+      };
+      activityFilter.addEventListener('change', filterRows);
+      statusFilter.addEventListener('change', filterRows);
+      search.addEventListener('input', filterRows);
+
+      const dialog = document.getElementById('reservation-dialogue');
+      const reservationId = document.getElementById('dialog-reservation-id');
+      const courseSelect = document.getElementById('dialog-reservation-course');
+      document.querySelectorAll('[data-reservation-edit]').forEach(button => {
+        button.addEventListener('click', () => {
+          reservationId.value = button.dataset.id;
+          courseSelect.value = '';
+          courseSelect.querySelectorAll('option[data-complet]').forEach(option => {
+            option.disabled = option.dataset.complet === '1';
+          });
+          const currentCourse = courseSelect.querySelector(`[value="${button.dataset.currentCourse}"]`);
+          if (currentCourse) currentCourse.disabled = false;
+          dialog.showModal();
+        });
+      });
+      dialog.querySelector('.reservation-dialog-close').addEventListener('click', () => dialog.close());
+    })();
+  </script>
 
 <?php elseif ($onglet === 'creneaux'): ?>
 
@@ -1744,11 +1900,11 @@ $topbarLinks = [
       break;
     }
   }
+  $vueEditionTicket = $maintenance && $ticketSelectionne && (($_GET['vue_ticket'] ?? '') === 'modifier');
   $categoriesTickets = array_values(array_unique(array_column($ticketsPourSuivi, 'libelletypeequip')));
   sort($categoriesTickets, SORT_NATURAL | SORT_FLAG_CASE);
   $prioritesTickets = array_values(array_unique(array_column($ticketsPourSuivi, 'priorite')));
   sort($prioritesTickets, SORT_NATURAL | SORT_FLAG_CASE);
-  $historiqueTicketComplet = ($_GET['historique_ticket'] ?? '') === '1';
   $interventionsTicket = [];
   if ($ticketSelectionne) {
     $sqlInterventionsTicket =
@@ -1764,14 +1920,15 @@ $topbarLinks = [
     $interventionsTicket = $queryInterventionsTicket->fetchAll(PDO::FETCH_ASSOC);
   }
   ?>
-  <section class="maintenance-ticket-page" aria-label="<?= $maintenance ? 'Gestion des tickets' : 'Suivi de mes tickets' ?>">
+  <section class="maintenance-ticket-page<?= $maintenance ? ' is-technician' : '' ?>" aria-label="<?= $maintenance ? 'Mes tickets de maintenance' : 'Suivi de mes tickets' ?>">
     <header class="maintenance-ticket-page-heading">
-      <div><h2><?= $maintenance ? 'Gestion des tickets' : 'Suivi des tickets' ?></h2><p><?= $maintenance ? 'Consultez les demandes et suivez les interventions de maintenance.' : 'Consultez l’état de vos demandes et suivez leur avancement.' ?></p></div>
+      <div><?php if ($maintenance): ?><p class="ticket-page-eyebrow">ESPACE MAINTENANCE</p><?php endif; ?><h2><?= $maintenance ? 'Mes tickets' : 'Suivi des tickets' ?></h2><p><?= $maintenance ? 'Retrouvez la file des demandes et suivez l’avancement des interventions.' : 'Consultez l’état de vos demandes et suivez leur avancement.' ?></p></div>
     </header>
+    <?php if (!$maintenance): ?>
     <div class="maintenance-ticket-summary">
       <article class="ticket-summary-card ticket-summary-total">
         <span class="ticket-summary-icon" aria-hidden="true"><i class="fa-solid fa-ticket"></i></span>
-        <div><strong><?= count($ticketsPourSuivi) ?></strong><span><?= $maintenance ? 'Total des tickets' : 'Mes tickets' ?></span><small><?= $maintenance ? 'Dans la file de maintenance' : 'Demandes signalées par vous' ?></small></div>
+        <div><strong><?= count($ticketsPourSuivi) ?></strong><span><?= $maintenance ? 'Tickets dans la file' : 'Mes tickets' ?></span><small><?= $maintenance ? 'Toutes les demandes de maintenance' : 'Demandes signalées par vous' ?></small></div>
       </article>
       <article class="ticket-summary-card ticket-summary-progress">
         <span class="ticket-summary-icon" aria-hidden="true"><i class="fa-solid fa-wrench"></i></span>
@@ -1786,6 +1943,7 @@ $topbarLinks = [
         <div><strong><?= $ticketsEnAttenteMaintenance ?></strong><span>En attente</span><small><?= $maintenance ? 'À prendre en charge ou valider' : 'En attente d’intervention' ?></small></div>
       </article>
     </div>
+    <?php endif; ?>
 
     <?php if (!$ticketsPourSuivi): ?>
       <div class="maintenance-ticket-empty">
@@ -1795,7 +1953,8 @@ $topbarLinks = [
         <?php if (!$maintenance): ?><a class="btn btn-vert" href="<?= e(url('employe/espace.php?onglet=creer-ticket')) ?>">Créer un ticket</a><?php endif; ?>
       </div>
     <?php else: ?>
-      <div class="maintenance-ticket-workspace">
+      <div class="maintenance-ticket-workspace<?= $maintenance ? ' is-technician' . ($ticketSelectionne ? ' has-selection' : '') . ($vueEditionTicket ? ' is-editing' : '') : '' ?>">
+        <?php if (!$vueEditionTicket): ?>
         <section class="maintenance-ticket-list-panel" aria-label="Liste des tickets">
           <div class="ticket-toolbar">
             <div class="ticket-status-tabs" role="group" aria-label="Filtrer par statut">
@@ -1847,7 +2006,10 @@ $topbarLinks = [
                   <td><span class="ticket-status-badge is-<?= e($statusClass) ?>"><?= $ticket['libelle_statut'] === 'Terminee' ? 'Résolu' : e($ticket['libelle_statut']) ?></span></td>
                   <td><span class="ticket-priority-badge is-<?= e(mb_strtolower($ticket['priorite'])) ?>"><?= e($ticket['priorite']) ?></span></td>
                   <td class="ticket-row-date"><?= dateFr($ticket['date_demandemaint'], true) ?></td>
-                  <td><a class="ticket-view-button" href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets . '&ticket=' . (int) $ticket['Nummaint'])) ?>" aria-label="Voir le ticket TKT-<?= (int) $ticket['Nummaint'] ?>"<?= $isSelected ? ' aria-current="true"' : '' ?>><i class="fa-regular fa-eye" aria-hidden="true"></i></a></td>
+                  <td><div class="ticket-row-actions">
+                    <a class="ticket-view-button" href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets . '&ticket=' . (int) $ticket['Nummaint'])) ?>"<?= $isSelected ? ' aria-current="true"' : '' ?>><i class="fa-regular fa-eye" aria-hidden="true"></i> Voir</a>
+                    <?php if ($maintenance): ?><a class="ticket-view-button ticket-row-edit" href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets . '&ticket=' . (int) $ticket['Nummaint'] . '&vue_ticket=modifier')) ?>"><i class="fa-solid fa-pen" aria-hidden="true"></i> Modifier</a><?php endif; ?>
+                  </div></td>
                 </tr>
               <?php endforeach; ?>
               </tbody>
@@ -1863,6 +2025,7 @@ $topbarLinks = [
             </nav>
           </footer>
         </section>
+        <?php endif; ?>
 
         <?php if ($ticketSelectionne): ?>
         <aside class="maintenance-ticket-detail-panel" data-ticket-detail-panel aria-label="Détails du ticket">
@@ -1877,12 +2040,27 @@ $topbarLinks = [
             };
             ?>
             <header class="ticket-detail-heading">
-              <a class="ticket-detail-back" href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets)) ?>" aria-label="Retour à la liste des tickets"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
-              <h3><i class="fa-solid fa-ticket" aria-hidden="true"></i> Détails du ticket</h3>
-              <?php if ($maintenance): ?>
-              <a class="ticket-detail-edit" href="#ticket-detail-actions"><i class="fa-solid fa-pen" aria-hidden="true"></i> Modifier</a>
+              <?php if ($vueEditionTicket): ?>
+                <a class="ticket-detail-back" href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets . '&ticket=' . (int) $ticket['Nummaint'])) ?>" aria-label="Retour au détail du ticket"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+                <h3><i class="fa-solid fa-pen" aria-hidden="true"></i> Modifier le ticket</h3>
+                <a class="ticket-detail-edit" href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets . '&ticket=' . (int) $ticket['Nummaint'])) ?>"><i class="fa-regular fa-eye" aria-hidden="true"></i> Voir</a>
+              <?php else: ?>
+                <a class="ticket-detail-back" href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets)) ?>" aria-label="Retour à la liste des tickets"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+                <h3><i class="fa-solid fa-ticket" aria-hidden="true"></i> Détails du ticket</h3>
+                <?php if ($maintenance): ?>
+                <a class="ticket-detail-edit" href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets . '&ticket=' . (int) $ticket['Nummaint'] . '&vue_ticket=modifier')) ?>"><i class="fa-solid fa-pen" aria-hidden="true"></i> Modifier</a>
+                <?php endif; ?>
               <?php endif; ?>
             </header>
+            <?php if ($vueEditionTicket): ?>
+            <div class="ticket-edit-summary">
+              <p class="ticket-detail-id">TKT-<?= (int) $ticket['Nummaint'] ?></p>
+              <h4><?= e($ticket['description_problememaint']) ?></h4>
+              <p><i class="fa-solid fa-cube" aria-hidden="true"></i> <?= e($ticket['nomequip']) ?> · <?= e($ticket['libelletypeequip']) ?></p>
+              <span class="ticket-status-badge is-<?= e($statusClass) ?>"><?= $ticket['libelle_statut'] === 'Terminee' ? 'Résolu' : e($ticket['libelle_statut']) ?></span>
+            </div>
+            <?php endif; ?>
+            <?php if (!$vueEditionTicket): ?>
             <div class="ticket-detail-title-row">
               <p class="ticket-detail-id">TKT-<?= (int) $ticket['Nummaint'] ?></p>
               <span class="ticket-priority-badge is-<?= e(mb_strtolower($ticket['priorite'])) ?>"><?= e($ticket['priorite']) ?> priorité</span>
@@ -1921,27 +2099,10 @@ $topbarLinks = [
                 <?php else: ?><?= e($ticket['technicien_prenom'] . ' ' . $ticket['technicien_nom']) ?><?php endif; ?>
               </p>
             </div>
-            <section class="ticket-recent-updates" aria-labelledby="ticket-recent-updates-title">
-              <header>
-                <h4 id="ticket-recent-updates-title"><i class="fa-solid fa-comment-dots" aria-hidden="true"></i> Échanges récents</h4>
-                <?php if ($historiqueTicketComplet): ?>
-                  <a href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets . '&ticket=' . (int) $ticket['Nummaint'])) ?>">Voir moins <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-                <?php elseif (count($interventionsTicket) > 3): ?>
-                  <a href="<?= e(url('employe/espace.php?onglet=' . $ongletSuiviTickets . '&ticket=' . (int) $ticket['Nummaint'] . '&historique_ticket=1')) ?>">Voir tout <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
-                <?php endif; ?>
-              </header>
-              <?php if (!$interventionsTicket): ?>
-                <p>Aucun échange enregistré.</p>
-              <?php else: ?>
-                <ul>
-                  <?php foreach (array_slice(array_reverse($interventionsTicket), 0, $historiqueTicketComplet ? count($interventionsTicket) : 3) as $interventionTicket): ?>
-                    <li>
-                      <div><strong><?= e($interventionTicket['prenomUsers'] . ' ' . $interventionTicket['nomUsers']) ?></strong><small><?= e($interventionTicket['libelle_statut']) ?> · <?= dateFr($interventionTicket['date_intervention'], true) ?></small></div>
-                      <?php if (trim((string) $interventionTicket['commentaire']) !== ''): ?><p><?= e($interventionTicket['commentaire']) ?></p><?php endif; ?>
-                    </li>
-                  <?php endforeach; ?>
-                </ul>
-              <?php endif; ?>
+            <?php endif; ?>
+            <?php if ($maintenance && $vueEditionTicket): ?>
+            <div class="ticket-detail-actions" id="ticket-detail-actions">
+              <h4>Actions de maintenance</h4>
               <?php if (
                 (int) $ticket['NumUsers_technicien'] === (int) $moi
                 && !in_array($ticket['libelle_statut'], ['Terminee', 'À valider'], true)
@@ -1952,13 +2113,9 @@ $topbarLinks = [
                   <input type="hidden" name="maintenance" value="<?= (int) $ticket['Nummaint'] ?>">
                   <label class="sr-only" for="ticket-new-comment-<?= (int) $ticket['Nummaint'] ?>">Ajouter un commentaire</label>
                   <textarea id="ticket-new-comment-<?= (int) $ticket['Nummaint'] ?>" name="commentaire" rows="1" maxlength="2000" placeholder="Ajouter un commentaire…" required></textarea>
-                  <button type="submit" aria-label="Envoyer le commentaire"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
+                  <button type="submit"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i><span>Envoyer</span></button>
                 </form>
               <?php endif; ?>
-            </section>
-            <?php if ($maintenance): ?>
-            <div class="ticket-detail-actions" id="ticket-detail-actions">
-              <h4>Mettre à jour le ticket</h4>
               <?php if ($ticket['NumUsers_technicien'] === null && $ticket['libelle_statut'] === 'Ouverte'): ?>
                 <form method="post">
                   <?= champ_csrf() ?>
@@ -2000,7 +2157,7 @@ $topbarLinks = [
               <?php endif; ?>
               <a class="ticket-action-secondary" href="<?= e(url('employe/espace.php?onglet=materiel')) ?>"><i class="fa-solid fa-cube" aria-hidden="true"></i> Consulter le matériel</a>
             </div>
-            <?php else: ?>
+            <?php elseif (!$maintenance): ?>
             <div class="ticket-detail-actions">
               <h4>Suivi de la demande</h4>
               <?php if ($ticket['libelle_statut'] === 'À valider'): ?>

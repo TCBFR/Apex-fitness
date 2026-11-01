@@ -8,6 +8,7 @@
  *   - séances       : flux JSON planning/events.php (celui de FullCalendar)
  *   - création      : action « creer_creneau »    (titre, type, salle, coach, debut, duree,
  *                     capacite, repeter, jusqu_au)
+ *   - modification : action « modifier_creneau » (creneau + champs du formulaire)
  *   - suppression   : action « supprimer_creneau » (creneau, portee = un | serie)
  *   - listes du formulaire : $planningDonnees['salles' | 'coachs' | 'titres']
  *
@@ -25,7 +26,9 @@ $PE = [
 ];
 
 /* ---- Types d'activité (PlanningController::TYPES) + couleurs ------------- */
-$palette = ['#CCFF00', '#4DA3FF', '#FF7A59', '#B07CFF', '#2EC4B6', '#FFC857', '#F06292', '#8BC34A'];
+$palette = !empty($accueil)
+    ? ['#4b8ff7', '#ad64e8', '#f27675', '#e26b9e', '#e3a32f', '#54ad68', '#29a7a5', '#80a640']
+    : ['#CCFF00', '#4DA3FF', '#FF7A59', '#B07CFF', '#2EC4B6', '#FFC857', '#F06292', '#8BC34A'];
 $types = [];
 $n = 0;
 foreach (PlanningController::TYPES as $cle => $libelle) {
@@ -89,9 +92,15 @@ foreach ((array) ($planningDonnees['titres'] ?? []) as $t) {
 }
 $titres = array_values(array_unique($titres));
 
-$cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
+$cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types, 'createAction' => $PE['action_creer']];
 ?>
-<div class="pe" id="pe-root" data-testid="planning-employe">
+<div class="pe<?= !empty($accueil) ? ' pe-reception' : '' ?>" id="pe-root" data-testid="planning-employe">
+  <?php if (!empty($accueil)): ?>
+    <header class="pe-reception-heading">
+      <span class="pe-reception-heading-icon" aria-hidden="true"><i class="fa-regular fa-calendar"></i></span>
+      <div><h2>Planning des cours</h2><p>Consultez et gérez le planning des activités du centre sportif.</p></div>
+    </header>
+  <?php endif; ?>
   <style>
     .pe [hidden]{display:none !important}
     .pe-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
@@ -124,32 +133,131 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
     .pe-warn{grid-column:1/-1;margin:0;padding:9px 11px;border-radius:8px;font-size:13px;background:rgba(234,88,12,.12);color:#c2410c}
     .pe-info{grid-column:1/-1;margin:0;font-size:13px;opacity:.8}
     .pe-form-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}
+    .pe-reception [hidden]{display:none !important}
+    .pe-reception-heading{display:flex;align-items:center;gap:14px;margin:0 0 18px}
+    .pe-reception-heading-icon{display:grid;width:44px;height:44px;place-items:center;border-radius:10px;background:#edf4ff;color:#3179e5;font-size:23px}
+    .pe-reception-heading h2{margin:0;color:#14294a;font-size:24px;letter-spacing:-.025em}
+    .pe-reception-heading p{margin:4px 0 0;color:#536783;font-size:12px}
+    .pe-reception .layout-2{display:block;margin-top:0}
+    .pe-reception .col-main{gap:12px}
+    .pe-reception .pe-stats,.pe-reception .view-tabs,.pe-reception .pe-hint,.pe-reception .col-side{display:none}
+    .pe-reception .toolbar{display:grid;grid-template-columns:1fr;gap:12px;padding:0;border:0;background:transparent;box-shadow:none}
+    .pe-reception .date-nav{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+    .pe-reception .date-box .icon-btn{height:36px;padding:0 12px;border:1px solid #dfe6ef;border-radius:6px;background:#fff;color:#29425f;font-size:14px}
+    .pe-reception .date-box .icon-btn:first-child::after{content:' Semaine précédente';font:600 10px var(--font,Arial,sans-serif)}
+    .pe-reception .date-box .icon-btn:last-child::before{content:'Semaine suivante ';font:600 10px var(--font,Arial,sans-serif)}
+    .pe-reception .date-label{min-width:165px;justify-content:center;padding:0 8px;color:#243b58;font-size:11px}
+    .pe-reception .date-nav > [data-pe-nav="today"]{border-color:#dfe6ef;background:#fff;color:#3277dc}
+    .pe-reception .pe-reception-filters{display:flex;justify-content:flex-end;gap:8px;margin-left:auto}
+    .pe-reception .pe-reception-filters .select{min-width:150px}
+    .pe-reception .pe-reception-filters select{height:36px;padding:0 28px 0 11px;border:1px solid #dfe6ef;border-radius:6px;background-color:#fff;color:#314761;font-size:10px}
+    .pe-reception .date-nav > .date-box{display:flex;align-items:center;gap:4px;order:1;padding:2px;border:1px solid #dfe6ef;border-radius:7px;background:#fff}
+    .pe-reception .date-nav > [data-pe-nav="today"]{order:2}
+    .pe-reception .date-nav > .pe-reception-filters{order:3}
+    .pe-reception .date-nav > #pe-create-btn{order:4}
+    .pe-reception #pe-create-btn{border-color:#2870dc;background:#2870dc;color:#fff;box-shadow:none}
+    .pe-reception #pe-create-btn:hover{border-color:#1d5fc2;background:#1d5fc2}
+    .pe-reception .cal-wrap{padding:0 8px 10px;border:1px solid #dfe6ef;border-radius:9px;background:#fff;box-shadow:0 3px 14px rgba(27,48,75,.04)}
+    .pe-reception #pe-calendar{--fc-border-color:#dfe6ef;--fc-page-bg-color:#fff;--fc-neutral-bg-color:#f8fafc;--fc-today-bg-color:rgba(125,190,75,.07);min-height:480px;color:#334a66}
+    .pe-reception #pe-calendar .fc-scrollgrid{border:0}
+    .pe-reception #pe-calendar .fc-col-header-cell{padding:9px 0;border-right:1px solid #dfe6ef;border-bottom:1px solid #dfe6ef;background:#fff}
+    .pe-reception #pe-calendar .fc-col-header-cell-cushion{display:grid;gap:3px;color:#243b58;font-size:10px;text-decoration:none}
+    .pe-reception #pe-calendar .dh-dow{text-transform:capitalize}
+    .pe-reception #pe-calendar .dh-date{color:#71839a;font-size:9px;font-weight:500}
+    .pe-reception #pe-calendar .fc-timegrid-slot{height:2.6em}
+    .pe-reception #pe-calendar .fc-timegrid-slot-label-cushion{padding-right:8px;color:#3e5878;font-size:10px}
+    .pe-reception #pe-calendar .fc-timegrid-axis,.pe-reception #pe-calendar .fc-timegrid-slot-label{border-right:0}
+    .pe-reception #pe-calendar .fc-timegrid-slot-minor{border-top:0}
+    .pe-reception #pe-calendar .fc-timegrid-col-events{margin:2px 3px}
+    .pe-reception #pe-calendar .fc-timegrid-event-harness-inset .fc-timegrid-event{box-shadow:none}
+    .pe-reception #pe-calendar .fc-event.atx-ev{overflow:hidden;border:1px solid color-mix(in srgb,var(--c) 38%,white);border-left:3px solid var(--c);border-radius:6px;background:color-mix(in srgb,var(--c) 15%,white);color:#243b58;cursor:pointer}
+    .pe-reception #pe-calendar .fc-event-main,.pe-reception #pe-calendar .fc-event-main-frame{height:100%;padding:0;color:#243b58}
+    .pe-reception #pe-calendar .ev{display:grid;gap:3px;padding:5px 6px;font-size:9px;line-height:1.2}
+    .pe-reception #pe-calendar .ev strong{display:flex;align-items:center;gap:5px;overflow:hidden;font-size:9px;text-overflow:ellipsis}
+    .pe-reception #pe-calendar .ev strong i{flex:none;color:var(--c)}
+    .pe-reception #pe-calendar .ev span{overflow:hidden;font-size:8px;text-overflow:ellipsis;white-space:nowrap}
+    .pe-reception #pe-calendar .ev .ev-coach{display:none}
+    .pe-reception #pe-calendar .ev .pe-ev-count{margin:0;font-size:8px}
+    .pe-reception .event-tooltip{border:1px solid #dfe6ef;border-radius:8px;background:#fff;color:#334a66;box-shadow:0 8px 28px rgba(26,45,68,.15)}
+    .pe-reception .event-tooltip strong{color:#243b58}
+    .pe-reception .event-tooltip b{color:#568b38}
+    .pe-reception .modal-box{border-color:#dfe6ef;background:#fff;color:#243b58}
+    .pe-reception .modal-body h2{color:#1e3552}
+    .pe-reception .modal-body .meta-list,.pe-reception .modal-body .places{color:#516780}
+    .pe-reception .pe-actions .btn-outline{border-color:#dfe6ef;color:#536b84}
+    .pe-reception .pe-actions .btn-danger{border-color:#f1c8c0;background:#fff;color:#b3483a}
+    .pe-reception .pe-form input,.pe-reception .pe-form select{border-color:#dfe6ef;background:#fff;color:#314761}
+    .pe-reception .pe-form-actions .btn-primary{background:#3279e7;color:#fff}
+    .pe-reception .pe-form-actions .btn-primary:hover{background:#1d5fc2}
+    .pe-reception.is-creating>.pe-reception-heading,.pe-reception.is-creating>.layout-2{display:none}
+    .pe-reception.is-creating #pe-create-modal{position:static;inset:auto;z-index:auto;display:block;padding:0;background:transparent}
+    .pe-reception.is-creating #pe-create-modal .modal-backdrop,.pe-reception.is-creating #pe-create-modal .modal-close{display:none}
+    .pe-reception.is-creating #pe-create-modal .modal-box{width:100%;max-width:760px;margin:0 auto;overflow:visible;border:1px solid #dfe6ef;border-radius:12px;background:#fff;box-shadow:0 8px 28px rgba(27,48,75,.08);opacity:1;transform:none}
+    .pe-reception.is-creating #pe-create-modal .modal-body{margin:0;padding:24px}
+    .pe-create-view-heading{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:22px}
+    .pe-create-view-heading>button{justify-self:start;padding:7px 10px;border:1px solid #dfe6ef;border-radius:6px;background:#fff;color:#385778;font:600 11px var(--font,Arial,sans-serif);cursor:pointer}
+    .pe-create-view-heading>div>span{color:#71839a;font-size:9px;font-weight:700;letter-spacing:.1em}
+    .pe-create-view-heading h2{margin:5px 0;color:#1e3552;font-size:24px}
+    .pe-create-view-heading p{margin:0;color:#647791;font-size:12px}
+    .pe-reception.is-viewing>.pe-reception-heading,.pe-reception.is-viewing>.layout-2{display:none}
+    .pe-reception.is-viewing #pe-session-modal{position:static;inset:auto;z-index:auto;display:block;padding:0;background:transparent}
+    .pe-reception.is-viewing #pe-session-modal .modal-backdrop,.pe-reception.is-viewing #pe-session-modal .modal-close{display:none}
+    .pe-reception.is-viewing #pe-session-modal .modal-box{width:100%;max-width:760px;margin:0 auto;overflow:visible;border:1px solid #dfe6ef;border-radius:12px;background:#fff;box-shadow:0 8px 28px rgba(27,48,75,.08);opacity:1;transform:none}
+    .pe-reception.is-viewing #pe-session-modal .modal-body{margin:0;padding:24px}
+    .pe-session-view-heading{display:grid;grid-template-columns:1fr;gap:14px;margin-bottom:20px}
+    .pe-session-view-heading>button{justify-self:start;padding:7px 10px;border:1px solid #dfe6ef;border-radius:6px;background:#fff;color:#385778;font:600 11px var(--font,Arial,sans-serif);cursor:pointer}
+    .pe-session-view-heading>div>span{color:#71839a;font-size:9px;font-weight:700;letter-spacing:.1em}
+    .pe-session-view-heading h2{margin:5px 0;color:#1e3552;font-size:24px}
+    .pe-session-view-heading p{margin:0;color:#647791;font-size:12px}
+    .pe-reception.is-viewing .modal-body>.tag{display:inline-flex;margin-bottom:4px}
+    .pe-reception.is-viewing .modal-body>h2{margin-top:0}
+    .pe-reception.is-viewing .modal-body .meta-list{padding:0;list-style:none}
+    .pe-reception.is-creating .pe-form{gap:16px;margin-top:0}
+    .pe-reception.is-creating .pe-field{gap:7px;color:#405873;font-size:12px;font-weight:600}
+    .pe-reception.is-creating .pe-field input,.pe-reception.is-creating .pe-field select{min-height:42px}
+    .pe-reception.is-creating .pe-form-actions{padding-top:8px}
+    @media(max-width:900px){.pe-reception .pe-reception-filters{flex:1 1 100%;margin-left:0;flex-wrap:wrap;justify-content:stretch}.pe-reception .pe-reception-filters .select{flex:1;min-width:130px}}
+    @media(max-width:560px){.pe-reception-heading h2{font-size:20px}.pe-reception .date-box .icon-btn:first-child::after{content:' Préc.'}.pe-reception .date-box .icon-btn:last-child::before{content:'Suiv. '}.pe-reception .date-label{font-size:10px}.pe-reception .cal-wrap{padding-inline:3px}.pe-reception #pe-calendar .fc-timegrid-slot-label-cushion{font-size:8px}.pe-reception #pe-calendar .ev{padding:3px;font-size:8px}.pe-reception #pe-calendar .ev span{font-size:7px}}
     @media (max-width:560px){.pe-form{grid-template-columns:1fr}}
   </style>
 
+  <?php if (empty($accueil)): ?>
   <section class="pe-stats" data-testid="planning-stats">
     <div class="pe-stat"><b id="pe-stat-count" data-testid="stat-sessions">0</b><span>séances sur la période</span></div>
     <div class="pe-stat"><b id="pe-stat-fill" data-testid="stat-fill">—</b><span>taux de remplissage moyen</span></div>
     <div class="pe-stat is-warn"><b id="pe-stat-full" data-testid="stat-full">0</b><span>séances complètes</span></div>
     <div class="pe-stat is-bad"><b id="pe-stat-low" data-testid="stat-low">0</b><span>séances peu remplies (&lt; 30&nbsp;%)</span></div>
   </section>
+  <?php endif; ?>
 
-  <div class="layout-2">
+  <div class="layout-2<?= !empty($accueil) ? ' pe-layout-reception' : '' ?>">
     <div class="col-main">
       <section class="panel toolbar" data-testid="planning-toolbar">
+        <?php if (empty($accueil)): ?>
         <div class="view-tabs" role="tablist">
           <button type="button" class="vt is-active" data-pe-view="timeGridWeek" data-testid="view-week-button">Semaine</button>
           <button type="button" class="vt" data-pe-view="dayGridMonth" data-testid="view-month-button">Mois</button>
           <button type="button" class="vt" data-pe-view="timeGridDay" data-testid="view-day-button">Jour</button>
         </div>
+        <?php endif; ?>
         <div class="date-nav">
-          <button type="button" class="btn btn-ghost btn-sm" data-pe-nav="today" data-testid="calendar-today-button">Aujourd’hui</button>
+          <?php if (empty($accueil)): ?><button type="button" class="btn btn-ghost btn-sm" data-pe-nav="today" data-testid="calendar-today-button">Aujourd’hui</button><?php endif; ?>
           <div class="date-box">
-            <button type="button" class="icon-btn" data-pe-nav="prev" data-testid="calendar-prev-button" aria-label="Précédent">‹</button>
-            <span class="date-label"><span id="pe-cal-title" data-testid="calendar-title"></span></span>
-            <button type="button" class="icon-btn" data-pe-nav="next" data-testid="calendar-next-button" aria-label="Suivant">›</button>
+            <button type="button" class="icon-btn" data-pe-nav="prev" data-testid="calendar-prev-button" aria-label="<?= !empty($accueil) ? 'Semaine précédente' : 'Précédent' ?>">‹</button>
+            <span class="date-label"><?php if (!empty($accueil)): ?><i class="fa-regular fa-calendar" aria-hidden="true"></i><?php endif; ?><span id="pe-cal-title" data-testid="calendar-title"></span></span>
+            <button type="button" class="icon-btn" data-pe-nav="next" data-testid="calendar-next-button" aria-label="<?= !empty($accueil) ? 'Semaine suivante' : 'Suivant' ?>">›</button>
           </div>
-          <button type="button" class="btn btn-primary btn-vert btn-sm" id="pe-create-btn" data-testid="create-session-button"><?= !empty($accueil) ? '+ Ajouter un cours' : '+ Nouveau créneau' ?></button>
+          <?php if (!empty($accueil)): ?>
+          <button type="button" class="btn btn-primary btn-vert btn-sm" data-pe-nav="today"><i class="fa-regular fa-calendar" aria-hidden="true"></i> Cette semaine</button>
+          <?php endif; ?>
+          <button type="button" class="btn btn-primary btn-vert btn-sm" id="pe-create-btn" data-testid="create-session-button"><?= !empty($accueil) ? '+ Ajouter un créneau' : '+ Nouveau créneau' ?></button>
+          <?php if (!empty($accueil)): ?>
+          <div class="pe-reception-filters">
+            <label class="select"><span class="sr-only">Filtrer les salles</span><select id="pe-filter-room" data-testid="filter-room-select"><option value="all">Toutes les salles</option><?php foreach ($salles as $s): ?><option value="<?= e($s['nom']) ?>"><?= e($s['nom']) ?></option><?php endforeach; ?></select></label>
+            <label class="select"><span class="sr-only">Filtrer les activités</span><select id="pe-filter-type" data-testid="filter-type-select"><option value="all">Toutes les activités</option><?php foreach ($types as $cle => $t): ?><option value="<?= e($cle) ?>"><?= e($t['label']) ?></option><?php endforeach; ?></select></label>
+            <label class="select"><span class="sr-only">Filtrer les coachs</span><select id="pe-filter-coach" data-testid="filter-coach-select"><option value="all">Tous les coachs</option></select></label>
+          </div>
+          <?php endif; ?>
         </div>
       </section>
 
@@ -158,9 +266,10 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
         <div class="event-tooltip" id="pe-tooltip" role="tooltip" hidden></div>
         <p class="cal-empty" id="pe-empty" hidden data-testid="calendar-empty-state">Aucune séance ne correspond à vos filtres sur cette période.</p>
       </section>
-      <p class="pe-hint">Astuce : cliquez sur une plage libre du calendrier pour préparer un nouveau créneau à cette date et à cette heure.</p>
+      <?php if (empty($accueil)): ?><p class="pe-hint">Astuce : cliquez sur une plage libre du calendrier pour préparer un nouveau créneau à cette date et à cette heure.</p><?php endif; ?>
     </div>
 
+    <?php if (empty($accueil)): ?>
     <aside class="col-side">
       <section class="panel side-card" data-testid="filters-panel">
         <h2 class="side-title">Filtres</h2>
@@ -218,15 +327,22 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
         </ul>
       </section>
     </aside>
+    <?php endif; ?>
   </div>
 
   <!-- Modale : détail d'une séance -->
   <div class="modal" id="pe-session-modal" hidden data-testid="session-modal">
     <div class="modal-backdrop" data-pe-close></div>
-    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="pe-modal-title">
+    <div class="modal-box" role="<?= !empty($accueil) ? 'region' : 'dialog' ?>"<?= empty($accueil) ? ' aria-modal="true"' : '' ?> aria-labelledby="pe-modal-title">
       <button type="button" class="icon-btn modal-close" data-pe-close data-testid="session-modal-close" aria-label="Fermer">×</button>
       <div class="modal-img" id="pe-modal-img"></div>
       <div class="modal-body">
+        <?php if (!empty($accueil)): ?>
+          <div class="pe-session-view-heading">
+            <button type="button" data-pe-close>← Retour au planning</button>
+            <div><span>PLANNING DES COURS</span><h2>Détail du cours</h2><p>Consultez les informations et gérez cette séance.</p></div>
+          </div>
+        <?php endif; ?>
         <span class="tag" id="pe-modal-cat" data-testid="session-modal-category"></span>
         <h2 id="pe-modal-title" data-testid="session-modal-title"></h2>
         <ul class="meta-list">
@@ -240,7 +356,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
           <div class="bar"><i id="pe-modal-bar"></i></div>
         </div>
         <div class="pe-actions">
-          <button type="button" class="btn btn-outline btn-sm" id="pe-dup" data-testid="session-duplicate-button">Dupliquer (+ 7 jours)</button>
+          <?php if (!empty($accueil)): ?><button type="button" class="btn btn-outline btn-sm" id="pe-edit-btn" data-testid="session-edit-button">Modifier</button><?php else: ?><button type="button" class="btn btn-outline btn-sm" id="pe-dup" data-testid="session-duplicate-button">Dupliquer (+ 7 jours)</button><?php endif; ?>
           <form method="post" id="pe-delete-form">
             <?= champ_csrf() ?>
             <input type="hidden" name="action" value="<?= e($PE['action_supprimer']) ?>">
@@ -259,13 +375,21 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
   <!-- Modale : nouveau créneau -->
   <div class="modal" id="pe-create-modal" hidden data-testid="create-modal">
     <div class="modal-backdrop" data-pe-close></div>
-    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="pe-create-title">
+    <div class="modal-box" role="<?= !empty($accueil) ? 'region' : 'dialog' ?>"<?= empty($accueil) ? ' aria-modal="true"' : '' ?> aria-labelledby="pe-create-title">
       <button type="button" class="icon-btn modal-close" data-pe-close data-testid="create-modal-close" aria-label="Fermer">×</button>
       <div class="modal-body">
-        <h2 id="pe-create-title">Nouveau créneau</h2>
+        <?php if (!empty($accueil)): ?>
+          <div class="pe-create-view-heading">
+            <button type="button" data-pe-close>← Retour au planning</button>
+            <div><span>PLANNING DES COURS</span><h2 id="pe-create-title">Nouveau créneau</h2><p>Renseignez les informations pour organiser cette séance.</p></div>
+          </div>
+        <?php else: ?>
+          <h2 id="pe-create-title">Nouveau créneau</h2>
+        <?php endif; ?>
         <form method="post" class="pe-form" id="pe-create-form" data-testid="create-form">
           <?= champ_csrf() ?>
-          <input type="hidden" name="action" value="<?= e($PE['action_creer']) ?>">
+          <input type="hidden" name="action" id="pe-create-action" value="<?= e($PE['action_creer']) ?>">
+          <input type="hidden" name="creneau" id="pe-edit-id" value="">
           <?php if (!$salles || !$coachs): ?>
             <p class="pe-warn">
               <?= !$salles ? 'La liste des salles est vide ou illisible. ' : '' ?>
@@ -306,7 +430,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
           <label class="pe-field">Durée (minutes) *
             <input type="number" name="duree" min="15" max="480" step="5" value="60" required data-testid="create-duration">
           </label>
-          <label class="pe-check">
+          <label class="pe-check" id="pe-repeat-field">
             <input type="checkbox" name="repeter" value="1" id="pe-repeter" data-testid="create-repeat">
             Répéter chaque semaine
           </label>
@@ -318,7 +442,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
           <p class="pe-warn" id="pe-form-error" hidden role="alert" data-testid="create-error"></p>
           <div class="pe-form-actions">
             <button type="button" class="btn btn-ghost btn-sm" data-pe-close>Annuler</button>
-            <button type="submit" class="btn btn-primary btn-vert btn-sm" data-testid="create-submit">Créer le créneau</button>
+            <button type="submit" class="btn btn-primary btn-vert btn-sm" id="pe-create-submit" data-testid="create-submit">Créer le créneau</button>
           </div>
         </form>
         <datalist id="pe-dl-titres"><?php foreach ($titres as $v): ?><option value="<?= e($v) ?>"><?php endforeach; ?></datalist>
@@ -343,6 +467,11 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
     const CFG = JSON.parse($('pe-config').textContent);
     const TYPES = CFG.types;
     const FIRST_TYPE = Object.keys(TYPES)[0];
+    const TYPE_ICONS = {
+      cross: 'fa-dumbbell', pilates: 'fa-spa', abdos: 'fa-heart-pulse',
+      boxe: 'fa-hand-fist', danse: 'fa-music', yoga: 'fa-leaf',
+      cardio: 'fa-heart-pulse', musculation: 'fa-dumbbell',
+    };
 
     /* ---------- Helpers ---------- */
     const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -366,7 +495,9 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
       const s = {
         id: ev.id, title: ev.title, start: ev.start, end: ev.end,
         type: type, typeLabel: p.typeLibelle || TYPES[type].label, color: TYPES[type].color,
-        salle: p.salle || '', coach: p.coach || '',
+        salle: p.salle || '', roomId: Number(p.roomId) || 0,
+        coach: p.coach || '', coachFirstName: p.coachFirstName || p.coach || '',
+        coachId: Number(p.coachId) || 0,
         capacite: capacite, prises: prises,
         restantes: p.restantes != null ? Number(p.restantes) : Math.max(0, capacite - prises),
         serie: !!p.serie, passe: !!p.passe,
@@ -421,6 +552,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
 
     /* ---------- Indicateurs de la période affichée ---------- */
     function updateStats(list) {
+      if (!$('pe-stat-count')) return;
       const cp = list.reduce((a, s) => a + s.capacite, 0);
       const bk = list.reduce((a, s) => a + Math.min(s.prises, s.capacite || s.prises), 0);
       $('pe-stat-count').textContent = list.length;
@@ -458,11 +590,19 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
     function openModal(m) {
       clearTimeout(m._t);
       m.hidden = false;
+      if (root.classList.contains('pe-reception')) {
+        root.classList.toggle('is-creating', m === createModal);
+        root.classList.toggle('is-viewing', m === sessionModal);
+      }
       requestAnimationFrame(() => m.classList.add('is-open'));
     }
     function closeModal(m) {
       m.classList.remove('is-open');
-      m._t = setTimeout(() => { m.hidden = true; }, 200);
+      m._t = setTimeout(() => {
+        m.hidden = true;
+        if (m === createModal) root.classList.remove('is-creating');
+        if (m === sessionModal) root.classList.remove('is-viewing');
+      }, 200);
     }
     const sessionModal = $('pe-session-modal');
     const createModal = $('pe-create-modal');
@@ -494,7 +634,9 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
       scope.hidden = !s.serie;
       const del = $('pe-delete-btn');
       del.disabled = s.passe;
-      del.textContent = s.passe ? 'Séance passée' : 'Supprimer';
+      del.textContent = s.passe ? 'Séance passée' : (root.classList.contains('pe-reception') ? 'Annuler le créneau' : 'Supprimer');
+      const editButton = $('pe-edit-btn');
+      if (editButton) editButton.hidden = s.passe;
       openModal(sessionModal);
     }
 
@@ -510,18 +652,33 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
       if (!confirm(msg)) e.preventDefault();
     });
 
-    $('pe-dup').addEventListener('click', () => {
+    $('pe-dup')?.addEventListener('click', () => {
       if (!cur) return;
       const s = cur;
       const next = new Date(s.start);
       next.setDate(next.getDate() + 7);
       closeModal(sessionModal);
       openCreate({
-        title: s.title, type: s.type, salleNom: s.salle, coachPrenom: s.coach, capacite: s.capacite,
+        title: s.title, type: s.type, salleNom: s.salle, coachPrenom: s.coachFirstName, capacite: s.capacite,
         debut: ymd(next) + 'T' + hm(s.start),
         duree: Math.max(15, Math.round((D(s.end) - D(s.start)) / 60000)),
       });
     });
+
+    const editButton = $('pe-edit-btn');
+    if (editButton) {
+      editButton.addEventListener('click', () => {
+        if (!cur || cur.passe) return;
+        const s = cur;
+        closeModal(sessionModal);
+        openCreate({
+          edit: true, id: s.id, title: s.title, type: s.type,
+          salleId: s.roomId, coachId: s.coachId, capacite: s.capacite, prises: s.prises,
+          debut: ymd(s.start) + 'T' + hm(s.start),
+          duree: Math.max(15, Math.round((D(s.end) - D(s.start)) / 60000)),
+        });
+      });
+    }
 
     /* ---------- Modale création ---------- */
     const form = $('pe-create-form');
@@ -566,10 +723,13 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
       const a = new Date(v);
       if (isNaN(a)) return [];
       const b = new Date(a.getTime() + dur * 60000);
-      const so = el.salle.selectedOptions[0], co = el.coach.selectedOptions[0];
-      const salle = (so && so.dataset.nom) || '', coach = (co && co.dataset.prenom) || '';
+      const so = el.salle.selectedOptions[0];
+      const salle = (so && so.dataset.nom) || '', coach = el.coach.value;
+      const currentId = $('pe-edit-id').value;
       return Array.from(known.values()).filter((s) =>
-        D(s.start) < b && D(s.end) > a && ((salle && s.salle === salle) || (coach && s.coach === coach))
+        String(s.id) !== currentId
+        && D(s.start) < b && D(s.end) > a
+        && ((salle && s.salle === salle) || (coach && String(s.coachId) === coach))
       );
     }
     function refreshConflicts() {
@@ -605,10 +765,23 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
       p = p || {};
       form.reset();
       errBox.hidden = true;
+      const editing = p.edit === true;
+      $('pe-create-action').value = editing ? 'modifier_creneau' : CFG.createAction;
+      $('pe-edit-id').value = editing ? String(p.id) : '';
+      $('pe-create-title').textContent = editing ? 'Modifier le créneau' : 'Nouveau créneau';
+      $('pe-create-submit').textContent = editing ? 'Enregistrer les modifications' : 'Créer le créneau';
+      $('pe-repeat-field').hidden = editing;
+      el.repeter.disabled = editing;
+      el.capacite.min = editing ? String(Math.max(1, Number(p.prises) || 0)) : '1';
       el.titre.value = p.title || '';
       if (p.type && TYPES[p.type]) el.type.value = p.type;
-      selectByData(el.salle, 'nom', p.salleNom);
-      selectByData(el.coach, 'prenom', p.coachPrenom);
+      if (editing) {
+        el.salle.value = String(p.salleId || '');
+        el.coach.value = String(p.coachId || '');
+      } else {
+        selectByData(el.salle, 'nom', p.salleNom);
+        selectByData(el.coach, 'prenom', p.coachPrenom);
+      }
       el.salle.dispatchEvent(new Event('change'));
       el.capacite.value = p.capacite || 15;
       if (el.capacite.max && Number(el.capacite.value) > Number(el.capacite.max)) el.capacite.value = el.capacite.max;
@@ -635,6 +808,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
     /* ---------- Séances du jour ---------- */
     function renderToday() {
       const box = $('pe-today');
+      if (!box) return;
       const t0 = new Date();
       const t1 = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() + 1);
       fetchSessions(ymd(t0) + 'T00:00:00', ymd(t1) + 'T00:00:00')
@@ -665,8 +839,8 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
       headerToolbar: false,
       firstDay: 1,
       allDaySlot: false,
-      slotMinTime: '07:00:00',
-      slotMaxTime: '21:00:00',
+      slotMinTime: '<?= !empty($accueil) ? '08:00:00' : '07:00:00' ?>',
+      slotMaxTime: '<?= !empty($accueil) ? '18:00:00' : '21:00:00' ?>',
       slotDuration: '00:30:00',
       slotLabelInterval: '01:00',
       slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
@@ -709,7 +883,7 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
           return { html: '<div class="ev-m"><i></i><b>' + hm(s.start) + '</b><span>' + esc(s.title) + (s.salle ? ' · ' + esc(s.salle) : '') + ' · ' + count + '</span></div>' };
         }
         return {
-          html: '<div class="ev"><strong>' + (s.serie ? '↻ ' : '') + esc(s.title) + '</strong><span>' + hm(s.start) + ' – ' + hm(s.end) + '</span>' +
+          html: '<div class="ev"><strong><i class="fa-solid ' + (TYPE_ICONS[s.type] || 'fa-dumbbell') + '" aria-hidden="true"></i>' + (s.serie ? '↻ ' : '') + esc(s.title) + '</strong><span>' + hm(s.start) + ' – ' + hm(s.end) + '</span>' +
             (s.coach ? '<span class="ev-coach">Coach ' + esc(s.coach) + '</span>' : '') +
             (s.salle ? '<span class="ev-room">Salle ' + esc(s.salle) + '</span>' : '') +
             '<span class="pe-ev-count">' + count + ' inscrits</span></div>',
@@ -752,8 +926,12 @@ $cfg = ['eventsUrl' => $PE['events_url'], 'types' => $types];
     coachSel.addEventListener('change', (e) => { state.coach = e.target.value; calendar.refetchEvents(); });
     const roomFilter = $('pe-filter-room');
     if (roomFilter) roomFilter.addEventListener('change', (e) => { state.room = e.target.value; calendar.refetchEvents(); });
-    $('pe-filter-fill').addEventListener('change', (e) => { state.fill = e.target.value; calendar.refetchEvents(); });
-    $('pe-filter-past').addEventListener('change', (e) => { state.hidePast = e.target.checked; calendar.refetchEvents(); });
+    const typeFilter = $('pe-filter-type');
+    if (typeFilter) typeFilter.addEventListener('change', (e) => { state.type = e.target.value; calendar.refetchEvents(); });
+    const fillFilter = $('pe-filter-fill');
+    if (fillFilter) fillFilter.addEventListener('change', (e) => { state.fill = e.target.value; calendar.refetchEvents(); });
+    const pastFilter = $('pe-filter-past');
+    if (pastFilter) pastFilter.addEventListener('change', (e) => { state.hidePast = e.target.checked; calendar.refetchEvents(); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

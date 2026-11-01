@@ -48,7 +48,7 @@ final class Planning
     {
         $st = $this->pdo->prepare(
             "SELECT a.Numactivite, a.titre, a.type_activite, a.date_heure_debut, a.date_heure_fin,
-                    a.capacite_max, a.id_serie, s.nomsalle, u.prenomUsers,
+                    a.capacite_max, a.id_serie, a.Numsalle, a.NumUsers, s.nomsalle, u.prenomUsers, u.nomUsers,
                     (SELECT COUNT(*) FROM reservation r
                       WHERE r.Numactivite = a.Numactivite AND r.statut_reservation <> 'Annulee') AS places_prises,
                     (SELECT COUNT(*) FROM reservation r2

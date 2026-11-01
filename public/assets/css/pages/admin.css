@@ -807,6 +807,7 @@
 .admin-reservation-table-scroll { width:100%; overflow-x:auto; padding:0 10px 4px; }.admin-reservation-table { width:100%; border-collapse:collapse; font-size:10px; }.admin-reservation-table th { padding:9px 8px; background:#f7f9fa; color:#6d8291; font-size:9px; font-weight:650; text-align:left; white-space:nowrap; }.admin-reservation-table td { padding:9px 8px; border-bottom:1px solid #edf1f4; color:#60778a; vertical-align:middle; }.admin-reservation-table tr:last-child td { border-bottom:0; }.admin-reservation-table td:first-child { min-width:112px; }.admin-reservation-table td:first-child strong,.admin-reservation-table td:first-child span { display:block; white-space:nowrap; }.admin-reservation-table td:first-child strong { color:#4b6276; font-size:9px; font-weight:600; }.admin-reservation-table td:first-child span { margin-top:4px; color:#8295a4; font-size:9px; }.admin-reservation-table td:nth-child(2),.admin-reservation-table td:nth-child(3) { min-width:130px; }.admin-reservation-table td:nth-child(2),.admin-reservation-table td:nth-child(3) { align-items:center; }.admin-reservation-table td:nth-child(2) > div,.admin-reservation-table td:nth-child(3) > div { display:inline-grid; vertical-align:middle; gap:4px; }.admin-reservation-table td:nth-child(2) > div strong,.admin-reservation-table td:nth-child(3) > div strong { color:#30475a; font-size:9px; font-weight:650; }.admin-reservation-table td:nth-child(2) > div span,.admin-reservation-table td:nth-child(3) > div span { color:#8698a6; font-size:8px; white-space:nowrap; }.admin-reservation-activity-icon,.admin-reservation-avatar { display:inline-grid; width:30px; height:30px; margin-right:6px; place-items:center; border-radius:50%; background:#eaf7e6; color:#62b53e; font-size:15px; vertical-align:middle; }.admin-reservation-activity-icon.type-cross { background:#e8f1ff; color:#3d88ed; }.admin-reservation-activity-icon.type-boxe { background:#ffe8eb; color:#e45163; }.admin-reservation-activity-icon.type-yoga,.admin-reservation-activity-icon.type-pilates { background:#f0eaff; color:#8d69e7; }.admin-reservation-activity-icon.type-musculation { background:#fff4d7; color:#c79414; }.admin-reservation-activity-icon.type-danse,.admin-reservation-activity-icon.type-abdos { background:#e8f1ff; color:#458de2; }.admin-reservation-avatar { background:#edf0f2; color:#64788a; font-size:9px; font-weight:700; }
 .admin-reservation-status { display:inline-flex; align-items:center; padding:5px 9px; border-radius:20px; font-size:8px; font-weight:650; white-space:nowrap; }.admin-reservation-status.status-confirmed { background:#e4f6df; color:#337b2c; }.admin-reservation-status.status-waiting { background:#fff1da; color:#a26410; }.admin-reservation-status.status-cancelled { background:#ffe6e5; color:#b9443b; }
 .admin-reservation-actions { display:flex; align-items:center; gap:4px; }.admin-reservation-actions > button,.admin-reservation-action-form button { display:grid; width:29px; height:29px; place-items:center; border:1px solid #dce5eb; border-radius:5px; background:#fff; color:#536e82; cursor:pointer; font-size:13px; }.admin-reservation-actions > button:hover,.admin-reservation-action-form button:hover { border-color:#9fc5df; background:#f6fafc; }.admin-reservation-action-form { margin:0; }.admin-reservation-actions .admin-reservation-action-form button.is-danger { color:#ef5555; }.admin-reservation-no-action { width:29px; color:#a3b0b9; text-align:center; }.admin-reservation-no-data { height:110px; color:#7b8e9d!important; text-align:center; }.admin-reservation-filter-empty { padding:16px; color:#71869a; font-size:11px; text-align:center; }
+.employee-page.admin-reservations-page .admin-reservation-actions > button,.employee-page.admin-reservations-page .admin-reservation-action-form button { display:inline-flex; width:auto; min-height:30px; height:auto; align-items:center; justify-content:center; padding:0 9px; font-size:10px; white-space:nowrap; }.employee-page.admin-reservations-page .admin-reservation-actions > button { border-color:#dbe8d5; background:#f4faef; color:#497a36; }.employee-page.admin-reservations-page .admin-reservation-actions .admin-reservation-action-form button.is-danger { border-color:#f1dada; background:#fff7f6; color:#c34d46; }.employee-page.admin-reservations-page .admin-reservation-no-action { width:auto; font-size:9px; white-space:nowrap; }
 .admin-reservations-aside { display:grid; gap:10px; }.admin-reservation-summary,.admin-reservation-calendar { padding:12px; }.admin-reservation-summary h3,.admin-reservation-calendar h3 { display:flex; align-items:center; gap:8px; margin-bottom:11px; }.admin-reservation-summary h3 > span,.admin-reservation-calendar h3 > span { display:grid; width:25px; height:25px; place-items:center; border-radius:50%; background:#edf7e9; color:#5aaa36; font-size:14px; }
 .admin-reservation-summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }.admin-reservation-summary-grid article { display:grid; grid-template-columns:29px 1fr; align-items:center; gap:2px 7px; min-height:64px; padding:8px; border-radius:6px; }.admin-reservation-summary-grid article b { display:grid; grid-row:span 2; width:27px; height:27px; place-items:center; border-radius:50%; background:rgba(255,255,255,.65); font-size:15px; }.admin-reservation-summary-grid article strong { color:#31475a; font-size:15px; line-height:1; }.admin-reservation-summary-grid article span { color:#788b9a; font-size:8px; }.summary-confirmed { background:#eef9ec; color:#49a64a; }.summary-waiting { background:#fff5e9; color:#e18c24; }.summary-cancelled { background:#fff0f0; color:#e65b5d; }.summary-total { background:#f3efff; color:#8762de; }
 .admin-reservation-calendar > header { display:flex; justify-content:space-between; }.admin-reservation-month-nav { display:flex; justify-content:space-between; align-items:center; min-height:33px; padding:0 7px; border:1px solid #edf1f4; border-radius:5px; background:#fafcfd; }.admin-reservation-month-nav a { color:#60798c; font-size:19px; text-decoration:none; }.admin-reservation-month-nav strong { color:#536b7e; font-size:10px; font-weight:600; }.admin-reservation-month-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px 2px; padding-top:8px; }.admin-reservation-month-grid > span,.admin-reservation-month-grid > a { display:grid; width:25px; height:25px; place-items:center; justify-self:center; border-radius:50%; color:#5d7488; font-size:8px; text-decoration:none; }.admin-reservation-month-grid > span { color:#8394a1; font-weight:600; }.admin-reservation-month-grid > a.is-outside { color:#c1cbd2; }.admin-reservation-month-grid > a.is-selected { background:#91dc45; color:#fff; }.admin-reservation-month-grid > a.has-bookings:not(.is-selected)::after { position:absolute; width:3px; height:3px; margin:18px 0 0 10px; border-radius:50%; background:#7dc946; content:''; }
@@ -4531,6 +4532,562 @@
   .ticket-category-filter select,
   .ticket-priority-filter,
   .ticket-priority-filter select {
+    flex: 1;
+    max-width: none;
+  }
+}
+
+.maintenance-ticket-page.is-technician {
+  gap: 20px;
+  color: #233449;
+}
+
+.maintenance-ticket-page.is-technician .maintenance-ticket-page-heading {
+  margin: 0;
+  padding: 2px 0 0;
+}
+
+.ticket-page-eyebrow {
+  margin: 0 0 6px;
+  color: #679b3b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.maintenance-ticket-page.is-technician .maintenance-ticket-page-heading h2 {
+  color: #1d2c3b;
+  font-size: 26px;
+  letter-spacing: -.035em;
+}
+
+.maintenance-ticket-page.is-technician .maintenance-ticket-page-heading p:last-child {
+  margin-top: 6px;
+  color: #748394;
+  font-size: 13px;
+}
+
+.maintenance-ticket-page.is-technician .maintenance-ticket-summary {
+  gap: 13px;
+}
+
+.maintenance-ticket-page.is-technician .ticket-summary-card {
+  position: relative;
+  min-height: 100px;
+  gap: 13px;
+  padding: 15px;
+  overflow: hidden;
+  border: 1px solid #e4eaf0;
+  border-top: 3px solid var(--ticket-accent);
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(34, 52, 73, .035);
+  color: var(--ticket-accent);
+}
+
+.maintenance-ticket-page.is-technician .ticket-summary-total { --ticket-accent: #5685d8; }
+.maintenance-ticket-page.is-technician .ticket-summary-progress { --ticket-accent: #54a36d; }
+.maintenance-ticket-page.is-technician .ticket-summary-resolved { --ticket-accent: #7582c9; }
+.maintenance-ticket-page.is-technician .ticket-summary-waiting { --ticket-accent: #d28a3d; }
+
+.maintenance-ticket-page.is-technician .ticket-summary-icon {
+  flex-basis: 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ticket-accent) 11%, white);
+  color: var(--ticket-accent);
+  font-size: 16px;
+}
+
+.maintenance-ticket-page.is-technician .ticket-summary-card strong {
+  color: #203147;
+  font-size: 24px;
+}
+
+.maintenance-ticket-page.is-technician .ticket-summary-card > div > span {
+  color: #34485e;
+  font-size: 11px;
+}
+
+.maintenance-ticket-page.is-technician .ticket-summary-card small {
+  color: #8290a0;
+  font-size: 9px;
+}
+
+.maintenance-ticket-workspace.is-technician {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.maintenance-ticket-workspace.is-technician.has-selection {
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, .82fr);
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-list-panel,
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-detail-panel {
+  border-color: #e2e8ee;
+  border-radius: 10px;
+  box-shadow: 0 5px 18px rgba(34, 52, 73, .045);
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-toolbar {
+  display: grid;
+  min-height: 0;
+  gap: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-status-tabs {
+  min-height: 52px;
+  gap: 5px;
+  padding: 0 15px;
+  overflow-x: auto;
+  border-bottom: 1px solid #edf1f4;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-tab {
+  gap: 7px;
+  padding: 0 10px;
+  color: #69798a;
+  font-size: 11px;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-tab > span {
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: #f0f3f6;
+  color: #718094;
+  font-size: 9px;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-tab.is-active {
+  color: #538b35;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-tab.is-active::after {
+  background: #80b94b;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-tab.is-active i {
+  color: #538b35;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-tab.is-active > span {
+  background: #edf5e6;
+  color: #538b35;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-filters {
+  gap: 9px;
+  padding: 12px 15px;
+  border-bottom: 1px solid #edf1f4;
+  background: #fafbfd;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-search,
+.maintenance-ticket-workspace.is-technician .ticket-category-filter select,
+.maintenance-ticket-workspace.is-technician .ticket-priority-filter select {
+  min-height: 37px;
+  border-color: #e0e7ed;
+  border-radius: 6px;
+  color: #64758a;
+  font-size: 10px;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-search {
+  width: clamp(180px, 24vw, 290px);
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-category-filter select,
+.maintenance-ticket-workspace.is-technician .ticket-priority-filter select {
+  max-width: 175px;
+  padding: 0 26px 0 10px;
+  cursor: pointer;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-table-scroll {
+  padding: 0 14px;
+}
+
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-table {
+  min-width: 760px;
+}
+
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-table th {
+  padding: 12px 9px;
+  border-bottom: 1px solid #e8edf1;
+  background: #fff;
+  color: #8491a0;
+  font-size: 9px;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-table th:first-child,
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-table th:last-child {
+  border-radius: 0;
+}
+
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-table td {
+  padding: 13px 9px;
+  border-bottom-color: #edf1f4;
+  color: #536579;
+  font-size: 10px;
+}
+
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-table tbody tr:hover,
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-table tbody tr.is-selected {
+  background: #f5f9f1;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-row-id {
+  color: #667b8f !important;
+  font-size: 9px !important;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-row-subject {
+  max-width: 240px;
+  color: #2e4054 !important;
+  font-size: 10px !important;
+  font-weight: 650;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-row-subject small {
+  color: #8794a2;
+  font-size: 9px;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-status-badge,
+.maintenance-ticket-workspace.is-technician .ticket-priority-badge {
+  padding: 5px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-view-button {
+  min-height: 31px;
+  gap: 5px;
+  padding: 0 8px;
+  border-color: #e0e8ed;
+  border-radius: 7px;
+  color: #66834e;
+  white-space: nowrap;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-row-edit {
+  color: #607286;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-row-edit:hover {
+  border-color: #cbd6df;
+  background: #f7f9fa;
+  color: #40586f;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-view-button:hover,
+.maintenance-ticket-workspace.is-technician .ticket-view-button[aria-current="true"] {
+  border-color: #b6d59d;
+  background: #f1f8eb;
+  color: #4c812f;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-table-footer {
+  min-height: 52px;
+  padding: 9px 16px;
+  border-top: 1px solid #edf1f4;
+  color: #8190a0;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-pagination button {
+  border-color: #e0e7ed;
+  border-radius: 7px;
+  color: #64758a;
+}
+
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-detail-panel {
+  position: sticky;
+  top: 82px;
+  padding: 17px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .maintenance-ticket-detail-panel {
+  position: static;
+  width: 100%;
+  max-width: 760px;
+  justify-self: center;
+  padding: 22px;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-detail-heading {
+  gap: 9px;
+  margin: -2px 0 17px;
+  padding-bottom: 13px;
+  border-bottom: 1px solid #edf1f4;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-detail-heading h3 {
+  color: #2d4055;
+  font-size: 12px;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-detail-heading h3 i {
+  color: #699746;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-detail-edit {
+  border-color: #dce8d4;
+  color: #5e873c;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-detail-edit:hover {
+  border-color: #b6d59d;
+  background: #f3f8ef;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-progress-steps li.is-complete {
+  color: #5e873c;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-progress-steps li.is-complete > span {
+  border-color: #75a94b;
+  background: #75a94b;
+}
+
+.maintenance-ticket-workspace.is-technician .ticket-pagination [data-ticket-pages] button.is-current {
+  border-color: #6c9d43;
+  background: #6c9d43;
+  color: #fff;
+}
+
+.maintenance-ticket-workspace.is-technician .maintenance-ticket-detail-panel > .ticket-detail-subject {
+  color: #263a50;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-detail-heading {
+  margin-bottom: 18px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-detail-heading h3 {
+  flex: 1;
+  font-size: 15px;
+}
+
+.ticket-edit-summary {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 15px;
+  border: 1px solid #e8edf1;
+  border-radius: 8px;
+  background: #f8fafb;
+}
+
+.ticket-edit-summary .ticket-detail-id,
+.ticket-edit-summary h4,
+.ticket-edit-summary > p {
+  margin: 0;
+}
+
+.ticket-edit-summary h4 {
+  color: #263a50;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.ticket-edit-summary > p:not(.ticket-detail-id) {
+  color: #788798;
+  font-size: 11px;
+}
+
+.ticket-edit-summary > p > i {
+  margin-right: 5px;
+  color: #699746;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-detail-actions {
+  gap: 12px;
+  padding-top: 0;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-detail-actions > h4 {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf1f4;
+  color: #2d4055;
+  font-size: 13px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-intervention-form {
+  gap: 9px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-intervention-form label {
+  margin-top: 3px;
+  color: #506378;
+  font-size: 11px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-intervention-form select,
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-intervention-form textarea {
+  min-height: 40px;
+  border-color: #dfe7ed;
+  border-radius: 7px;
+  font-size: 12px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-intervention-form textarea {
+  min-height: 90px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-detail-actions form.ticket-comment-form {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-comment-form textarea {
+  min-height: 42px;
+  border-color: #dfe7ed;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-comment-form button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-width: 104px;
+  height: auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 1px solid #6c9d43;
+  border-radius: 7px;
+  background: #6c9d43;
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-comment-form button:hover {
+  border-color: #568335;
+  background: #568335;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-action-primary,
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-action-secondary {
+  border-color: #6c9d43;
+  border-radius: 7px;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-action-primary {
+  background: #6c9d43;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-action-primary:hover {
+  border-color: #568335;
+  background: #568335;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-action-secondary {
+  color: #5e873c;
+}
+
+.maintenance-ticket-workspace.is-technician.is-editing .ticket-action-secondary:hover {
+  background: #f3f8ef;
+}
+
+.maintenance-ticket-page.is-technician .maintenance-ticket-empty {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 44px 20px;
+  border-color: #e2e8ee;
+  text-align: center;
+}
+
+.maintenance-ticket-page.is-technician .maintenance-ticket-empty > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  margin-bottom: 5px;
+  border-radius: 14px;
+  background: #eff6e9;
+  color: #679b3b;
+  font-size: 19px;
+}
+
+.maintenance-ticket-page.is-technician .maintenance-ticket-empty h3 {
+  margin: 0;
+  color: #2d4055;
+}
+
+.maintenance-ticket-page.is-technician .maintenance-ticket-empty p {
+  margin: 0;
+  color: #7c8998;
+}
+
+@media (max-width: 1100px) {
+  .maintenance-ticket-workspace.is-technician.has-selection {
+    grid-template-columns: minmax(0, 1.35fr) minmax(290px, .9fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .maintenance-ticket-workspace.is-technician.has-selection {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .maintenance-ticket-workspace.is-technician .maintenance-ticket-detail-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 760px) {
+  .maintenance-ticket-page.is-technician .maintenance-ticket-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 580px) {
+  .maintenance-ticket-page.is-technician {
+    gap: 15px;
+  }
+
+  .maintenance-ticket-page.is-technician .maintenance-ticket-page-heading h2 {
+    font-size: 22px;
+  }
+
+  .maintenance-ticket-workspace.is-technician .ticket-filters {
+    flex-wrap: wrap;
+  }
+
+  .maintenance-ticket-workspace.is-technician .ticket-search {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .maintenance-ticket-workspace.is-technician .ticket-category-filter,
+  .maintenance-ticket-workspace.is-technician .ticket-priority-filter,
+  .maintenance-ticket-workspace.is-technician .ticket-category-filter select,
+  .maintenance-ticket-workspace.is-technician .ticket-priority-filter select {
     flex: 1;
     max-width: none;
   }
