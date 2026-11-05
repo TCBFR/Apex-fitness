@@ -1,4 +1,6 @@
 <?php
+// Préfixe des liens du planning : admin par défaut, l'espace employé le redéfinit avant l'inclusion
+$planningBase = $planningBase ?? 'admin/espace.php?onglet=planning';
 $d = $planningDonneesAdmin;
 $edition = $creneauAModifier;
 $debutSemainePlanning = new DateTimeImmutable($d['debut_semaine']);
@@ -6,7 +8,7 @@ $dureeForm = $edition
     ? max(15, (int) round((strtotime($edition['date_heure_fin']) - strtotime($edition['date_heure_debut'])) / 60))
     : 60;
 $semaineRetour = $d['debut_semaine'];
-$urlRetourPlanning = url('admin/espace.php?onglet=planning&semaine=' . $semaineRetour);
+$urlRetourPlanning = url($planningBase . '&semaine=' . $semaineRetour);
 ?>
 <section class="admin-planning-page admin-planning-form-page">
   <header class="admin-planning-heading">

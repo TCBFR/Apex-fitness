@@ -2,16 +2,72 @@
 declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/model/AdherentEspace.php';
-require_once dirname(__DIR__) . '/service/ProfilePhotoStorage.php';
-require_once dirname(__DIR__, 2) . '/admin/controller/EntityController.php';
+require_once dirname(__DIR__) . '/service/StockagePhotoProfil.php';
+require_once dirname(__DIR__, 2) . '/admin/controller/ControleurGenerique.php';
 require_once dirname(__DIR__) . '/model/adherent.php';
 
-final class AdherentController extends EntityController
+final class AdherentController extends ControleurGenerique
 {
+    /** Actions accessibles par URL (index.php?route=adherent/<action>). */
+    public const ACTIONS = [
+        'espace', 'planning', 'reservations', 'abonnement', 'profil', 'avis', 'messagerie', 'offres',
+    ];
+
     public function __construct(private ?AdherentEspace $space = null)
     {
         parent::__construct(Adherent::class);
         $this->space ??= new AdherentEspace();
+    }
+
+    /** Page d'arrivée après la connexion (/adherent/espace). */
+    public function espace(): array
+    {
+        return $this->donneesPage('Mon espace', 'espace');
+    }
+
+    public function planning(): array
+    {
+        return $this->donneesPage('Planning', 'planning');
+    }
+
+    public function reservations(): array
+    {
+        return $this->donneesPage('Réservations', 'reservations');
+    }
+
+    public function abonnement(): array
+    {
+        return $this->donneesPage('Mon abonnement', 'abonnement');
+    }
+
+    public function offres(): array
+    {
+        return $this->donneesPage('Offres', 'abonnement');
+    }
+
+    public function profil(): array
+    {
+        return $this->donneesPage('Mon profil', 'profil');
+    }
+
+    public function avis(): array
+    {
+        return $this->donneesPage('Mon avis', 'avis');
+    }
+
+    public function messagerie(): array
+    {
+        return $this->donneesPage('Messagerie', 'messagerie');
+    }
+
+    /** Données communes aux pages de l'espace adhérent. */
+    private function donneesPage(string $titre, string $pageActive): array
+    {
+        return [
+            'titrePage'  => $titre,
+            'pageActive' => $pageActive,
+            'layout'     => 'aucun',
+        ];
     }
 
     public function historiqueReservations(int $memberId): array
@@ -36,7 +92,7 @@ final class AdherentController extends EntityController
 
     public function changerPhotoProfil(int $memberId, array $upload): string
     {
-        $storage = new ProfilePhotoStorage();
+        $storage = new StockagePhotoProfil();
         $newPath = $storage->store($upload);
         try {
             $oldPath = $this->space->updateProfilePhoto($memberId, $newPath);
@@ -57,11 +113,11 @@ final class AdherentController extends EntityController
         }
         require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 
-        $safe = static fn($value): string => htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $safe = static fn($value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $facture = $invoice;
         ob_start();
         require dirname(__DIR__, 2) . '/facture/templates/facture.php';
-        $html = (string)ob_get_clean();
+        $html = (string) ob_get_clean();
 
         $options = new \Dompdf\Options();
         $options->set('defaultFont', 'DejaVu Sans');
@@ -75,27 +131,5 @@ final class AdherentController extends EntityController
         }
         $dompdf->stream('facture-Athletix.pdf', ['Attachment' => true]);
         exit;
-    }
-
-    public function objectifs(int $memberId, int $months = 3): array
-    {
-        $today = date('Y-m-d');
-        $done = array_column($this->space->objectifsDuJour($memberId, $today), 'objectif');
-        return [
-            'today' => $today,
-            'available' => ['Séance sportive', 'Boire 2 litres d’eau', 'Dormir 8 heures', '10 000 pas'],
-            'done' => $done,
-            'history' => $this->space->historiqueObjectifs($memberId, $months),
-        ];
-    }
-
-    public function marquerObjectif(int $memberId, array $input): void
-    {
-        $this->space->marquerObjectif(
-            $memberId,
-            (string)($input['date'] ?? ''),
-            (string)($input['objectif'] ?? ''),
-            filter_var($input['atteint'] ?? false, FILTER_VALIDATE_BOOLEAN)
-        );
     }
 }

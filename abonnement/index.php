@@ -1,6 +1,7 @@
 <?php
-require_once __DIR__ . '/../config/function.php';
-exige_role('ADMIN');
-require_once __DIR__ . '/controller/AbonnementController.php';
-$crud = (new AbonnementController())->traiterCrud();
-require __DIR__ . '/view/abonnement.php';
+// Vue d'entrée appelée par le routeur : prépare les variables puis affiche le catalogue public.
+$titrePage = $viewData['titrePage'] ?? 'Abonnements';
+$offres = $viewData['offres'] ?? [];
+$aboCourant = $viewData['aboCourant'] ?? null;
+
+require __DIR__ . '/catalogue.php';

@@ -10,15 +10,13 @@ $navActive = $pageActive === 'accueil' ? 'accueil' : $pageActive;
     <nav class="main-nav" id="main-nav" aria-label="Navigation principale">
       <?php foreach ([
           'accueil' => ['Accueil', url('accueil/index.php')],
-          'abonnements' => ['Abonnements', url('abonnement/catalogue.php')],
-          'avis' => ['Avis', url('avis/public.php')],
-          'equipes' => ['Nos équipes', url('equipe/public.php')],
+          'abonnements' => ['Abonnements', url('abonnement')],          'avis' => ['Avis', url('avis/public.php')],
           'faq' => ['FAQ', url('faq/public.php')],
           'contact' => ['Contact', url('message_contact/index.php')],
       ] as $key => [$label, $href]): ?>
         <a class="nav-link <?= $navActive === $key ? 'is-active' : '' ?>" href="<?= e($href) ?>" <?= $navActive === $key ? 'aria-current="page"' : '' ?>><?= e($label) ?></a>
       <?php endforeach; ?>
-      <?php if (a_role('ADHERENT')): ?><a class="nav-link" href="<?= e(url('adherent/espace.php')) ?>">Mon espace</a><?php endif; ?>
+      <?php if (a_role('ADHERENT')): ?><a class="nav-link" href="<?= e(url('adherent/espace')) ?>">Mon espace</a><?php endif; ?>
       <?php if (a_role('EMPLOYE')): ?><a class="nav-link" href="<?= e(url('employe/espace.php')) ?>">Gestion</a><?php endif; ?>
       <?php if (a_role('ADMIN')): ?><a class="nav-link" href="<?= e(url('admin/espace.php')) ?>">Administration</a><?php endif; ?>
       <?php if (connecte()): ?>

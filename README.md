@@ -72,10 +72,9 @@ message_contact/    contact et vues de messagerie
 paiement/           paiement et CRUD
 utilisateur/        connexion, déconnexion et CRUD
 <autres entités>/   un index.php, controller/, model/ et view/ par entité
-layout/table.php    gabarit commun utilisé par les vues des entités
 config/             connexion PDO, authentification, sessions, CSRF et helpers
 config/function.php fonctions partagées (base, session, authentification, affichage)
-layout/             en-tête et pied de page partagés
+layout/             gabarits de navigation et de page partagés
 <entite>/controller un contrôleur local pour router chaque fonctionnalité
 public/index.php    point d’entrée et routes autorisées
 public/.htaccess    réécriture des URL vers le point d’entrée
@@ -90,95 +89,7 @@ L’inventaire de démonstration est initialisé par la classe
 `DemoInstaller`, dans `config/DemoInstaller.php`, prépare les comptes et les
 données de démonstration depuis `config/install.php`. Cette installation ne
 s’exécute plus lorsqu’un employé consulte son espace.
-Chaque dossier de fonctionnalité possède un sous-dossier `controller/` avec un
-seul contrôleur local, ainsi qu’un sous-dossier `model/` contenant un seul
-fichier modèle. Les contrôleurs CRUD locaux délèguent les actions communes à
-`admin/controller/EntityController.php`. Le point d’entrée `public/index.php`
-vérifie chaque route dans sa liste blanche avant de charger la page
-correspondante. Les vues restent séparées des actions de page et des opérations
-SQL.
-
-## Règles de gestion implémentées
-
-Les contrôles du cahier des charges sont faits **côté serveur** ; le JS ne sert
-qu'au confort (menu, filtres, confirmations).
-
-- Deux activités ne peuvent pas occuper la même salle au même moment :
-  contrainte `UNIQUE (Numsalle, date_heure_debut)` plus test de chevauchement
-  dans `employe/espace.php`.
-- Réservation refusée si le créneau est complet : comptage dans une transaction
-  avec `SELECT … FOR UPDATE`, ce qui évite la sur-réservation en cas de clics
-  simultanés.
-- Réservation refusée si l'adhérent n'est pas actif : lecture de son statut.
-- Double réservation impossible : contrainte `UNIQUE (NumUsers, Numcreneaux)`
-  sur `reservation`, doublée d'un test applicatif.
-- Quota mensuel de l'offre Freemium (`nb_reservations_max_mois`).
-- Un adhérent ne peut pas devenir employé : trigger
-  `trg_employe_avant_adherent`. L'inverse reste permis, c'est le cumul autorisé
-  par l'héritage T.
-- L'historique des interventions est conservé : chaque changement de statut
-  d'une demande écrit une ligne dans `intervention`.
-- Un adhérent peut payer depuis `paiement/payer.php`, même si son statut est expiré :
-  la souscription précédente est terminée, le paiement est enregistré, une
-  nouvelle souscription est créée et le statut repasse à Actif dans une seule
-  transaction.
-- Chaque table SQL utilise la classe métier du dossier de l’entité pour ses
-  opérations CRUD, sans trait de persistance partagé ni classe adaptatrice par
-  table. Toutes les entités exposent les mêmes opérations `create`, `update`,
-  `findById`, `findAll` et `delete`. Les opérations métier propres aux quatre
-  familles d’héritage portent des noms spécifiques (par exemple
-  `createAccount` ou `createOffer`) pour ne pas détourner cette interface. Le
-  contrôleur commun traite les actions HTTP et prépare les métadonnées ; les
-  lectures et écritures SQL sont dans la classe de l’entité. Chaque dossier
-  conserve sa vue, qui réutilise `layout/table.php`.
-  Les héritages du MCD sont représentés par les classes `Utilisateur` →
-  `Adherent`, `Employe`, `Admin`, `Fournisseur` ; `Offre` → `Freemium`, `Basic`,
-  `AbonnementPlus` ; `Statut` → `EtatEquipement`, `StatutMaintenance` ;
-  `InteractionAdherent` → `Avis`, `Faq`. Chaque classe fille écrit son
-  enregistrement parent et son enregistrement spécialisé dans une transaction.
-  La déconnexion détruit toute la session et tous les rôles
-  portés par le compte connecté.
-
-## CRUD par table
-
-Un administrateur peut consulter, créer, modifier ou supprimer les
-enregistrements des tables depuis les pages de chaque entité. Chaque table
-possède son propre dossier avec `model/`, `view/` et `index.php`. Les champs,
-clés primaires et clés étrangères sont lus depuis
-les métadonnées MySQL ; les opérations de chaque table sont exposées par les
-méthodes de sa classe métier. Les identifiants restent configurés dans
-`config/config.php`.
-
-## Sécurité
-
-- Mots de passe hachés avec `password_hash()` / `password_verify()`.
-- Toutes les requêtes sont préparées (PDO, `ATTR_EMULATE_PREPARES` à `false`).
-- Toute sortie passe par `e()` (`htmlspecialchars`).
-- Jeton CSRF sur chaque formulaire en POST.
-- `session_regenerate_id()` à la connexion.
-- Contrôle de rôle en tête de chaque page protégée (`exige_role`).
-- Message de connexion identique pour un e-mail inconnu et un mot de passe faux.
-
-À faire avant une mise en ligne réelle : passer `display_errors` à `0`,
-utiliser un compte MySQL dédié sans privilège `DROP`, servir le site en HTTPS
-et activer l'option `secure` du cookie de session.
-
-## Écarts assumés avec le MCD v4
-
-Le schéma ajoute ce que le MCD ne portait pas et que le cahier des charges
-exige. Chaque ajout est commenté `[COMPLEMENT]` dans le fichier SQL :
-
-| Ajout | Raison |
-|---|---|
-| `activite` | section 4 du cahier des charges, absente du MCD |
-| `creneaux.NumUsers_coach` | « éventuellement à un coach » |
-| `statut_adherent` | statuts actif / suspendu / expiré |
-| `equipement.Numsalle`, `equipement.num_inventaire` | localisation et numéro d'inventaire |
-| `intervention` | historique des interventions |
-| `journal` | journaux d'activité de l'administrateur |
-| `message_contact` | page contact |
-| `souscrire.date_debut` / `date_fin` | savoir quel abonnement est en cours |
-
-Si le MCD doit rester strictement identique à la v4 pour la soutenance,
-ces tables sont isolées et repérables : il suffit de les retirer, en sachant
-que les fonctionnalités correspondantes tomberont avec elles.
+Les fonctionnalités suivent une architecture MVC avec un ou plusieurs contrôleurs,
+modèles et vues selon leur périmètre. Les opérations CRUD génériques sont
+partagées dans `config/model/`; les règles et requêtes métier restent dans les
+modèles locaux. Les détails et règles fonctionnelles sont dans [BUSINESS_RULES.md](./BUSINESS_RULES.md).

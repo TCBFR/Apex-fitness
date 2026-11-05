@@ -10,7 +10,7 @@ if (function_exists('a_role')) {
   if (a_role('ADHERENT')) {
     $topbarRoleLinks[] = [
       'label' => 'Espace membre',
-      'href' => url('adherent/espace.php'),
+      'href' => url('adherent/espace'),
     ];
   }
   if (a_role('ADMIN')) {

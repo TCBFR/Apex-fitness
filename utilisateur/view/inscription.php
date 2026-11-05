@@ -6,18 +6,7 @@ $donnees = $donnees ?? [
 $commune = $commune ?? ['id_commune' => '', 'nom_commune' => '', 'code_postal' => ''];
 $erreur = $erreur ?? null;
 ?>
-<!doctype html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Inscription — ATHLETIX</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= e(url('assets/css/pages/login.css')) ?>">
-  <link rel="stylesheet" href="<?= e(url('assets/css/commune/commune.css')) ?>">
-</head>
+<?php include __DIR__ . '/inscription-head.php'; ?>
 <body class="signup-page">
 <main class="stage" id="stage">
   <aside class="visual" aria-hidden="true">
@@ -75,25 +64,7 @@ $erreur = $erreur ?? null;
           <div class="input-wrap"><input type="text" id="code_postal" value="<?= e((string) $commune['code_postal']) ?>" placeholder="Code postal" aria-label="Code postal" readonly tabindex="-1"></div>
           <p class="field-msg"></p>
         </div>
-        <div class="field">
-          <div class="input-wrap"><input type="email" name="mail" id="email" value="<?= e($donnees['mail']) ?>" placeholder="Adresse e-mail" autocomplete="email" maxlength="150" required></div>
-          <p class="field-msg"></p>
-        </div>
-        <div class="field">
-          <div class="input-wrap"><input type="text" name="adresse_postale" id="adresse_postale" value="<?= e($donnees['adresse_postale']) ?>" placeholder="Adresse postale" autocomplete="street-address" maxlength="255" required></div>
-          <p class="field-msg"></p>
-        </div>
-        <div class="field">
-          <div class="input-wrap"><input type="password" name="motdepasse" id="password" placeholder="Mot de passe (8 caractères minimum)" autocomplete="new-password" minlength="8" required></div>
-          <p class="field-msg"></p>
-        </div>
-        <div class="field">
-          <div class="input-wrap"><input type="password" name="confirmation" id="confirmation" placeholder="Confirmer le mot de passe" autocomplete="new-password" required></div>
-          <p class="field-msg"></p>
-        </div>
-        <button type="submit" class="btn" id="signup-button" data-testid="sign-up-button">
-          <span class="btn-label">Créer mon compte</span><span class="btn-spinner" aria-hidden="true"></span>
-        </button>
+        <?php include __DIR__ . '/inscription-credentials.php'; ?>
       </form>
 
       <div class="divider"><span>OU</span></div>

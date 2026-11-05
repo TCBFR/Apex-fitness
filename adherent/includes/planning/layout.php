@@ -58,7 +58,7 @@ function atx_js_config(): array
 {
     $cats = [];
     foreach (CATEGORIES as $k => $c) $cats[$k] = $c + ['svg' => icon($c['icon'], 16)];
-    return ['categories' => $cats, 'images' => CAT_IMAGES, 'apiUrl' => url('adherent/api.php'), 'reservationsUrl' => url('adherent/view/reservations.php'), 'csrf' => csrf(), 'icons' => [
+    return ['categories' => $cats, 'images' => CAT_IMAGES, 'apiUrl' => url('adherent/api.php'),'reservationsUrl' => url('adherent/reservations'), 'csrf' => csrf(), 'icons' => [
         'user' => icon('user', 13), 'clock' => icon('clock', 14), 'check' => icon('check', 12),
         'pin' => icon('pin', 14), 'signal' => icon('signal', 14), 'right' => icon('right', 16), 'calendar' => icon('calendar', 14),
     ]];
@@ -67,7 +67,7 @@ function atx_js_config(): array
 function page_head(string $active, string $title): void
 {
     // Correspondance clé de page -> clé de la sidebar universelle
-    $activeNav = ['performances' => 'performance'][$active] ?? $active;
+    $activeNav = $active;
     ?>
 <!doctype html>
 <html lang="fr">

@@ -51,7 +51,7 @@ $adherentEnEdition = $vueAdherent === 'modifier' && $adherentSelectionne;
                       <input type="hidden" name="action" value="supprimer">
                       <input type="hidden" name="utilisateur" value="<?= (int) $adherent['NumUsers'] ?>">
                       <input type="hidden" name="retour" value="adherents">
-                      <button class="btn btn-sm btn-danger" type="submit" data-confirme="Supprimer définitivement cet adhérent, son compte et son historique de paiements ?">Supprimer</button>
+                      <button class="btn btn-sm btn-danger" type="submit" data-confirme="<?= !empty($adherent['est_employe']) ? 'Supprimer le rôle adhérent, ses réservations, abonnements et son historique financier ? Le compte employé et ses activités seront conservés.' : 'Supprimer définitivement cet adhérent, son compte et son historique de paiements ?' ?>">Supprimer</button>
                     </form>
                   </div>
                 </td>

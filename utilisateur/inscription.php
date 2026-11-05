@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $donnees[$champ] = trim((string) ($_POST[$champ] ?? ''));
     }
     // Réaffiche la commune choisie si le formulaire revient avec une erreur.
-    $commune = CommuneModel::trouver((int) ($_POST['id_commune'] ?? 0)) ?? $commune;
+    $commune = ModeleCommune::trouver((int) ($_POST['id_commune'] ?? 0)) ?? $commune;
 
     try {
         (new InscriptionController())->inscrire($_POST);

@@ -139,8 +139,7 @@ $pageActive = 'accueil';
       <p class="cta-sub">Crée ton espace membre et découvre les offres qui correspondent à tes objectifs.</p>
       <div class="hero-ctas">
         <a class="btn btn-lime" href="<?= e(url('utilisateur/inscription.php')) ?>">Créer mon compte <span aria-hidden="true">→</span></a>
-        <a class="btn btn-ghost-h" href="<?= e(url('abonnement/catalogue.php')) ?>">Voir les abonnements</a>
-      </div>
+        <a class="btn btn-ghost-h" href="<?= e(url('abonnement')) ?>">Voir les abonnements</a>  
     </div>
   </section>
 </main>

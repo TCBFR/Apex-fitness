@@ -4,14 +4,26 @@ require_once __DIR__ . '/../config/function.php';
 
 $titrePage = 'Nos équipes';
 $pageActive = 'equipes';
-$coachs = db()->query(
+$fonctionsCoachPubliques = [
+    'coach',
+    'danse fitness',
+    'yoga',
+    'coach de performance',
+    'boxe',
+    'coach principal',
+    'pilates',
+];
+$placeholdersCoachPublic = implode(', ', array_fill(0, count($fonctionsCoachPubliques), '?'));
+$requeteCoachs = db()->prepare(
     "SELECT u.prenomUsers, u.nomUsers, e.photo_profil, f.libellefonc
        FROM employe e
        JOIN utilisateur u ON u.NumUsers = e.NumUsers
        JOIN fonction f ON f.Numfonc = e.Numfonc
-      WHERE f.libellefonc NOT IN ('Technicien maintenance', 'Accueil')
+      WHERE LOWER(f.libellefonc) IN ($placeholdersCoachPublic)
       ORDER BY u.nomUsers, u.prenomUsers"
-)->fetchAll(PDO::FETCH_ASSOC);
+);
+$requeteCoachs->execute($fonctionsCoachPubliques);
+$coachs = $requeteCoachs->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="fr">

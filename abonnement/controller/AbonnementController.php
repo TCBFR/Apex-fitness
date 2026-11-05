@@ -1,11 +1,36 @@
 <?php
 
-require_once __DIR__ . '/../../admin/controller/EntityController.php';
+require_once __DIR__ . '/../../admin/controller/ControleurGenerique.php';
 require_once __DIR__ . '/../model/abonnement.php';
 
 /** Fournit les offres actives et l’abonnement courant d’un adhérent. */
 final class AbonnementController
 {
+    /**
+     * Point d'entrée appelé par le routeur (public/index.php).
+     * Les données retournées sont disponibles dans la vue via $viewData.
+     */
+    public function index(): array
+    {
+        // Même logique que l'ancien abonnement/index.php
+        $aboCourant = a_role('ADHERENT')
+            ? $this->get((int) utilisateur()['NumUsers'])
+            : null;
+
+        // Clés attendues par view/catalogue.php
+        return [
+            'titrePage' => 'Abonnements',
+            'pageActive' => 'abonnements',
+            'offres' => $this->getAll(),
+            'aboCourant' => $aboCourant,
+        ];
+    }
+    public const ACTIONS = ['index', 'catalogue'];
+
+public function catalogue(): array
+{
+    return $this->index();
+}
     public function getAll(): array
     {
         return db()->query(
@@ -45,6 +70,6 @@ final class AbonnementController
 
     public function traiterCrud(): array
     {
-        return (new EntityController(Abonnement::class))->traiter();
+        return (new ControleurGenerique(Abonnement::class))->traiter();
     }
 }

@@ -374,7 +374,7 @@ $commune = [
                         <?php endforeach; ?>
                     </ul>
 
-                    <a href="<?= e(url('adherent/view/abonnement.php')) ?>" class="btn btn-primary btn-block">
+                    <a href="<?= e(url('adherent/abonnement')) ?>" class="btn btn-primary btn-block">
                         Gérer mon abonnement <i class="fa-solid fa-chevron-right right"></i>
                     </a>
                 </section>

@@ -12,6 +12,11 @@ final class AccueilController
         $this->activites = $activites ?? new AccueilActivites();
     }
 
+    public function index(): array
+    {
+        return $this->getAll();
+    }
+
     public function getAll(): array
     {
         return $this->activites->toutes();

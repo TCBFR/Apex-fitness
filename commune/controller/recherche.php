@@ -7,6 +7,6 @@ require_once __DIR__ . '/../model/commune.php';
 header('Content-Type: application/json; charset=utf-8');
 
 echo json_encode(
-    CommuneModel::rechercher((string) ($_GET['q'] ?? '')),
+    ModeleCommune::rechercher((string) ($_GET['q'] ?? '')),
     JSON_UNESCAPED_UNICODE
 );

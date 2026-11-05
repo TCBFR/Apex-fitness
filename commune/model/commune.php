@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-final class CommuneModel
+final class ModeleCommune
 {
     /** Communes dont le nom commence par la saisie. */
     public static function rechercher(string $saisie): array

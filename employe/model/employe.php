@@ -24,7 +24,7 @@ class Employe extends Utilisateur
         $this->numFonction = $numFonction;
     }
 
-    public function createEmployee(PDO $pdo): int
+    public function creerEmploye(PDO $pdo): int
     {
         $pdo->beginTransaction();
         try {
@@ -42,7 +42,7 @@ class Employe extends Utilisateur
         }
     }
 
-    public function updateEmployee(PDO $pdo, int $id): void
+    public function mettreAJourEmploye(PDO $pdo, int $id): void
     {
         $pdo->beginTransaction();
         try {
@@ -59,7 +59,7 @@ class Employe extends Utilisateur
         }
     }
 
-    public static function findEmployeeById(PDO $pdo, int $id): ?array
+    public static function trouverEmployeParId(PDO $pdo, int $id): ?array
     {
         $requete = $pdo->prepare(
             'SELECT u.NumUsers, u.nomUsers, u.prenomUsers, u.mailUsers,
@@ -71,7 +71,7 @@ class Employe extends Utilisateur
         return $requete->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
-    public static function findEmployees(PDO $pdo): array
+    public static function listerEmployes(PDO $pdo): array
     {
         return $pdo->query(
             'SELECT u.NumUsers, u.nomUsers, u.prenomUsers, u.mailUsers,
@@ -81,48 +81,8 @@ class Employe extends Utilisateur
         )->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function deleteEmployee(PDO $pdo, int $id): void
+    public static function supprimerEmploye(PDO $pdo, int $id): void
     {
         Utilisateur::deleteAccount($pdo, $id);
-    }
-}
-
-final class Personnel
-{
-    private PDO $pdo;
-
-    public function __construct(?PDO $pdo = null)
-    {
-        $this->pdo = $pdo ?? db();
-    }
-
-    public function tous(): array
-    {
-        return $this->pdo->query(
-            'SELECT e.NumUsers, e.matriculeemp, e.Date_embaucheemp,
-                    u.nomUsers, u.prenomUsers, u.mailUsers,
-                    f.Numfonc, f.libellefonc
-             FROM employe e
-             JOIN utilisateur u ON u.NumUsers = e.NumUsers
-             JOIN fonction f ON f.Numfonc = e.Numfonc
-             ORDER BY u.nomUsers, u.prenomUsers'
-        )->fetchAll();
-    }
-
-    public function fonctions(): array
-    {
-        return $this->pdo->query('SELECT * FROM fonction ORDER BY libellefonc')->fetchAll();
-    }
-
-    public function modifierFonction(int $numUtilisateur, int $numFonction): void
-    {
-        $requete = $this->pdo->prepare('UPDATE employe SET Numfonc = ? WHERE NumUsers = ?');
-        $requete->execute([$numFonction, $numUtilisateur]);
-    }
-
-    public function supprimer(int $numUtilisateur): void
-    {
-        $requete = $this->pdo->prepare('DELETE FROM employe WHERE NumUsers = ?');
-        $requete->execute([$numUtilisateur]);
     }
 }

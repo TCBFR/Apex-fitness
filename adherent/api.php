@@ -18,63 +18,7 @@ $input = json_decode(file_get_contents('php://input') ?: '[]', true);
 if (!is_array($input)) $input = [];
 $action = (string)($_GET['action'] ?? $input['action'] ?? '');
 
-function apiReply(array $data, int $status = 200): never
-{
-    http_response_code($status);
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit;
-}
-
-function apiSession(array $row): array
-{
-    $start = str_replace(' ', 'T', (string)$row['date_heure_debut']);
-    $end = str_replace(' ', 'T', (string)$row['date_heure_fin']);
-    $category = (string)$row['type_activite'];
-    $capacity = (int)$row['capacite_max'];
-    $taken = (int)$row['places_prises'];
-    $booked = !empty($row['Numres']);
-    return [
-        'id'=>(string)$row['Numactivite'], 'activity_id'=>(int)$row['Numactivite'],
-        'reservation_id'=>(int)($row['Numres'] ?? 0), 'title'=>$row['titre'],
-        'category'=>$category, 'coach'=>$row['coach'], 'coach_full'=>$row['coach'],
-        'level'=>(string)($row['niveau'] ?? ''), 'room'=>$row['nomsalle'],
-        'date'=>substr($start,0,10), 'start'=>$start, 'end'=>$end,
-        'capacity'=>$capacity, 'booked'=>$taken, 'remaining'=>max(0,$capacity-$taken),
-        'is_booked'=>$booked, 'is_past'=>strtotime($start)<time(),
-        'is_waitlisted'=>(bool)($row['en_attente'] ?? false),
-        'can_cancel'=>strtotime($start)-time() >= 2*3600,
-        'color'=>CATEGORIES[$category]['color'] ?? '#4F7DFF', 'image'=>CAT_IMAGES[$category] ?? '',
-    ];
-}
-
-function notifyMember(int $memberId, int $reservationId, string $type, string $title, string $message): void
-{
-    $q = db()->prepare('INSERT IGNORE INTO notification_adherent (NumUsers, Numres, type_notification, titre, message) VALUES (?, ?, ?, ?, ?)');
-    $q->execute([$memberId, $reservationId, $type, $title, $message]);
-}
-
-function promoteWaitlist(int $activityId, PlanningController $planning): ?int
-{
-    $q = db()->prepare('SELECT NumUsers FROM liste_attente WHERE Numactivite=? ORDER BY date_inscription, Numattente');
-    $q->execute([$activityId]);
-    foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $memberId) {
-        $memberId = (int)$memberId;
-        try {
-            $planning->reserver($memberId, $activityId);
-            $r = db()->prepare('SELECT Numres FROM reservation WHERE NumUsers=? AND Numactivite=?');
-            $r->execute([$memberId, $activityId]);
-            $reservationId = (int)$r->fetchColumn();
-            db()->prepare('DELETE FROM liste_attente WHERE NumUsers=? AND Numactivite=?')->execute([$memberId, $activityId]);
-            notifyMember($memberId, $reservationId, 'PLACE_LIBEREE', 'Une place s’est libérée', 'Votre inscription au cours est confirmée.');
-            return $memberId;
-        } catch (Throwable $error) {
-            if (str_contains(mb_strtolower($error->getMessage()), 'complet')) return null;
-            // Un adhérent devenu inéligible ne bloque pas les suivants dans la file.
-            db()->prepare('DELETE FROM liste_attente WHERE NumUsers=? AND Numactivite=?')->execute([$memberId, $activityId]);
-        }
-    }
-    return null;
-}
+require_once __DIR__ . '/api_helpers.php';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -86,112 +30,52 @@ try {
 
     switch ($action) {
         case 'events':
-            $start = (string)($_GET['start'] ?? '');
-            $end = (string)($_GET['end'] ?? '');
-            if (!strtotime($start) || !strtotime($end)) apiReply(['error'=>'Période invalide.'], 400);
-            $events = $planning->evenements(date('Y-m-d H:i:s', strtotime($start)), date('Y-m-d H:i:s', strtotime($end)), $id);
-            foreach ($events as &$event) {
-                $p = &$event['extendedProps'];
-                $p['category'] = $p['type'];
-                $p['coach_full'] = $p['coach'];
-                $p['room'] = $p['salle'];
-                $p['level'] = $p['typeLibelle'];
-                $p['capacity'] = $p['capacite'];
-                $p['booked'] = $p['prises'];
-                $p['remaining'] = $p['restantes'];
-                $p['is_booked'] = $p['reserve'];
-                $p['is_waitlisted'] = $p['enAttente'];
-                $p['can_cancel'] = strtotime($event['start']) - time() >= 2 * 3600;
-                $p['is_past'] = $p['passe'];
-                $p['color'] = CATEGORIES[$p['category']]['color'] ?? '#4F7DFF';
-                $p['image'] = CAT_IMAGES[$p['category']] ?? '';
-                $p['id'] = (string)$event['id'];
-                $p['title'] = $event['title'];
-                $p['start'] = $event['start'];
-                $p['end'] = $event['end'];
-                $p['date'] = substr($event['start'], 0, 10);
-                unset($p);
-            }
-            apiReply($events);
+            require __DIR__ . '/api/actions/events.php';
+            break;
 
         case 'my':
-            apiReply(array_map('apiSession', $space->reservations($id)));
+            require __DIR__ . '/api/actions/my.php';
+            break;
 
         case 'reservation_history':
-            apiReply($adherentController->historiqueReservations($id));
-
-        case 'objectives':
-            if ($_SERVER['REQUEST_METHOD'] === 'GET') apiReply($adherentController->objectifs($id, (int)($_GET['months'] ?? 12)));
-            $adherentController->marquerObjectif($id, $input);
-            apiReply($adherentController->objectifs($id, 12));
+            require __DIR__ . '/api/actions/reservation_history.php';
+            break;
 
         case 'waitlist_join':
-            $activityId = (int)($input['id'] ?? 0);
-            $q = db()->prepare('SELECT capacite_max, date_heure_debut FROM activite WHERE Numactivite=?');
-            $q->execute([$activityId]);
-            $activity = $q->fetch();
-            if (!$activity || strtotime($activity['date_heure_debut']) <= time()) apiReply(['error'=>'Ce cours n’est plus disponible.'], 422);
-            $q = db()->prepare("SELECT COUNT(*) FROM reservation WHERE Numactivite=? AND statut_reservation<>'Annulee'");
-            $q->execute([$activityId]);
-            if ((int)$q->fetchColumn() < (int)$activity['capacite_max']) apiReply(['error'=>'Une place est disponible. Réservez directement le cours.'], 422);
-            $q = db()->prepare("SELECT COUNT(*) FROM reservation WHERE NumUsers=? AND Numactivite=? AND statut_reservation<>'Annulee'");
-            $q->execute([$id, $activityId]);
-            if ((int)$q->fetchColumn()) apiReply(['error'=>'Vous avez déjà réservé ce cours.'], 422);
-            db()->prepare('INSERT IGNORE INTO liste_attente (NumUsers, Numactivite) VALUES (?, ?)')->execute([$id, $activityId]);
-            apiReply(['message'=>'Vous êtes sur la liste d’attente.']);
+            require __DIR__ . '/api/actions/waitlist_join.php';
+            break;
 
         case 'waitlist_leave':
-            $activityId = (int)($input['id'] ?? 0);
-            db()->prepare('DELETE FROM liste_attente WHERE NumUsers=? AND Numactivite=?')->execute([$id, $activityId]);
-            apiReply(['message'=>'Vous avez quitté la liste d’attente.']);
+            require __DIR__ . '/api/actions/waitlist_leave.php';
+            break;
 
         case 'next':
-            $items = $space->reservations($id);
-            if (isset($items[0])) apiReply(['session'=>apiSession($items[0])]);
-            apiReply(['session'=>null]);
+            require __DIR__ . '/api/actions/next.php';
+            break;
 
         case 'book':
-            $activityId = (int)($input['id'] ?? 0);
-            $title = $planning->reserver($id, $activityId);
-            db()->prepare('DELETE FROM liste_attente WHERE NumUsers=? AND Numactivite=?')->execute([$id, $activityId]);
-            journalise('RESERVATION', 'Numactivite='.$activityId);
-            $q=db()->prepare('SELECT a.Numactivite,a.titre,a.type_activite,a.niveau,a.date_heure_debut,a.date_heure_fin,a.capacite_max,s.nomsalle,u.prenomUsers AS coach,(SELECT COUNT(*) FROM reservation r WHERE r.Numactivite=a.Numactivite AND r.statut_reservation<>\'Annulee\') AS places_prises,r.Numres,(SELECT COUNT(*) FROM liste_attente la WHERE la.NumUsers=? AND la.Numactivite=a.Numactivite) AS en_attente FROM activite a JOIN salle s ON s.Numsalle=a.Numsalle JOIN utilisateur u ON u.NumUsers=a.NumUsers JOIN reservation r ON r.Numactivite=a.Numactivite AND r.NumUsers=? AND r.statut_reservation<>\'Annulee\' WHERE a.Numactivite=?');
-            $q->execute([$id,$id,$activityId]);
-            apiReply(['message'=>'Réservation confirmée : '.$title.'.','session'=>apiSession($q->fetch())]);
+            require __DIR__ . '/api/actions/book.php';
+            break;
 
         case 'cancel':
-            $activityId = (int)($input['id'] ?? 0);
-            $q = db()->prepare("SELECT Numres FROM reservation WHERE NumUsers=? AND Numactivite=? AND statut_reservation <> 'Annulee'");
-            $q->execute([$id,$activityId]);
-            $reservationId = (int)$q->fetchColumn();
-            if (!$reservationId) apiReply(['error'=>'Réservation introuvable.'], 404);
-            $planning->annuler($id, $reservationId);
-            db()->prepare("DELETE FROM notification_adherent WHERE Numres=? AND type_notification='RAPPEL_SEANCE'")->execute([$reservationId]);
-            journalise('ANNULATION', 'Numres='.$reservationId);
-            $promoted = promoteWaitlist($activityId, $planning);
-            $q=db()->prepare('SELECT a.Numactivite,a.titre,a.type_activite,a.niveau,a.date_heure_debut,a.date_heure_fin,a.capacite_max,s.nomsalle,u.prenomUsers AS coach,(SELECT COUNT(*) FROM reservation r WHERE r.Numactivite=a.Numactivite AND r.statut_reservation<>\'Annulee\') AS places_prises,NULL AS Numres,0 AS en_attente FROM activite a JOIN salle s ON s.Numsalle=a.Numsalle JOIN utilisateur u ON u.NumUsers=a.NumUsers WHERE a.Numactivite=?');
-            $q->execute([$activityId]);
-            apiReply(['message'=>'Réservation annulée.'.($promoted ? ' La place a été attribuée à une personne en liste d’attente.' : ''),'session'=>apiSession($q->fetch())]);
+            require __DIR__ . '/api/actions/cancel.php';
+            break;
 
         case 'profile':
-            if ($_SERVER['REQUEST_METHOD'] === 'GET') apiReply($space->profil($id));
-            $space->updateProfile($id, $input);
-            apiReply(['profile'=>$space->profil($id)]);
+            require __DIR__ . '/api/actions/profile.php';
+            break;
 
         case 'profile_photo':
-            if ($_SERVER['REQUEST_METHOD'] !== 'POST') apiReply(['error'=>'Méthode non autorisée.'], 405);
-            $photoPath = $adherentController->changerPhotoProfil($id, $_FILES['photo'] ?? []);
-            journalise('MODIFICATION_PHOTO_PROFIL');
-            apiReply(['photo_url'=>url($photoPath)]);
+            require __DIR__ . '/api/actions/profile_photo.php';
+            break;
 
         case 'messages':
-            if ($_SERVER['REQUEST_METHOD'] === 'GET') apiReply($space->messages($id));
-            $space->envoyerMessage($id, (string)($input['message'] ?? ''), isset($input['recipient']) ? (int)$input['recipient'] : null);
-            apiReply(['message'=>'Message envoyé.']);
+            require __DIR__ . '/api/actions/messages.php';
+            break;
 
         case 'unread_messages':
-            if ($_SERVER['REQUEST_METHOD'] !== 'GET') apiReply(['error'=>'Méthode non autorisée.'], 405);
-            apiReply(['unread_count'=>$space->messagesNonLus($id)]);
+            require __DIR__ . '/api/actions/unread_messages.php';
+            break;
 
         default:
             apiReply(['error'=>'Action inconnue.'], 404);

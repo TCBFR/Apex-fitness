@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../config/function.php';
-require_once __DIR__ . '/controller/MessageContactController.php';
+require_once __DIR__ . '/controller/ContactController.php';
 
 // Prépare le formulaire et transmet son contenu au contrôleur de contact.
 $controller = new ContactController();

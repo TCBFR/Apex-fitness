@@ -1,8 +1,8 @@
 <?php
 
 require_once __DIR__ . '/../config/function.php';
-require_once __DIR__ . '/controller/GestionController.php';
-require_once __DIR__ . '/model/FournisseurDomain.php';
+require_once __DIR__ . '/controller/GestionnaireFournisseur.php';
+require_once __DIR__ . '/controller/FournisseurController.php';
 
 exige_role('EMPLOYE');
 $maintenance = est_technicien_maintenance();
@@ -13,7 +13,8 @@ if (!a_role('ADMIN')) {
     ? 'employe/espace.php?onglet=maintenance'
     : 'employe/espace.php?onglet=tableau');
 }
-$controller = new GestionController();
+$controller = new GestionnaireFournisseur();
+$fournisseurController = new FournisseurController();
 $onglet = $_GET['onglet'] ?? 'fournisseurs';
 if ($maintenance && $onglet !== 'fournisseurs') {
   redirige('fournisseur/gestion.php?onglet=fournisseurs');
@@ -25,10 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? '';
         if ($action === 'fournisseur_enregistrer') {
             $id = ($_POST['id'] ?? '') === '' ? null : (int) $_POST['id'];
-          Fournisseur::enregistrer($_POST, $id);
+            $fournisseurController->enregistrer($_POST, $id);
             flash('succes', 'Fournisseur enregistré.');
         } elseif ($action === 'fournisseur_supprimer') {
-          Fournisseur::supprimer((int) $_POST['id']);
+            $fournisseurController->supprimer((int) $_POST['id']);
             flash('succes', 'Fournisseur supprimé.');
         } elseif ($action === 'fonction_modifier') {
             $controller->modifierFonction((int) $_POST['utilisateur'], (int) $_POST['fonction']);
@@ -43,18 +44,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirige('fournisseur/gestion.php?onglet=' . urlencode($onglet));
 }
 
-$fournisseurs = Fournisseur::tous();
-$utilisateursFournisseur = Fournisseur::utilisateurs();
+$fournisseurs = $fournisseurController->tous();
+$utilisateursFournisseur = $fournisseurController->utilisateursDisponibles();
 $personnel = $controller->personnel();
 $fonctions = $controller->fonctions();
 $fournisseurModifie = null;
 if (isset($_GET['modifier'])) {
-  foreach ($fournisseurs as $fournisseur) {
-    if ((int) $fournisseur['NumUsers'] === (int) $_GET['modifier']) {
-      $fournisseurModifie = $fournisseur;
-      break;
-    }
-  }
+  $fournisseurModifie = $fournisseurController->trouver((int) $_GET['modifier']);
 }
 $titrePage = 'Accueil et personnel';
 $pageActive = 'employe';
@@ -75,41 +71,7 @@ require __DIR__ . '/../layout/header.php';
   <?php if ($onglet === 'fournisseurs'): ?>
     <?php require __DIR__ . '/view/crud.php'; ?>
   <?php else: ?>
-    <div class="table-scroll">
-      <table class="tableau">
-        <thead><tr><th>Nom</th><th>E-mail</th><th>Fonction</th><th>Action</th></tr></thead>
-        <tbody>
-        <?php foreach ($personnel as $employe): ?>
-          <tr>
-            <td><?= e($employe['prenomUsers'] . ' ' . $employe['nomUsers']) ?><br><span class="mono"><?= e($employe['matriculeemp']) ?></span></td>
-            <td><?= e($employe['mailUsers']) ?></td>
-            <td>
-              <form method="post" style="display:flex;gap:8px;margin:0">
-                <?= champ_csrf() ?>
-                <input type="hidden" name="action" value="fonction_modifier">
-                <input type="hidden" name="utilisateur" value="<?= (int) $employe['NumUsers'] ?>">
-                <select name="fonction">
-                  <?php foreach ($fonctions as $fonction): ?>
-                    <option value="<?= (int) $fonction['Numfonc'] ?>" <?= (int) $fonction['Numfonc'] === (int) $employe['Numfonc'] ? 'selected' : '' ?>><?= e($fonction['libellefonc']) ?></option>
-                  <?php endforeach; ?>
-                </select>
-                <button class="btn btn-sm btn-ghost" type="submit">Modifier</button>
-              </form>
-            </td>
-            <td>
-              <form method="post" style="margin:0">
-                <?= champ_csrf() ?>
-                <input type="hidden" name="action" value="employe_supprimer">
-                <input type="hidden" name="utilisateur" value="<?= (int) $employe['NumUsers'] ?>">
-                <button class="btn btn-sm btn-danger" type="submit" data-confirme="Retirer cet employé du personnel ?">Retirer</button>
-              </form>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
-    <p class="note">Les fonctions disponibles sont celles du modèle: coach sportif, accueil, maintenance et responsable.</p>
+    <?php require __DIR__ . '/view/personnel.php'; ?>
   <?php endif; ?>
 </div>
 

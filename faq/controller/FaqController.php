@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../../admin/controller/EntityController.php';
+require_once __DIR__ . '/../../admin/controller/ControleurGenerique.php';
 require_once __DIR__ . '/../model/FaqDomain.php';
 
 /** Coordonne la consultation, la création et la gestion des questions. */
@@ -59,6 +59,6 @@ final class FaqController
 
     public function traiterCrud(): array
     {
-        return (new EntityController(Faq::class))->traiter();
+        return (new ControleurGenerique(Faq::class))->traiter();
     }
 }

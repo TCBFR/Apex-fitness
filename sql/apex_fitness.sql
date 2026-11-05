@@ -27,10 +27,6 @@ INSERT INTO commune (code_insee, nom_commune, code_postal) VALUES
 ('19031', 'Brive-la-Gaillarde', '19100'),
 ('19272', 'Tulle', '19000');
 
-ALTER TABLE adherent
-  ADD COLUMN id_commune INT NULL,
-  ADD CONSTRAINT fk_adherent_commune FOREIGN KEY (id_commune) REFERENCES commune (id_commune);
-
 CREATE TABLE compte_demo (
   NumUsers INT PRIMARY KEY,
   FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE CASCADE
@@ -102,6 +98,10 @@ CREATE TABLE adherent (
   photo_profil        VARCHAR(255),
   FOREIGN KEY (NumUsers) REFERENCES utilisateur(NumUsers) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+ALTER TABLE adherent
+  ADD COLUMN id_commune INT NULL,
+  ADD CONSTRAINT fk_adherent_commune FOREIGN KEY (id_commune) REFERENCES commune (id_commune);
 
 CREATE TABLE qr_code (
   Numqr              INT AUTO_INCREMENT PRIMARY KEY,

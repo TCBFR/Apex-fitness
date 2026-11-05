@@ -4,15 +4,15 @@ require_once dirname(__DIR__) . '/controller/AdherentController.php';
 
 $topbarUser = function_exists('utilisateur') ? (utilisateur() ?? []) : [];
 $topbarNotifications = true;
-$topbarMessageHref = url('adherent/view/messagerie.php');
+$topbarMessageHref = url('adherent/messagerie');
 $topbarMessageCount = (new AdherentController())->messagesNonLus((int) $topbarUser['NumUsers']);
 $topbarMessageCountEndpoint = url('adherent/api.php?action=unread_messages');
 $topbarNotificationCount = (new NotificationController())->nombreNonLues((int)$topbarUser['NumUsers']);
 $topbarNotificationApi = url('adherent/notification_api.php');
 $topbarNotificationCsrf = csrf();
 $topbarLinks = [
-    ['label' => 'Mon profil', 'href' => url('adherent/view/profil.php')],
-    ['label' => 'Mon abonnement', 'href' => url('adherent/view/abonnement.php')],
+    ['label' => 'Mon profil', 'href' => url('adherent/profil')],
+    ['label' => 'Mon abonnement', 'href' => url('adherent/abonnement')],
     ['label' => 'Déconnexion', 'href' => url('utilisateur/deconnexion.php')],
 ];
 require dirname(__DIR__, 2) . '/layout/topbar.php';

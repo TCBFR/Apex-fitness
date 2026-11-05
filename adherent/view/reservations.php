@@ -32,8 +32,7 @@ hero('calweek', 'Mes séances', 'Retrouvez vos réservations à venir et les sé
           <section class="panel side-card">
             <h2 class="side-title"><?= icon('calendar', 22) ?>Réserver une séance</h2>
             <p class="muted">Parcourez le calendrier pour choisir un cours, vérifier les places et confirmer votre réservation.</p>
-            <a class="btn btn-primary btn-block" href="<?= e(url('adherent/view/planning.php')) ?>">Ouvrir le planning <?= icon('right', 16) ?></a>
-          </section>
+            <a class="btn btn-primary btn-block" href="<?= e(url('adherent/planning')) ?>">Ouvrir le planning <?= icon('right', 16) ?></a>          </section>
 
         </aside>
       </div>

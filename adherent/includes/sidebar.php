@@ -1,12 +1,11 @@
 <?php
 $adherentNavigation = [
-    ['dashboard', 'Tableau de bord', 'home', 'espace.php'],
-    ['planning', 'Planning', 'calendar', 'view/planning.php'],
-    ['reservations', 'Mes réservations', 'bag', 'view/reservations.php'],
-    ['performance', 'Performance', 'chart', 'view/performance.php'],
-    ['abonnement', 'Mon abonnement', 'card', 'view/abonnement.php'],
-    ['profil', 'Mon profil', 'user', 'view/profil.php'],
-    ['avis', 'Mon avis', 'star', 'view/avis.php'],
+    ['dashboard', 'Tableau de bord', 'home', 'espace'],
+    ['planning', 'Planning', 'calendar', 'planning'],
+    ['reservations', 'Réservations', 'icone', 'reservations'],
+    ['abonnement', 'Mon abonnement', 'card', 'abonnement'],
+    ['profil', 'Mon profil', 'user', 'profil'],
+    ['avis', 'Mon avis', 'star', 'avis'],
 ];
 
 $sidebarItems = [];
@@ -20,7 +19,7 @@ foreach ($adherentNavigation as [$id, $label, $icon, $page]) {
 }
 
 $sidebarActive = $activeNav ?? 'dashboard';
-$sidebarHome = url('adherent/espace.php');
+$sidebarHome = url('adherent/espace');
 $sidebarLabel = 'Navigation adhérent';
 $sidebarSubtitle = 'Plus fort chaque jour';
 

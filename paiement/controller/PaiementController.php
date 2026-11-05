@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/../../admin/controller/EntityController.php';
+require_once __DIR__ . '/../../admin/controller/ControleurGenerique.php';
 require_once __DIR__ . '/../model/PaiementDomain.php';
 
 /** Coordonne la consultation des offres et l’enregistrement des paiements. */
@@ -42,6 +42,6 @@ final class PaiementController
 
     public function traiterCrud(): array
     {
-        return (new EntityController(Paiement::class))->traiter();
+        return (new ControleurGenerique(Paiement::class))->traiter();
     }
 }
